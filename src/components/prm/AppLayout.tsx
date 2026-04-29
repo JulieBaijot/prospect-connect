@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { BarChart3, Database, GitBranch, ListChecks, PhoneCall, Search } from "lucide-react";
+import { BarChart3, CalendarDays, Database, GitBranch, ListChecks, PhoneCall, Search } from "lucide-react";
 
 const navItems = [
+  { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
   { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
   { to: "/process", label: "Process", icon: GitBranch },
   { to: "/prospects", label: "Base prospects", icon: Database },
