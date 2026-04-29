@@ -13,7 +13,6 @@ import {
 import {
   addLog,
   buildCalendarUrl,
-  bestPhone,
   contactName,
   dataQualityIssues,
   formatDate,
