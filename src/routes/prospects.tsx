@@ -336,12 +336,19 @@ function ProspectsPage() {
         title="Base prospects"
         subtitle="Tableau desktop filtrable avec panneau d'ajout et d'édition."
         action={
-          <Button onClick={addNew}>
-            <Plus className="mr-2 h-4 w-4" />
-            Ajouter un prospect
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="neutral" onClick={qualifyIncompleteBatch} disabled={batchBusy || !incompleteProspects.length}>
+              <Wand2 className="mr-2 h-4 w-4" />
+              Qualifier incomplets
+            </Button>
+            <Button onClick={addNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              Ajouter un prospect
+            </Button>
+          </div>
         }
       />
+      {batchStatus ? <p className="mb-4 rounded-lg bg-script p-3 text-sm">{batchStatus}</p> : null}
       <div className="mb-4 grid gap-3 md:grid-cols-5">
         <MiniKpi label="Total" value={counters.total} />
         <MiniKpi label="À appeler" value={counters.due} />
@@ -429,6 +436,7 @@ function ProspectsPage() {
                     "Statut",
                     "Prochaine action",
                     "Valeur",
+                    "Actions",
                   ].map((h) => (
                     <th key={h} className="px-4 py-3">
                       {h}
@@ -461,6 +469,11 @@ function ProspectsPage() {
                           {dataQualityIssues(p).length} point(s) à compléter
                         </div>
                       ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button variant="neutral" onClick={() => openProspect(p)}>
+                        Modifier
+                      </Button>
                     </td>
                   </tr>
                 ))}
