@@ -16,6 +16,7 @@ import {
   headcountRanges,
   offerTargets,
   saveProspect,
+  suggestProspectCategory,
   type Category,
   type HeadcountRange,
   type OfferTarget,
@@ -311,6 +312,14 @@ function IntegrationPage() {
     setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }
   function addContact(company: Company, contact?: Partial<ContactDraft>) {
+    const suggested = suggestProspectCategory({
+      headcount_range: company.headcount,
+      offer_target: company.offer || "Formation SST",
+      sector: company.sector,
+      estimated_value: company.value,
+      comments: company.comments,
+      contactKnown: Boolean(contact?.firstName || contact?.lastName || contact?.role),
+    });
     const draft: ContactDraft = {
       firstName: contact?.firstName || "",
       lastName: contact?.lastName || "",
@@ -320,7 +329,7 @@ function IntegrationPage() {
       linkedin: contact?.linkedin || "",
       maturity: "Pas joint",
       offer: company.offer || "Formation SST",
-      category: company.category || "C – Porte d'entrée",
+      category: company.category || suggested?.category || "C – Porte d'entrée",
       value: company.value || 0,
       comments: "",
     };
@@ -352,12 +361,20 @@ function IntegrationPage() {
   async function saveAll(continueAfter = false) {
     for (const company of companies) {
       const first = company.contacts[0];
+      const suggested = suggestProspectCategory({
+        headcount_range: company.headcount,
+        offer_target: first?.offer || company.offer || "Formation SST",
+        sector: company.sector,
+        estimated_value: first?.value || company.value,
+        comments: [company.comments, first?.comments].filter(Boolean).join(" "),
+        contactKnown: Boolean(first),
+      });
       await saveProspect(
         {
           company_name: company.name,
           city: company.city,
           headcount_range: (company.headcount || "20-49") as HeadcountRange,
-          category: first?.category || company.category || "C – Porte d'entrée",
+          category: first?.category || company.category || suggested?.category || "C – Porte d'entrée",
           offer_target: first?.offer || company.offer || "Formation SST",
           estimated_value: first?.value || company.value || 0,
           current_stage: "J1",
