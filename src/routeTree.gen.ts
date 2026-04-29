@@ -15,6 +15,7 @@ import { Route as ProspectsRouteImport } from './routes/prospects'
 import { Route as ProcessRouteImport } from './routes/process'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
+import { Route as AujourdhuiRouteImport } from './routes/aujourdhui'
 import { Route as IndexRouteImport } from './routes/index'
 
 const StatsRoute = StatsRouteImport.update({
@@ -47,6 +48,11 @@ const IntegrationProspectsRoute = IntegrationProspectsRouteImport.update({
   path: '/integration-prospects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AujourdhuiRoute = AujourdhuiRouteImport.update({
+  id: '/aujourdhui',
+  path: '/aujourdhui',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,6 +61,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aujourdhui': typeof AujourdhuiRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/process': typeof ProcessRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aujourdhui': typeof AujourdhuiRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/process': typeof ProcessRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aujourdhui': typeof AujourdhuiRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/process': typeof ProcessRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/aujourdhui'
     | '/integration-prospects'
     | '/journal'
     | '/process'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/aujourdhui'
     | '/integration-prospects'
     | '/journal'
     | '/process'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/aujourdhui'
     | '/integration-prospects'
     | '/journal'
     | '/process'
@@ -113,6 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AujourdhuiRoute: typeof AujourdhuiRoute
   IntegrationProspectsRoute: typeof IntegrationProspectsRoute
   JournalRoute: typeof JournalRoute
   ProcessRoute: typeof ProcessRoute
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationProspectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aujourdhui': {
+      id: '/aujourdhui'
+      path: '/aujourdhui'
+      fullPath: '/aujourdhui'
+      preLoaderRoute: typeof AujourdhuiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -177,6 +197,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AujourdhuiRoute: AujourdhuiRoute,
   IntegrationProspectsRoute: IntegrationProspectsRoute,
   JournalRoute: JournalRoute,
   ProcessRoute: ProcessRoute,
