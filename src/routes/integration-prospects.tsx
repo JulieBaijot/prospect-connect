@@ -342,13 +342,15 @@ function IntegrationPage() {
               loading={loading}
               results={results}
               quotaBanner={quotaBanner}
+              batchRuns={batchRuns}
+              missingKeys={missingKeys}
               searchCompanies={searchCompanies}
               switchSource={switchSource}
               selectCompany={selectCompany}
               selected={companies}
             />
           )}
-          {step === 2 && <Step2 companies={companies} updateCompany={updateCompany} />}
+          {step === 2 && <Step2 companies={companies} updateCompany={updateCompany} enrichAll={enrichAll} />}
           {step === 3 && (
             <Step3 companies={companies} addContact={addContact} updateContact={updateContact} />
           )}
