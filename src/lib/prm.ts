@@ -581,6 +581,14 @@ export function nextDateForStage(stage: CycleStage) {
   return addDaysIso(delays[stage] || 2);
 }
 
+export function nodeForStage(stage: CycleStage | null | undefined) {
+  return playbookNodes[stage || "J1"] || playbookNodes.J1;
+}
+
+export function dateForOutcome(outcome: PlaybookOutcome) {
+  return addDaysIso(outcome.delayDays);
+}
+
 export function sessionReason(prospect: ProspectWithRelations) {
   if (isDueTodayOrLate(prospect.next_action_date)) return "Relance prévue aujourd'hui ou en retard";
   if (!bestPhone(prospect)) return "À enrichir avant appel";
