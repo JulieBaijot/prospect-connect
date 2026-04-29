@@ -857,6 +857,26 @@ export function prioritizeSession(prospects: ProspectWithRelations[]) {
     .slice(0, 20);
 }
 
+export function prioritizeCallSession(prospects: ProspectWithRelations[], limit = 20) {
+  return prioritizeSession(prospects.filter((prospect) => bestPhone(prospect))).slice(0, limit);
+}
+
+export function prioritizeQualificationSession(prospects: ProspectWithRelations[], limit = 20) {
+  return [...prospects]
+    .filter(
+      (prospect) =>
+        !["Perdu", "Converti"].includes(prospect.status) && dataQualityIssues(prospect).length > 0,
+    )
+    .sort((a, b) => {
+      const byDue =
+        Number(!isDueTodayOrLate(a.next_action_date)) -
+        Number(!isDueTodayOrLate(b.next_action_date));
+      if (byDue !== 0) return byDue;
+      return dataQualityIssues(b).length - dataQualityIssues(a).length;
+    })
+    .slice(0, limit);
+}
+
 export function buildCalendarUrl(args: {
   prospect: Prospect;
   contact?: Contact;
