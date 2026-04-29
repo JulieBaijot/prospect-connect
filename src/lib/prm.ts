@@ -807,6 +807,15 @@ export async function updateProspect(id: string, payload: Partial<Prospect>) {
   if (error) throw error;
 }
 
+export async function deleteProspect(id: string) {
+  const { error: logsError } = await supabase.from("prospection_logs").delete().eq("prospect_id", id);
+  if (logsError) throw logsError;
+  const { error: contactsError } = await supabase.from("contacts").delete().eq("prospect_id", id);
+  if (contactsError) throw contactsError;
+  const { error } = await supabase.from("prospects").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export function prioritizeSession(prospects: ProspectWithRelations[]) {
   const categoryRank: Record<string, number> = {
     "A – Pilier": 0,
