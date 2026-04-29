@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SessionAppelsRouteImport } from './routes/session-appels'
 import { Route as ProspectsRouteImport } from './routes/prospects'
+import { Route as ProcessRouteImport } from './routes/process'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +30,11 @@ const SessionAppelsRoute = SessionAppelsRouteImport.update({
 const ProspectsRoute = ProspectsRouteImport.update({
   id: '/prospects',
   path: '/prospects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProcessRoute = ProcessRouteImport.update({
+  id: '/process',
+  path: '/process',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JournalRoute = JournalRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
+  '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
+  '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
+  '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/integration-prospects'
     | '/journal'
+    | '/process'
     | '/prospects'
     | '/session-appels'
     | '/stats'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/integration-prospects'
     | '/journal'
+    | '/process'
     | '/prospects'
     | '/session-appels'
     | '/stats'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/integration-prospects'
     | '/journal'
+    | '/process'
     | '/prospects'
     | '/session-appels'
     | '/stats'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   IntegrationProspectsRoute: typeof IntegrationProspectsRoute
   JournalRoute: typeof JournalRoute
+  ProcessRoute: typeof ProcessRoute
   ProspectsRoute: typeof ProspectsRoute
   SessionAppelsRoute: typeof SessionAppelsRoute
   StatsRoute: typeof StatsRoute
@@ -129,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/prospects'
       fullPath: '/prospects'
       preLoaderRoute: typeof ProspectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/process': {
+      id: '/process'
+      path: '/process'
+      fullPath: '/process'
+      preLoaderRoute: typeof ProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/journal': {
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   IntegrationProspectsRoute: IntegrationProspectsRoute,
   JournalRoute: JournalRoute,
+  ProcessRoute: ProcessRoute,
   ProspectsRoute: ProspectsRoute,
   SessionAppelsRoute: SessionAppelsRoute,
   StatsRoute: StatsRoute,
