@@ -620,10 +620,12 @@ function Step3({
   companies,
   addContact,
   updateContact,
+  findContactEmail,
 }: {
   companies: Company[];
   addContact: (company: Company, contact?: Partial<ContactDraft>) => void;
   updateContact: UpdateContact;
+  findContactEmail: FindContactEmail;
 }) {
   return (
     <div className="grid gap-3">
@@ -679,7 +681,7 @@ function Step3({
               Ajouter {r.name}
             </Button>
           ))}
-          <ContactEditors company={c} updateContact={updateContact} />
+          <ContactEditors company={c} updateContact={updateContact} findContactEmail={findContactEmail} />
         </Card>
       ))}
     </div>
@@ -688,11 +690,13 @@ function Step3({
 function Step4({
   companies,
   updateContact,
+  findContactEmail,
   updateCompany,
   saveAll,
 }: {
   companies: Company[];
   updateContact: UpdateContact;
+  findContactEmail: FindContactEmail;
   updateCompany: (id: string, patch: Partial<Company>) => void;
   saveAll: (continueAfter?: boolean) => void;
 }) {
@@ -706,7 +710,7 @@ function Step4({
               category={c.contacts[0]?.category || c.category || "C – Porte d'entrée"}
             />
           </div>
-          <ContactEditors company={c} updateContact={updateContact} qualification />
+          <ContactEditors company={c} updateContact={updateContact} findContactEmail={findContactEmail} qualification />
           <textarea
             className={`${fieldClass} mt-3 min-h-20 w-full py-2`}
             placeholder="Commentaires entreprise"
