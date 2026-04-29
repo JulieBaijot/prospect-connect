@@ -286,6 +286,19 @@ function SessionPage() {
               </div>
               <div className="mt-5 rounded-lg bg-muted p-4">
                 <p className={labelClass}>Contact</p>
+                {current.contacts.length > 1 ? (
+                  <select
+                    className={`${fieldClass} mt-2 w-full`}
+                    value={contact?.id || ""}
+                    onChange={(e) => setActiveContactId(e.target.value)}
+                  >
+                    {current.contacts.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {contactName(item)} · {item.role_title || "Rôle à qualifier"}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
                 <h4 className="mt-1 text-[16px] font-medium">{contactName(contact)}</h4>
                 <p className="text-sm text-muted-foreground">
                   {contact?.role_title || "Rôle à qualifier"}
@@ -312,6 +325,19 @@ function SessionPage() {
                   <span>{current.reception_hours || "Horaires à compléter"}</span>
                 </div>
                 {current.comments ? <p className="mt-3 text-sm">{current.comments}</p> : null}
+                <div className="mt-4 grid gap-2 md:grid-cols-2">
+                  <Info label="Pourquoi maintenant" value={sessionReason(current)} />
+                  <Info label="Prochaine action" value={formatDate(current.next_action_date)} />
+                </div>
+                {dataQualityIssues(current).length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {dataQualityIssues(current).map((issue) => (
+                      <span key={issue} className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
+                        {issue}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <div className="mt-5 rounded-r-md border-l-[3px] border-script-border bg-script p-4">
                 <p className={labelClass}>{stageScripts[current.current_stage].label}</p>
@@ -334,10 +360,11 @@ function SessionPage() {
               <Button variant="success" onClick={() => setMode("meeting")}>
                 4 · RDV obtenu
               </Button>
-              <Button variant="neutral" onClick={nextCard}>
-                5 · Suivant
+              <Button variant="neutral" onClick={nextCard} disabled={busy}>
+                5 · Passer sans log
               </Button>
             </div>
+            {message ? <p className="mt-3 rounded-lg bg-script p-3 text-sm">{message}</p> : null}
             {mode === "callback" ? (
               <Panel>
                 <label className={labelClass}>Rappeler le</label>
@@ -368,6 +395,13 @@ function SessionPage() {
                     <option key={stage}>{stage}</option>
                   ))}
                 </select>
+                <label className={labelClass}>Prochaine action</label>
+                <input
+                  className={fieldClass}
+                  type="date"
+                  value={callbackDate}
+                  onChange={(e) => setCallbackDate(e.target.value)}
+                />
                 <Button onClick={saveExchange}>Sauvegarder l'échange</Button>
               </Panel>
             ) : null}
