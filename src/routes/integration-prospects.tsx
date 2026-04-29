@@ -129,21 +129,29 @@ const quotas = {
 
 function IntegrationPage() {
   const navigate = useNavigate();
+  const runBatchSearch = useServerFn(searchCompaniesBatch);
+  const runEnrichment = useServerFn(enrichCompany);
   const [step, setStep] = useState(1);
   const [source, setSource] = useState<SearchSource>(
     () => (localStorage.getItem("prm-search-source") as SearchSource) || "annuaire",
   );
   const [filters, setFilters] = useState({
     q: "",
+    keywords: "industrie annonay\nlogistique valence\nehpad ardèche",
     departments: defaultDepartments,
     headcounts: ["20-49", "50-99"],
     sector: "Industrie manufacturière",
     legal: "",
+    limit: 8,
   });
   const [results, setResults] = useState<Company[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [quotaBanner, setQuotaBanner] = useState(false);
+  const [batchRuns, setBatchRuns] = useState<
+    Array<{ keyword: string; source: SearchSource; status: "terminé" | "erreur"; count: number; error?: string }>
+  >([]);
+  const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [activeCompany, setActiveCompany] = useState<string | null>(null);
 
   useEffect(() => {
