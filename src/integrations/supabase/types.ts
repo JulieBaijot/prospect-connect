@@ -14,7 +14,251 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contacts: {
+        Row: {
+          category: string | null
+          comments: string | null
+          created_at: string
+          direct_phone: string | null
+          email: string | null
+          estimated_value: number | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          linkedin_url: string | null
+          main_phone: string | null
+          maturity_level: string | null
+          offer_target: string | null
+          prospect_id: string
+          role_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          comments?: string | null
+          created_at?: string
+          direct_phone?: string | null
+          email?: string | null
+          estimated_value?: number | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          linkedin_url?: string | null
+          main_phone?: string | null
+          maturity_level?: string | null
+          offer_target?: string | null
+          prospect_id: string
+          role_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          comments?: string | null
+          created_at?: string
+          direct_phone?: string | null
+          email?: string | null
+          estimated_value?: number | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          linkedin_url?: string | null
+          main_phone?: string | null
+          maturity_level?: string | null
+          offer_target?: string | null
+          prospect_id?: string
+          role_title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_batches: {
+        Row: {
+          companies: Json
+          created_at: string
+          current_step: number
+          filters: Json
+          id: string
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          companies?: Json
+          created_at?: string
+          current_step?: number
+          filters?: Json
+          id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          companies?: Json
+          created_at?: string
+          current_step?: number
+          filters?: Json
+          id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prospection_logs: {
+        Row: {
+          action_date: string
+          action_type: string
+          canal: string
+          contact_id: string | null
+          created_at: string
+          id: string
+          meeting_date: string | null
+          meeting_duration_minutes: number | null
+          next_action_date: string | null
+          notes: string | null
+          objective: string | null
+          prospect_id: string
+          result: string | null
+          stage: string | null
+          video_link: string | null
+        }
+        Insert: {
+          action_date?: string
+          action_type: string
+          canal?: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          meeting_date?: string | null
+          meeting_duration_minutes?: number | null
+          next_action_date?: string | null
+          notes?: string | null
+          objective?: string | null
+          prospect_id: string
+          result?: string | null
+          stage?: string | null
+          video_link?: string | null
+        }
+        Update: {
+          action_date?: string
+          action_type?: string
+          canal?: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          meeting_date?: string | null
+          meeting_duration_minutes?: number | null
+          next_action_date?: string | null
+          notes?: string | null
+          objective?: string | null
+          prospect_id?: string
+          result?: string | null
+          stage?: string | null
+          video_link?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospection_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospection_logs_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospects: {
+        Row: {
+          address: string | null
+          category: string
+          city: string | null
+          comments: string | null
+          company_name: string
+          created_at: string
+          current_stage: string
+          estimated_value: number
+          google_place_id: string | null
+          headcount_range: string | null
+          id: string
+          legal_status: string | null
+          main_phone: string | null
+          naf_code: string | null
+          next_action_date: string | null
+          offer_target: string | null
+          reception_hours: string | null
+          sector: string | null
+          siren: string | null
+          source: string | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category?: string
+          city?: string | null
+          comments?: string | null
+          company_name: string
+          created_at?: string
+          current_stage?: string
+          estimated_value?: number
+          google_place_id?: string | null
+          headcount_range?: string | null
+          id?: string
+          legal_status?: string | null
+          main_phone?: string | null
+          naf_code?: string | null
+          next_action_date?: string | null
+          offer_target?: string | null
+          reception_hours?: string | null
+          sector?: string | null
+          siren?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string
+          city?: string | null
+          comments?: string | null
+          company_name?: string
+          created_at?: string
+          current_stage?: string
+          estimated_value?: number
+          google_place_id?: string | null
+          headcount_range?: string | null
+          id?: string
+          legal_status?: string | null
+          main_phone?: string | null
+          naf_code?: string | null
+          next_action_date?: string | null
+          offer_target?: string | null
+          reception_hours?: string | null
+          sector?: string | null
+          siren?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
