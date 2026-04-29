@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { BarChart3, Database, ListChecks, PhoneCall, Search } from "lucide-react";
+import { BarChart3, Database, GitBranch, ListChecks, PhoneCall, Search } from "lucide-react";
 
 const navItems = [
   { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
+  { to: "/process", label: "Process", icon: GitBranch },
   { to: "/prospects", label: "Base prospects", icon: Database },
   { to: "/integration-prospects", label: "Intégration prospects", icon: Search },
   { to: "/journal", label: "Journal de prospection", icon: ListChecks },

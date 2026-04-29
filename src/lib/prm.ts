@@ -22,6 +22,27 @@ export type Canal = "email" | "téléphone" | "physique";
 export type LogResult = "NRP" | "Pas dispo" | "Échange" | "RDV";
 export type SearchSource = "pappers" | "insee" | "annuaire";
 
+export interface PlaybookOutcome {
+  key: string;
+  label: string;
+  result: LogResult;
+  actionType: string;
+  nextStage: CycleStage;
+  delayDays: number;
+  status?: ProspectStatus;
+  note: string;
+  mode?: "callback" | "exchange" | "meeting";
+}
+
+export interface PlaybookNode {
+  key: CycleStage;
+  label: string;
+  objective: string;
+  script: string;
+  checklist: string[];
+  outcomes: PlaybookOutcome[];
+}
+
 export interface Prospect {
   id: string;
   company_name: string;
@@ -122,44 +143,349 @@ export const offerTargets: OfferTarget[] = [
 export const stages: CycleStage[] = ["J1", "J2", "J4", "J6", "J10", "J15", "J21"];
 export const statuses: ProspectStatus[] = ["Chaud", "Tiède", "En attente", "Perdu", "Converti"];
 
+export const playbookNodes: Record<CycleStage, PlaybookNode> = {
+  J1: {
+    key: "J1",
+    label: "J1 – Premier contact",
+    objective: "Identifier le bon interlocuteur et ouvrir la discussion SST.",
+    script:
+      "Bonjour, je m'appelle Julie Baijot, formatrice SST basée à Annonay. Je voulais vérifier qui pilote les formations sécurité chez vous et voir si le sujet SST est d'actualité cette année.",
+    checklist: ["Confirmer le bon contact", "Valider l'effectif approximatif", "Repérer SST initiale ou MAC"],
+    outcomes: [
+      {
+        key: "nrp",
+        label: "NRP / standard muet",
+        result: "NRP",
+        actionType: "NRP",
+        nextStage: "J2",
+        delayDays: 1,
+        status: "Tiède",
+        note: "Pas de réponse. Relance douce au prochain créneau.",
+      },
+      {
+        key: "barrage",
+        label: "Barrage accueil",
+        result: "Pas dispo",
+        actionType: "Barrage accueil",
+        nextStage: "J2",
+        delayDays: 2,
+        status: "Tiède",
+        note: "Accueil filtrant. Revenir avec une accroche réglementaire courte.",
+        mode: "callback",
+      },
+      {
+        key: "interet",
+        label: "Intérêt / sujet ouvert",
+        result: "Échange",
+        actionType: "Échange qualifiant",
+        nextStage: "J4",
+        delayDays: 2,
+        status: "Chaud",
+        note: "Sujet SST identifié. Prochaine étape : qualifier besoin, volume et calendrier.",
+        mode: "exchange",
+      },
+      {
+        key: "rdv",
+        label: "RDV diagnostic",
+        result: "RDV",
+        actionType: "RDV obtenu",
+        nextStage: "J10",
+        delayDays: 0,
+        status: "Chaud",
+        note: "Rendez-vous obtenu pour cadrer le besoin.",
+        mode: "meeting",
+      },
+    ],
+  },
+  J2: {
+    key: "J2",
+    label: "J2 – Relance douce",
+    objective: "Rebondir sans pression et obtenir une première réponse utile.",
+    script:
+      "Je me permets de vous recontacter suite à mon précédent message. Je travaille avec des entreprises de la région sur la formation SST ; est-ce un sujet que vous gérez en interne ou avec un organisme externe ?",
+    checklist: ["Demander qui décide", "Identifier prestataire actuel", "Noter période de renouvellement"],
+    outcomes: [
+      {
+        key: "nrp",
+        label: "Toujours NRP",
+        result: "NRP",
+        actionType: "NRP",
+        nextStage: "J4",
+        delayDays: 2,
+        status: "Tiède",
+        note: "Deuxième tentative sans réponse. Relance avec angle de qualification.",
+      },
+      {
+        key: "pas-moment",
+        label: "Pas le bon moment",
+        result: "Pas dispo",
+        actionType: "Pas le bon moment",
+        nextStage: "J6",
+        delayDays: 4,
+        status: "En attente",
+        note: "Moment peu favorable. Programmer un rappel contextualisé.",
+        mode: "callback",
+      },
+      {
+        key: "qualification",
+        label: "Qualification SST",
+        result: "Échange",
+        actionType: "Qualification SST",
+        nextStage: "J4",
+        delayDays: 2,
+        status: "Chaud",
+        note: "Informations obtenues. Approfondir besoin, échéance et décideur.",
+        mode: "exchange",
+      },
+      {
+        key: "rdv",
+        label: "RDV diagnostic",
+        result: "RDV",
+        actionType: "RDV obtenu",
+        nextStage: "J10",
+        delayDays: 0,
+        status: "Chaud",
+        note: "Rendez-vous planifié après relance.",
+        mode: "meeting",
+      },
+    ],
+  },
+  J4: {
+    key: "J4",
+    label: "J4 – Qualification sujet",
+    objective: "Transformer l'intérêt en besoin concret ou en prochaine fenêtre claire.",
+    script:
+      "Pour savoir si je peux vous être utile : combien de personnes sont concernées, avez-vous des recyclages SST à prévoir, et à quelle période prenez-vous ces décisions ?",
+    checklist: ["Volume apprenants", "Échéance MAC ou FI", "Budget / décision", "Contraintes site"],
+    outcomes: [
+      {
+        key: "besoin-urgent",
+        label: "Besoin urgent",
+        result: "Échange",
+        actionType: "Besoin urgent identifié",
+        nextStage: "J10",
+        delayDays: 1,
+        status: "Chaud",
+        note: "Besoin prioritaire. Proposer RDV ou cadrage rapide.",
+        mode: "exchange",
+      },
+      {
+        key: "besoin-futur",
+        label: "Besoin futur",
+        result: "Échange",
+        actionType: "Besoin futur identifié",
+        nextStage: "J6",
+        delayDays: 7,
+        status: "Tiède",
+        note: "Fenêtre future. Relance avec contenu réglementaire et proposition de planning.",
+        mode: "exchange",
+      },
+      {
+        key: "deja-couvert",
+        label: "Déjà couvert",
+        result: "Pas dispo",
+        actionType: "Déjà couvert",
+        nextStage: "J21",
+        delayDays: 30,
+        status: "En attente",
+        note: "Prestataire déjà en place. Revenir sur une fenêtre trimestrielle.",
+        mode: "callback",
+      },
+      {
+        key: "rdv",
+        label: "RDV diagnostic",
+        result: "RDV",
+        actionType: "RDV obtenu",
+        nextStage: "J10",
+        delayDays: 0,
+        status: "Chaud",
+        note: "Rendez-vous obtenu suite à qualification.",
+        mode: "meeting",
+      },
+    ],
+  },
+  J6: {
+    key: "J6",
+    label: "J6 – Rappel réglementaire",
+    objective: "Rendre le sujet concret avec un rappel d'obligation et une question simple.",
+    script:
+      "Je vous renvoie un mémo très court sur les obligations SST. La vraie question est surtout : où en êtes-vous sur vos recyclages et vos nouveaux entrants ?",
+    checklist: ["Envoyer mémo", "Poser une question fermée", "Proposer deux créneaux"],
+    outcomes: [
+      {
+        key: "memo-envoye",
+        label: "Mémo envoyé",
+        result: "Échange",
+        actionType: "Mémo réglementaire envoyé",
+        nextStage: "J10",
+        delayDays: 4,
+        status: "Tiède",
+        note: "Contenu envoyé. Relancer sur une demande de rendez-vous.",
+        mode: "exchange",
+      },
+      {
+        key: "nrp",
+        label: "NRP après mémo",
+        result: "NRP",
+        actionType: "NRP",
+        nextStage: "J10",
+        delayDays: 4,
+        status: "Tiède",
+        note: "Pas de réponse après contenu. Relance demande RDV.",
+      },
+      {
+        key: "hors-cible",
+        label: "Hors cible",
+        result: "Pas dispo",
+        actionType: "Hors cible",
+        nextStage: "J21",
+        delayDays: 30,
+        status: "Perdu",
+        note: "Besoin non pertinent à court terme.",
+        mode: "callback",
+      },
+    ],
+  },
+  J10: {
+    key: "J10",
+    label: "J10 – Demande RDV",
+    objective: "Obtenir un créneau court pour cadrer besoin, dates et devis.",
+    script:
+      "Je passe sur votre secteur prochainement. Est-ce qu'on bloque 20 à 30 minutes pour faire le point sur vos besoins SST et voir si je peux vous proposer quelque chose d'utile ?",
+    checklist: ["Proposer deux créneaux", "Confirmer décideur", "Préparer éléments devis"],
+    outcomes: [
+      {
+        key: "rdv",
+        label: "RDV accepté",
+        result: "RDV",
+        actionType: "RDV obtenu",
+        nextStage: "J15",
+        delayDays: 0,
+        status: "Chaud",
+        note: "Rendez-vous accepté. Préparer diagnostic et offre.",
+        mode: "meeting",
+      },
+      {
+        key: "hesitation",
+        label: "Hésitation / à confirmer",
+        result: "Échange",
+        actionType: "RDV à confirmer",
+        nextStage: "J15",
+        delayDays: 5,
+        status: "Chaud",
+        note: "Intérêt présent mais créneau non confirmé. Relancer avec proposition précise.",
+        mode: "exchange",
+      },
+      {
+        key: "refus",
+        label: "Refus poli",
+        result: "Pas dispo",
+        actionType: "Refus poli",
+        nextStage: "J21",
+        delayDays: 30,
+        status: "En attente",
+        note: "Refus sans fermeture définitive. Revenir plus tard avec angle opportunité.",
+        mode: "callback",
+      },
+    ],
+  },
+  J15: {
+    key: "J15",
+    label: "J15 – Transformation devis",
+    objective: "Convertir l'échange en devis ou en décision datée.",
+    script:
+      "Pour avancer concrètement, je peux vous envoyer une proposition cadrée avec volume, dates possibles et tarif. Quels éléments doivent absolument apparaître pour que ce soit utile ?",
+    checklist: ["Valider volume", "Valider dates", "Identifier validation interne", "Envoyer devis"],
+    outcomes: [
+      {
+        key: "devis",
+        label: "Devis à envoyer",
+        result: "Échange",
+        actionType: "Devis à envoyer",
+        nextStage: "J21",
+        delayDays: 6,
+        status: "Chaud",
+        note: "Devis attendu. Relance décision à programmer.",
+        mode: "exchange",
+      },
+      {
+        key: "gagne",
+        label: "Accord obtenu",
+        result: "RDV",
+        actionType: "Accord obtenu",
+        nextStage: "J21",
+        delayDays: 0,
+        status: "Converti",
+        note: "Opportunité convertie. Passer en suivi client.",
+        mode: "meeting",
+      },
+      {
+        key: "silence",
+        label: "Silence décision",
+        result: "NRP",
+        actionType: "Silence après proposition",
+        nextStage: "J21",
+        delayDays: 6,
+        status: "En attente",
+        note: "Décision en attente. Dernier contact avant archivage.",
+      },
+    ],
+  },
+  J21: {
+    key: "J21",
+    label: "J21 – Dernier contact",
+    objective: "Clore proprement ou obtenir une fenêtre de reprise.",
+    script:
+      "Je tente un dernier message avant de vous laisser tranquille : soit ce n'est pas le bon moment, soit le sujet n'est plus prioritaire. Souhaitez-vous que je vous recontacte plus tard ?",
+    checklist: ["Rester léger", "Demander fenêtre de reprise", "Archiver proprement"],
+    outcomes: [
+      {
+        key: "reprise",
+        label: "Reprise plus tard",
+        result: "Pas dispo",
+        actionType: "Reprise ultérieure",
+        nextStage: "J1",
+        delayDays: 90,
+        status: "En attente",
+        note: "Relance trimestrielle programmée.",
+        mode: "callback",
+      },
+      {
+        key: "relance-chaude",
+        label: "Réponse tardive positive",
+        result: "Échange",
+        actionType: "Réponse tardive positive",
+        nextStage: "J10",
+        delayDays: 1,
+        status: "Chaud",
+        note: "Réactivation positive. Repartir sur une demande RDV.",
+        mode: "exchange",
+      },
+      {
+        key: "archiver",
+        label: "Archiver",
+        result: "Pas dispo",
+        actionType: "Archivage commercial",
+        nextStage: "J21",
+        delayDays: 90,
+        status: "En attente",
+        note: "Aucune ouverture. Archivage avec relance longue.",
+      },
+    ],
+  },
+};
+
 export const stageScripts: Record<CycleStage, { label: string; text: string; objective: string }> =
-  {
-    J1: {
-      label: "J1 – Premier contact",
-      objective: "Obtenir l'attention du bon interlocuteur.",
-      text: "Objectif : obtenir l'attention du bon interlocuteur. Action : email court sur les obligations SST, annonce d'un appel. Script appel : 'Bonjour, je m'appelle Julie Baijot, je suis formatrice SST basée à Annonay. J'ai envoyé un email à [contact] — je voulais vérifier qu'il était bien arrivé et voir si vous êtes la bonne personne pour en parler.'",
-    },
-    J2: {
-      label: "J2 – Relance 1",
-      objective: "Relancer avec bienveillance, proposer un RDV.",
-      text: "Objectif : relancer avec bienveillance, proposer un RDV. Script : 'Je me permets de recontacter suite à mon email. Je travaille avec des entreprises industrielles de la région sur la formation SST — est-ce que c'est un sujet d'actualité pour vous en ce moment ?'",
-    },
-    J4: {
-      label: "J4 – Qualification sujet",
-      objective: "Vérifier s'il y a un vrai sujet.",
-      text: "Objectif : vérifier s'il y a un vrai sujet. Script : 'Je reprends contact — avez-vous eu le temps de regarder mon email ? Je propose souvent un échange de 20 minutes pour voir si je peux vous être utile, sans engagement.'",
-    },
-    J6: {
-      label: "J6 – Rappel réglementaire",
-      objective: "Envoyer un récapitulatif des obligations légales + CTA.",
-      text: "Objectif : email récapitulatif des obligations légales + CTA. Action : envoyer email de rappel réglementaire avec call-to-action 'Où en êtes-vous sur votre plan SST ?'",
-    },
-    J10: {
-      label: "J10 – Demande RDV",
-      objective: "Obtenir un vrai RDV.",
-      text: "Objectif : obtenir un vrai RDV. Script : 'Je reviens vers vous car je passe dans votre secteur la semaine prochaine — est-ce qu'un créneau de 30 minutes serait possible pour qu'on fasse le point ensemble ?'",
-    },
-    J15: {
-      label: "J15 – Transformation devis",
-      objective: "Transformer en devis.",
-      text: "Objectif : transformer en devis. Script : 'Derniers créneaux disponibles ce trimestre — je voulais vous proposer de bloquer une date avant que mon planning soit complet.'",
-    },
-    J21: {
-      label: "J21 – Dernier contact",
-      objective: "Dernier contact humoristique avant archivage.",
-      text: "Objectif : dernier contact humoristique avant archivage. Action : email décalé du type 'Soit la planète s'est arrêtée de tourner, soit ce n'est vraiment pas le bon moment…' puis archiver dans 'En attente', relance trimestrielle.",
-    },
-  };
+  Object.fromEntries(
+    stages.map((stage) => [
+      stage,
+      {
+        label: playbookNodes[stage].label,
+        objective: playbookNodes[stage].objective,
+        text: playbookNodes[stage].script,
+      },
+    ]),
+  ) as Record<CycleStage, { label: string; text: string; objective: string }>;
 
 export function categoryClass(category: Category | null | undefined) {
   if (category === "A – Pilier") return "bg-category-a text-category-a-foreground";
@@ -253,6 +579,14 @@ export function nextDateForStage(stage: CycleStage) {
     J21: 30,
   };
   return addDaysIso(delays[stage] || 2);
+}
+
+export function nodeForStage(stage: CycleStage | null | undefined) {
+  return playbookNodes[stage || "J1"] || playbookNodes.J1;
+}
+
+export function dateForOutcome(outcome: PlaybookOutcome) {
+  return addDaysIso(outcome.delayDays);
 }
 
 export function sessionReason(prospect: ProspectWithRelations) {
