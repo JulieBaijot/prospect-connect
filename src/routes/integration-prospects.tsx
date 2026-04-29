@@ -732,7 +732,9 @@ function ContactEditors({
               <select
                 className={fieldClass}
                 value={ct.category}
-                onChange={(e) => updateContact(company, idx, { category: e.target.value as Category })}
+                onChange={(e) =>
+                  updateContact(company, idx, { category: e.target.value as Category })
+                }
               >
                 {categories.map((x) => (
                   <option key={x}>{x}</option>
