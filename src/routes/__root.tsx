@@ -23,12 +23,12 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PRM SST — Prospection" },
-      { name: "description", content: "Prospect relationship manager pour sessions d'appels SST." },
-      { property: "og:title", content: "PRM SST — Prospection" },
+      { title: "PRM Santé-Sécurité — Prospection" },
+      { name: "description", content: "Prospect relationship manager pour formations et conseil santé-sécurité." },
+      { property: "og:title", content: "PRM Santé-Sécurité — Prospection" },
       {
         property: "og:description",
-        content: "Cockpit de prospection pour formatrice SST freelance.",
+        content: "Cockpit de prospection pour formation et conseil en santé-sécurité au travail.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

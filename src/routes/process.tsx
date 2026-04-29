@@ -6,8 +6,8 @@ import { playbookNodes, stages } from "@/lib/prm";
 export const Route = createFileRoute("/process")({
   head: () => ({
     meta: [
-      { title: "Process commercial — PRM SST" },
-      { name: "description", content: "Playbook de prospection SST par nœuds et transitions." },
+      { title: "Process commercial — PRM Santé-Sécurité" },
+      { name: "description", content: "Playbook de prospection santé-sécurité par nœuds et transitions." },
     ],
   }),
   component: ProcessRoute,

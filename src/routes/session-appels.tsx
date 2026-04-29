@@ -31,8 +31,8 @@ import {
 export const Route = createFileRoute("/session-appels")({
   head: () => ({
     meta: [
-      { title: "Session d'appels — PRM SST" },
-      { name: "description", content: "Cockpit desktop pour appeler les prospects SST." },
+      { title: "Session d'appels — PRM Santé-Sécurité" },
+      { name: "description", content: "Cockpit desktop pour appeler les prospects santé-sécurité." },
     ],
   }),
   component: SessionRoute,

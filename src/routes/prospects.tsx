@@ -40,7 +40,7 @@ import { enrichCompany } from "@/server/prospect-search.functions";
 export const Route = createFileRoute("/prospects")({
   head: () => ({
     meta: [
-      { title: "Base prospects — PRM SST" },
+      { title: "Base prospects — PRM Santé-Sécurité" },
       { name: "description", content: "Liste filtrable des prospects et panneau d'édition." },
     ],
   }),
@@ -56,7 +56,7 @@ const emptyProspect = {
   city: "",
   headcount_range: "20-49" as HeadcountRange,
   category: "C – Porte d'entrée" as Category,
-  offer_target: "SST FI" as OfferTarget,
+  offer_target: "Formation SST" as OfferTarget,
   estimated_value: 0,
   current_stage: "J1" as CycleStage,
   status: "Tiède" as ProspectStatus,
@@ -162,7 +162,7 @@ function ProspectsPage() {
       next_action_date: prospect.next_action_date || "",
       city: prospect.city || "",
       headcount_range: prospect.headcount_range || "20-49",
-      offer_target: prospect.offer_target || "SST FI",
+      offer_target: prospect.offer_target || "Formation SST",
       main_phone: prospect.main_phone || "",
       website: prospect.website || "",
       address: prospect.address || "",

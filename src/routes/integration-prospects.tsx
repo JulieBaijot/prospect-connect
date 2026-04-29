@@ -26,7 +26,7 @@ import { enrichCompany, findEmail, searchCompaniesBatch } from "@/server/prospec
 export const Route = createFileRoute("/integration-prospects")({
   head: () => ({
     meta: [
-      { title: "Intégration prospects — PRM SST" },
+      { title: "Intégration prospects — PRM Santé-Sécurité" },
       {
         name: "description",
         content: "Wizard de recherche, enrichissement, contacts et qualification.",
@@ -319,7 +319,7 @@ function IntegrationPage() {
       email: contact?.email || "",
       linkedin: contact?.linkedin || "",
       maturity: "Pas joint",
-      offer: company.offer || "SST FI",
+      offer: company.offer || "Formation SST",
       category: company.category || "C – Porte d'entrée",
       value: company.value || 0,
       comments: "",
@@ -358,7 +358,7 @@ function IntegrationPage() {
           city: company.city,
           headcount_range: (company.headcount || "20-49") as HeadcountRange,
           category: first?.category || company.category || "C – Porte d'entrée",
-          offer_target: first?.offer || company.offer || "SST FI",
+          offer_target: first?.offer || company.offer || "Formation SST",
           estimated_value: first?.value || company.value || 0,
           current_stage: "J1",
           status: "Tiède",
@@ -764,10 +764,10 @@ function Step3({
           <h3 className="font-medium">{c.name}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {c.sector?.includes("Médico")
-              ? "Cibles prioritaires : Directeur, Responsable formation, Infirmier(e) coordinateur(trice)"
+              ? "Cibles prioritaires : Direction, Responsable formation, Infirmier(e) coordinateur(trice), Référent prévention"
               : c.sector?.includes("Transport")
-                ? "Cibles prioritaires : Responsable QSE, DRH, Gérant"
-                : "Cibles prioritaires : Responsable HSE, Responsable RH, Dirigeant"}
+                ? "Cibles prioritaires : Responsable QSE/HSE, DRH, Gérant, Référent sécurité"
+                : "Cibles prioritaires : Responsable HSE/QSE, Responsable RH, Dirigeant, CSE"}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
@@ -785,7 +785,7 @@ function Step3({
                 )
               }
             >
-              Google : responsable RH/Sécurité
+              Google : RH/HSE/Prévention
             </Button>
             <Button
               variant="neutral"

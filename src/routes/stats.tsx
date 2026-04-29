@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/stats")({
   head: () => ({
     meta: [
-      { title: "Stats — PRM SST" },
+      { title: "Stats — PRM Santé-Sécurité" },
       { name: "description", content: "Indicateurs de prospection et pipeline." },
     ],
   }),
