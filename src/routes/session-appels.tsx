@@ -320,30 +320,45 @@ function SessionPage() {
                 ) : null}
               </div>
               <div className="mt-5 rounded-r-md border-l-[3px] border-script-border bg-script p-4">
-                <p className={labelClass}>{stageScripts[current.current_stage].label}</p>
-                <p className="mt-2 text-sm leading-6">{stageScripts[current.current_stage].text}</p>
+                <p className={labelClass}>{activeNode?.label}</p>
+                <p className="mt-2 text-sm leading-6">{activeNode?.script}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {activeNode?.checklist.map((item) => (
+                    <span key={item} className="rounded-full bg-background px-3 py-1 text-xs text-muted-foreground">
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </Card>
           <Card className="p-4">
-            <p className={labelClass}>Actions rapides</p>
+            <p className={labelClass}>Issues du nœud</p>
             <div className="mt-3 grid gap-2">
-              <Button variant="danger" onClick={handleNrp}>
-                1 · NRP
-              </Button>
-              <Button variant="warning" onClick={() => setMode("callback")}>
-                2 · Pas dispo
-              </Button>
-              <Button variant="info" onClick={() => setMode("exchange")}>
-                3 · Échange
-              </Button>
-              <Button variant="success" onClick={() => setMode("meeting")}>
-                4 · RDV obtenu
-              </Button>
+              {activeNode?.outcomes.map((outcome, outcomeIndex) => (
+                <Button
+                  key={outcome.key}
+                  variant={outcome.result === "RDV" ? "success" : outcome.result === "Échange" ? "info" : outcome.result === "NRP" ? "danger" : "warning"}
+                  onClick={() => selectOutcome(outcome)}
+                  disabled={busy}
+                  className="justify-start text-left"
+                >
+                  {outcomeIndex + 1} · {outcome.label}
+                </Button>
+              ))}
               <Button variant="neutral" onClick={nextCard} disabled={busy}>
                 5 · Passer sans log
               </Button>
             </div>
+            {selectedOutcome ? (
+              <div className="mt-3 rounded-lg bg-muted p-3 text-sm">
+                <p className={labelClass}>Recommandation</p>
+                <p className="mt-1">{selectedOutcome.note}</p>
+                <p className="mt-1 text-muted-foreground">
+                  Suite : {selectedOutcome.nextStage} · {selectedOutcome.delayDays === 0 ? "immédiat" : `J+${selectedOutcome.delayDays}`}
+                </p>
+              </div>
+            ) : null}
             {message ? <p className="mt-3 rounded-lg bg-script p-3 text-sm">{message}</p> : null}
             {mode === "callback" ? (
               <Panel>
@@ -365,16 +380,7 @@ function SessionPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
-                <label className={labelClass}>Prochaine étape</label>
-                <select
-                  className={fieldClass}
-                  value={nextStage}
-                  onChange={(e) => setNextStage(e.target.value as CycleStage)}
-                >
-                  {stages.map((stage) => (
-                    <option key={stage}>{stage}</option>
-                  ))}
-                </select>
+                <Info label="Prochaine étape" value={selectedOutcome?.nextStage || "—"} />
                 <label className={labelClass}>Prochaine action</label>
                 <input
                   className={fieldClass}
