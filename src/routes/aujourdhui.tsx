@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { CalendarClock, PhoneCall, Search, UserRoundCheck } from "lucide-react";
+import { ArrowRight, CalendarClock, PhoneCall, Search, UserRoundCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
@@ -7,13 +7,13 @@ import { Card, CategoryBadge, PageTitle, StatusBadge, labelClass } from "@/compo
 import {
   bestPhone,
   contactName,
-  dataQualityIssues,
   formatDate,
   formatEuro,
   isDueTodayOrLate,
   loadLogs,
   loadProspects,
-  prioritizeSession,
+  prioritizeCallSession,
+  prioritizeQualificationSession,
   shortDateTime,
   todayIsoDate,
   type ProspectionLog,
@@ -56,15 +56,11 @@ function TodayPage() {
     const meetings = logs
       .filter((log) => log.meeting_date?.slice(0, 10) === today)
       .sort((a, b) => (a.meeting_date || "").localeCompare(b.meeting_date || ""));
-    const callCycle = prioritizeSession(active)
-      .filter((p) => bestPhone(p))
-      .slice(0, 20);
-    const qualificationCycle = active
-      .filter((p) => dataQualityIssues(p).length > 0)
-      .sort((a, b) => dataQualityIssues(b).length - dataQualityIssues(a).length)
-      .slice(0, 20);
+    const callCycle = prioritizeCallSession(active, 20);
+    const callReminders = callCycle.filter((p) => isDueTodayOrLate(p.next_action_date)).length;
+    const qualificationCycle = prioritizeQualificationSession(active, 20);
 
-    return { reminders, meetings, callCycle, qualificationCycle };
+    return { reminders, meetings, callCycle, callReminders, qualificationCycle };
   }, [logs, prospects, today]);
 
   return (
@@ -112,12 +108,20 @@ function TodayPage() {
           empty="Aucun rappel prévu ou en retard."
         />
         <MeetingSection logs={dashboard.meetings} />
-        <ActionSection
-          title="Cycle d'appel — 20"
-          items={dashboard.callCycle}
-          empty="Aucun prospect appelable."
+        <SessionStartSection
+          title="Session d'appels"
+          count={dashboard.callCycle.length}
+          subtitle={`${dashboard.callReminders} rappel(s) intégré(s) en priorité · ${Math.max(0, dashboard.callCycle.length - dashboard.callReminders)} autre(s) appel(s)`}
+          to="/session-appels"
+          icon={<PhoneCall className="h-4 w-4" />}
         />
-        <QualificationSection items={dashboard.qualificationCycle} />
+        <SessionStartSection
+          title="Session de qualification"
+          count={dashboard.qualificationCycle.length}
+          subtitle="20 fiches maximum à enrichir, triées par priorité et données manquantes."
+          to="/qualification"
+          icon={<Search className="h-4 w-4" />}
+        />
       </div>
     </>
   );
@@ -158,29 +162,37 @@ function ActionSection({
   );
 }
 
-function QualificationSection({ items }: { items: ProspectWithRelations[] }) {
+function SessionStartSection({
+  title,
+  count,
+  subtitle,
+  to,
+  icon,
+}: {
+  title: string;
+  count: number;
+  subtitle: string;
+  to: "/session-appels" | "/qualification";
+  icon: ReactNode;
+}) {
   return (
     <Card className="p-4">
-      <h3 className="text-[16px] font-medium">Qualification / recherche — 20</h3>
-      <div className="mt-3 grid gap-2">
-        {items.length ? (
-          items.map((p) => (
-            <div key={p.id} className="rounded-lg border border-border bg-card p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-medium">{p.company_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {p.city || "Ville à compléter"} · {dataQualityIssues(p).join(" · ")}
-                  </p>
-                </div>
-                <CategoryBadge category={p.category} />
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-muted-foreground">Aucune fiche à qualifier.</p>
-        )}
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <p className={labelClass}>{title}</p>
       </div>
+      <p className="mt-2 text-[28px] font-medium">{count}/20</p>
+      <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+      <div className="mt-4 h-2 rounded-full bg-secondary">
+        <div className="h-2 rounded-full bg-primary" style={{ width: `${(count / 20) * 100}%` }} />
+      </div>
+      <Link
+        to={to}
+        className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+      >
+        Commencer la session
+        <ArrowRight className="h-4 w-4" />
+      </Link>
     </Card>
   );
 }

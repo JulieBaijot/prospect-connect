@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SessionAppelsRouteImport } from './routes/session-appels'
+import { Route as QualificationRouteImport } from './routes/qualification'
 import { Route as ProspectsRouteImport } from './routes/prospects'
 import { Route as ProcessRouteImport } from './routes/process'
 import { Route as JournalRouteImport } from './routes/journal'
@@ -26,6 +27,11 @@ const StatsRoute = StatsRouteImport.update({
 const SessionAppelsRoute = SessionAppelsRouteImport.update({
   id: '/session-appels',
   path: '/session-appels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QualificationRoute = QualificationRouteImport.update({
+  id: '/qualification',
+  path: '/qualification',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProspectsRoute = ProspectsRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/journal': typeof JournalRoute
   '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
+  '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/journal': typeof JournalRoute
   '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
+  '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/journal': typeof JournalRoute
   '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
+  '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/process'
     | '/prospects'
+    | '/qualification'
     | '/session-appels'
     | '/stats'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/process'
     | '/prospects'
+    | '/qualification'
     | '/session-appels'
     | '/stats'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/process'
     | '/prospects'
+    | '/qualification'
     | '/session-appels'
     | '/stats'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   JournalRoute: typeof JournalRoute
   ProcessRoute: typeof ProcessRoute
   ProspectsRoute: typeof ProspectsRoute
+  QualificationRoute: typeof QualificationRoute
   SessionAppelsRoute: typeof SessionAppelsRoute
   StatsRoute: typeof StatsRoute
 }
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/session-appels'
       fullPath: '/session-appels'
       preLoaderRoute: typeof SessionAppelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qualification': {
+      id: '/qualification'
+      path: '/qualification'
+      fullPath: '/qualification'
+      preLoaderRoute: typeof QualificationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prospects': {
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   JournalRoute: JournalRoute,
   ProcessRoute: ProcessRoute,
   ProspectsRoute: ProspectsRoute,
+  QualificationRoute: QualificationRoute,
   SessionAppelsRoute: SessionAppelsRoute,
   StatsRoute: StatsRoute,
 }
