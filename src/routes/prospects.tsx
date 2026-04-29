@@ -591,3 +591,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+function MiniKpi({ label, value }: { label: string; value: string | number }) {
+  return (
+    <Card className="p-3">
+      <p className={labelClass}>{label}</p>
+      <p className="mt-1 text-[20px] font-medium">{value}</p>
+    </Card>
+  );
+}
