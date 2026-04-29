@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink, Plus, Save, Wand2 } from "lucide-react";
+import { ExternalLink, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import {
@@ -17,6 +17,7 @@ import {
   contactName,
   bestPhone,
   dataQualityIssues,
+  deleteProspect,
   formatDate,
   formatEuro,
   isDueTodayOrLate,
@@ -102,6 +103,7 @@ function ProspectsPage() {
   const [placesStatus, setPlacesStatus] = useState("");
   const [batchStatus, setBatchStatus] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
+  const [deleteStatus, setDeleteStatus] = useState("");
 
   useEffect(() => {
     void refresh();
@@ -246,6 +248,20 @@ function ProspectsPage() {
     );
     await refresh();
     setPlacesStatus("Prospect sauvegardé.");
+    setDeleteStatus("");
+  }
+
+  async function removeSelected() {
+    if (!selected) return;
+    const confirmed = window.confirm(
+      `Supprimer définitivement ${selected.company_name} et son historique ?`,
+    );
+    if (!confirmed) return;
+    await deleteProspect(selected.id);
+    setProspects((current) => current.filter((prospect) => prospect.id !== selected.id));
+    addNew();
+    setPlacesStatus("");
+    setDeleteStatus("Prospect supprimé.");
   }
 
   function openPappers() {
