@@ -21,7 +21,7 @@ import {
   type OfferTarget,
   type SearchSource,
 } from "@/lib/prm";
-import { enrichCompany, searchCompaniesBatch } from "@/server/prospect-search.functions";
+import { enrichCompany, findEmail, searchCompaniesBatch } from "@/server/prospect-search.functions";
 
 export const Route = createFileRoute("/integration-prospects")({
   head: () => ({
@@ -107,6 +107,7 @@ type Step1Props = {
 };
 
 type UpdateContact = (company: Company, idx: number, patch: Partial<ContactDraft>) => void;
+type FindContactEmail = (company: Company, idx: number) => void;
 
 const defaultDepartments = ["07", "26", "38", "42", "69", "01", "73", "74"];
 const sectors = [
@@ -133,6 +134,7 @@ function IntegrationPage() {
   const navigate = useNavigate();
   const runBatchSearch = useServerFn(searchCompaniesBatch);
   const runEnrichment = useServerFn(enrichCompany);
+  const runEmailFinder = useServerFn(findEmail);
   const [step, setStep] = useState(1);
   const [source, setSource] = useState<SearchSource>(
     () => (localStorage.getItem("prm-search-source") as SearchSource) || "annuaire",
@@ -275,6 +277,19 @@ function IntegrationPage() {
       qualification: "Qualifié",
     });
   }
+  async function findContactEmail(company: Company, idx: number) {
+    const contact = company.contacts[idx];
+    const response = await runEmailFinder({
+      data: {
+        domain: company.website,
+        company: company.name,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+      },
+    });
+    if (response.status === "found") updateContact(company, idx, { email: response.email });
+    if (response.status === "missing_key") updateContact(company, idx, { comments: "Hunter.io non configuré : recherche manuelle à faire." });
+  }
 
   async function saveAll(continueAfter = false) {
     for (const company of companies) {
@@ -357,12 +372,13 @@ function IntegrationPage() {
           )}
           {step === 2 && <Step2 companies={companies} updateCompany={updateCompany} enrichAll={enrichAll} />}
           {step === 3 && (
-            <Step3 companies={companies} addContact={addContact} updateContact={updateContact} />
+            <Step3 companies={companies} addContact={addContact} updateContact={updateContact} findContactEmail={findContactEmail} />
           )}
           {step === 4 && (
             <Step4
               companies={companies}
               updateContact={updateContact}
+              findContactEmail={findContactEmail}
               updateCompany={updateCompany}
               saveAll={saveAll}
             />
