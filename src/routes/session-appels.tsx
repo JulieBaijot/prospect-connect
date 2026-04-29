@@ -15,18 +15,16 @@ import {
   buildCalendarUrl,
   contactName,
   dataQualityIssues,
+  dateForOutcome,
   formatDate,
   formatEuro,
   loadProspects,
-  nextDateForStage,
-  nextStage as getNextStage,
+  nodeForStage,
   prioritizeSession,
   sessionReason,
   shortDateTime,
-  stageScripts,
-  stages,
   updateProspect,
-  type CycleStage,
+  type PlaybookOutcome,
   type ProspectWithRelations,
 } from "@/lib/prm";
 
@@ -59,17 +57,18 @@ function SessionPage() {
   const [summary, setSummary] = useState({ nrp: 0, rdv: 0, exchanges: 0, done: 0 });
   const [callbackDate, setCallbackDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [nextStage, setNextStage] = useState<CycleStage>("J2");
   const [meetingDate, setMeetingDate] = useState("");
   const [duration, setDuration] = useState(30);
   const [videoLink, setVideoLink] = useState("");
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
+  const [selectedOutcome, setSelectedOutcome] = useState<PlaybookOutcome | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
   const current = session[index];
   const contact =
     current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
+  const activeNode = current ? nodeForStage(current.current_stage) : null;
   const progress = session.length ? Math.round((summary.done / session.length) * 100) : 0;
 
   useEffect(() => {
@@ -78,10 +77,10 @@ function SessionPage() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) return;
-      if (event.key === "1") void handleNrp();
-      if (event.key === "2") setMode("callback");
-      if (event.key === "3") setMode("exchange");
-      if (event.key === "4") setMode("meeting");
+      if (["1", "2", "3", "4"].includes(event.key)) {
+        const outcome = activeNode?.outcomes[Number(event.key) - 1];
+        if (outcome) selectOutcome(outcome);
+      }
       if (event.key === "5") nextCard();
     };
     window.addEventListener("keydown", onKey);
@@ -110,6 +109,7 @@ function SessionPage() {
     setVideoLink("");
     setMessage("");
     setActiveContactId(null);
+    setSelectedOutcome(null);
     setIndex((prev) => prev + 1);
   }
 
@@ -118,100 +118,77 @@ function SessionPage() {
     nextCard();
   }
 
-  async function handleNrp() {
-    if (!current || busy) return;
+  function selectOutcome(outcome: PlaybookOutcome) {
+    setSelectedOutcome(outcome);
+    setMessage("");
+    setNotes(outcome.note);
+    if (outcome.mode === "meeting") {
+      setMode("meeting");
+      return;
+    }
+    const recommendedDate = dateForOutcome(outcome);
+    setCallbackDate(recommendedDate);
+    if (outcome.mode === "callback" || outcome.mode === "exchange") {
+      setMode(outcome.mode);
+      return;
+    }
+    void saveOutcome(outcome, { nextActionDate: recommendedDate });
+  }
+
+  async function saveOutcome(
+    outcome = selectedOutcome,
+    options: { nextActionDate?: string; meetingAt?: string; customNotes?: string } = {},
+  ) {
+    if (!current || !outcome || busy) return;
     setBusy(true);
     setMessage("");
-    const nextDate = nextDateForStage(current.current_stage);
-    const next = getNextStage(current.current_stage);
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
-      action_type: "NRP",
+      action_type: outcome.actionType,
       canal: "téléphone",
       stage: current.current_stage,
-      objective: stageScripts[current.current_stage].objective,
-      result: "NRP",
-      notes: `Pas de réponse. Relance proposée : ${next}`,
-      next_action_date: nextDate,
+      objective: activeNode?.objective,
+      result: outcome.result,
+      notes: options.customNotes || notes || outcome.note,
+      next_action_date: options.nextActionDate,
+      meeting_date: options.meetingAt,
+      meeting_duration_minutes: options.meetingAt ? duration : undefined,
+      video_link: options.meetingAt ? videoLink : undefined,
     });
-    await updateProspect(current.id, { current_stage: next, next_action_date: nextDate });
-    setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
+    await updateProspect(current.id, {
+      current_stage: outcome.nextStage,
+      status: outcome.status || current.status,
+      next_action_date: (options.meetingAt || options.nextActionDate || dateForOutcome(outcome)).slice(0, 10),
+    });
+    if (outcome.result === "NRP") setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
+    if (outcome.result === "Échange") setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
+    if (outcome.result === "RDV") setSummary((prev) => ({ ...prev, rdv: prev.rdv + 1 }));
     setBusy(false);
     markDoneAndNext();
   }
 
   async function saveCallback() {
-    if (!current || !callbackDate || busy) return;
-    setBusy(true);
-    await addLog({
-      prospect_id: current.id,
-      contact_id: contact?.id,
-      action_type: "Pas disponible",
-      canal: "téléphone",
-      stage: current.current_stage,
-      objective: stageScripts[current.current_stage].objective,
-      result: "Pas dispo",
-      notes: "Rappel demandé",
-      next_action_date: callbackDate,
-    });
-    await updateProspect(current.id, { next_action_date: callbackDate });
-    setBusy(false);
-    markDoneAndNext();
+    if (!callbackDate) return;
+    await saveOutcome(selectedOutcome, { nextActionDate: callbackDate, customNotes: notes });
   }
 
   async function saveExchange() {
-    if (!current || busy) return;
     if (!callbackDate) {
       setMessage("Choisissez une prochaine date d'action pour garder la relance sous contrôle.");
       return;
     }
-    setBusy(true);
-    await addLog({
-      prospect_id: current.id,
-      contact_id: contact?.id,
-      action_type: "Échange",
-      canal: "téléphone",
-      stage: current.current_stage,
-      objective: stageScripts[current.current_stage].objective,
-      result: "Échange",
-      notes,
-      next_action_date: callbackDate,
-    });
-    await updateProspect(current.id, { current_stage: nextStage, next_action_date: callbackDate });
-    setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
-    setBusy(false);
-    markDoneAndNext();
+    await saveOutcome(selectedOutcome, { nextActionDate: callbackDate, customNotes: notes });
   }
 
   async function saveMeeting() {
-    if (!current || !meetingDate || busy) return;
-    setBusy(true);
-    await addLog({
-      prospect_id: current.id,
-      contact_id: contact?.id,
-      action_type: "RDV obtenu",
-      canal: "téléphone",
-      stage: current.current_stage,
-      objective: stageScripts[current.current_stage].objective,
-      result: "RDV",
-      notes: "Rendez-vous obtenu",
-      meeting_date: meetingDate,
-      meeting_duration_minutes: duration,
-      video_link: videoLink,
-    });
-    await updateProspect(current.id, {
-      status: "Chaud",
-      next_action_date: meetingDate.slice(0, 10),
-    });
+    if (!current || !meetingDate || busy || !selectedOutcome) return;
     window.open(
       buildCalendarUrl({ prospect: current, contact, date: meetingDate, duration, videoLink }),
       "_blank",
       "noopener,noreferrer",
     );
-    setSummary((prev) => ({ ...prev, rdv: prev.rdv + 1 }));
-    setBusy(false);
-    markDoneAndNext();
+    await saveOutcome(selectedOutcome, { meetingAt: meetingDate, customNotes: notes || selectedOutcome.note });
   }
 
   return (
