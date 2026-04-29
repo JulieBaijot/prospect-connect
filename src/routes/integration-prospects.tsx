@@ -414,14 +414,15 @@ function Stepper({ step, setStep }: { step: number; setStep: (s: number) => void
   );
 }
 function Step1(props: Step1Props) {
+  const keywordCount = props.filters.keywords.split("\n").map((x) => x.trim()).filter(Boolean).length;
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        <input
-          className={fieldClass}
-          placeholder="Mot-clé / Nom entreprise"
-          value={props.filters.q}
-          onChange={(e) => props.setFilters({ ...props.filters, q: e.target.value })}
+      <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
+        <textarea
+          className={`${fieldClass} min-h-28 py-2`}
+          placeholder={"Mots-clés batch, un par ligne\nindustrie annonay\nlogistique valence"}
+          value={props.filters.keywords}
+          onChange={(e) => props.setFilters({ ...props.filters, keywords: e.target.value, q: e.target.value.split("\n")[0] || "" })}
         />
         <select
           className={fieldClass}
@@ -439,7 +440,7 @@ function Step1(props: Step1Props) {
           onChange={(e) => props.setFilters({ ...props.filters, legal: e.target.value })}
         />
       </div>
-      <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+      <div className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
         <div>
           <label className={labelClass}>Source de recherche</label>
           <select
@@ -457,9 +458,21 @@ function Step1(props: Step1Props) {
             {quotas[props.source as SearchSource]}
           </p>
         </div>
-        <Button onClick={() => props.searchCompanies()}>
+        <div>
+          <label className={labelClass}>Résultats par mot-clé</label>
+          <input
+            className={`${fieldClass} mt-1 w-full`}
+            type="number"
+            min={1}
+            max={25}
+            value={props.filters.limit}
+            onChange={(e) => props.setFilters({ ...props.filters, limit: Number(e.target.value) })}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">{keywordCount} mot(s)-clé(s)</p>
+        </div>
+        <Button onClick={() => props.searchCompanies()} disabled={props.loading}>
           <Search className="mr-2 h-4 w-4" />
-          Rechercher
+          {props.loading ? "Batch en cours…" : "Lancer le batch"}
         </Button>
       </div>
       {props.quotaBanner ? (
