@@ -897,7 +897,16 @@ function ContactEditors({
 }) {
   return (
     <div className="mt-3 grid gap-3">
-      {company.contacts.map((ct: ContactDraft, idx: number) => (
+      {company.contacts.map((ct: ContactDraft, idx: number) => {
+        const autoCategory = suggestProspectCategory({
+          headcount_range: company.headcount,
+          offer_target: ct.offer,
+          sector: company.sector,
+          estimated_value: ct.value,
+          comments: [company.comments, ct.comments].filter(Boolean).join(" "),
+          contactKnown: Boolean(ct.firstName || ct.lastName || ct.role || ct.email || ct.phone),
+        });
+        return (
         <div key={idx} className="rounded-lg border border-border bg-background p-3">
           <div className="grid gap-2 md:grid-cols-3">
             <input
@@ -984,6 +993,16 @@ function ContactEditors({
                 value={ct.value}
                 onChange={(e) => updateContact(company, idx, { value: Number(e.target.value) })}
               />
+              {autoCategory && autoCategory.category !== ct.category ? (
+                <button
+                  type="button"
+                  onClick={() => updateContact(company, idx, { category: autoCategory.category })}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs text-secondary-foreground hover:bg-accent md:col-span-4"
+                >
+                  <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium uppercase text-primary-foreground">Auto</span>
+                  {autoCategory.category} · {autoCategory.reasons.join(", ")}
+                </button>
+              ) : null}
             </div>
           ) : null}
           <div className="mt-2 flex gap-2">
@@ -1004,7 +1023,8 @@ function ContactEditors({
             </Button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
