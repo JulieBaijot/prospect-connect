@@ -75,6 +75,30 @@ type ContactDraft = {
   comments: string;
 };
 
+type Filters = {
+  q: string;
+  departments: string[];
+  headcounts: string[];
+  sector: string;
+  legal: string;
+};
+
+type Step1Props = {
+  filters: Filters;
+  setFilters: (filters: Filters) => void;
+  source: SearchSource;
+  setSource: (source: SearchSource) => void;
+  loading: boolean;
+  results: Company[];
+  quotaBanner: boolean;
+  searchCompanies: (source?: SearchSource) => void;
+  switchSource: (source: SearchSource) => void;
+  selectCompany: (company: Company) => void;
+  selected: Company[];
+};
+
+type UpdateContact = (company: Company, idx: number, patch: Partial<ContactDraft>) => void;
+
 const defaultDepartments = ["07", "26", "38", "42", "69", "01", "73", "74"];
 const sectors = [
   "Industrie manufacturière",
