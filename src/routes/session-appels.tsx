@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import {
@@ -20,7 +21,7 @@ import {
   formatEuro,
   loadProspects,
   nodeForStage,
-  prioritizeSession,
+  prioritizeCallSession,
   sessionReason,
   shortDateTime,
   updateProspect,
@@ -69,7 +70,7 @@ function SessionPage() {
   const contact =
     current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
   const activeNode = current ? nodeForStage(current.current_stage) : null;
-  const progress = session.length ? Math.round((summary.done / session.length) * 100) : 0;
+  const progress = session.length ? Math.round(((Math.min(index + 1, session.length)) / session.length) * 100) : 0;
 
   useEffect(() => {
     refresh();
@@ -81,7 +82,8 @@ function SessionPage() {
         const outcome = activeNode?.outcomes[Number(event.key) - 1];
         if (outcome) selectOutcome(outcome);
       }
-      if (event.key === "5") nextCard();
+      if (event.key === "5" || event.key === "ArrowRight") nextCard();
+      if (event.key === "ArrowLeft") previousCard();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -94,7 +96,7 @@ function SessionPage() {
   }
 
   function startSession() {
-    const picked = prioritizeSession(prospects);
+    const picked = prioritizeCallSession(prospects);
     setSession(picked);
     setIndex(0);
     setSummary({ nrp: 0, rdv: 0, exchanges: 0, done: 0 });
@@ -111,6 +113,18 @@ function SessionPage() {
     setActiveContactId(null);
     setSelectedOutcome(null);
     setIndex((prev) => prev + 1);
+  }
+
+  function previousCard() {
+    setMode("idle");
+    setNotes("");
+    setCallbackDate("");
+    setMeetingDate("");
+    setVideoLink("");
+    setMessage("");
+    setActiveContactId(null);
+    setSelectedOutcome(null);
+    setIndex((prev) => Math.max(0, prev - 1));
   }
 
   function markDoneAndNext() {
@@ -233,6 +247,19 @@ function SessionPage() {
             <p className="mt-2 text-sm">
               {Math.min(index + 1, session.length)}/{session.length} cartes
             </p>
+            <div className="mt-4 h-16">
+              {session.slice(index, Math.min(index + 4, session.length)).map((item, stackIndex) => (
+                <div
+                  key={item.id}
+                  className="h-3 rounded-md border border-border bg-card shadow-sm"
+                  style={{
+                    width: `${100 - stackIndex * 8}%`,
+                    transform: `translateY(-${stackIndex * 2}px)`,
+                    opacity: 1 - stackIndex * 0.18,
+                  }}
+                />
+              ))}
+            </div>
             <div className="mt-5 space-y-3">
               <Kpi label="NRP" value={summary.nrp} />
               <Kpi label="Échanges" value={summary.exchanges} />
@@ -253,6 +280,12 @@ function SessionPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Button variant="neutral" onClick={previousCard} disabled={index === 0 || busy} className="px-3">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="neutral" onClick={nextCard} disabled={busy} className="px-3">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                   <CategoryBadge category={current.category} />
                   <StatusBadge status={current.status} />
                 </div>
