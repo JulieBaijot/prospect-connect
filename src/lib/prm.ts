@@ -507,6 +507,56 @@ export function categoryClass(category: Category | null | undefined) {
   return "bg-category-exceptional text-category-exceptional-foreground";
 }
 
+export function suggestProspectCategory(input: {
+  headcount_range?: HeadcountRange | string | null;
+  offer_target?: OfferTarget | string | null;
+  sector?: string | null;
+  estimated_value?: number | string | null;
+  comments?: string | null;
+  contactKnown?: boolean;
+  history?: Array<{ notes?: string | null; action_type?: string | null; objective?: string | null }>;
+}): { category: Category; reasons: string[] } | null {
+  const text = [input.sector, input.offer_target, input.comments, ...(input.history || []).flatMap((log) => [log.notes, log.action_type, log.objective])]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const value = Number(input.estimated_value || 0);
+  const headcountMin = input.headcount_range?.toString().startsWith("1000")
+    ? 1000
+    : Number(input.headcount_range?.toString().split("-")[0] || 0);
+  const offer = (input.offer_target || "").toString().toLowerCase();
+  const sector = (input.sector || "").toLowerCase();
+  const hasWords = (words: string[]) => words.some((word) => text.includes(word));
+  if (hasWords(["client existant", "déjà client", "contrat signé", "contrat signe", "signé", "signe", "accord obtenu", "commande"])) {
+    return { category: "Récurrent", reasons: ["relation client ou contrat identifié"] };
+  }
+  const aReasons = [
+    headcountMin >= 200 ? "effectif ≥ 200" : "",
+    ["cse", "cssct", "ssct", "qvct", "rps", "émotions", "emotions"].some((item) => offer.includes(item)) ? "offre stratégique" : "",
+    ["médico", "medico", "collectivité", "collectivite", "hôpital", "hopital", "santé", "sante"].some((item) => sector.includes(item)) ? "secteur prioritaire" : "",
+    value >= 4000 ? "valeur ≥ 4 000 €" : "",
+    hasWords(["réseau commun", "reseau commun", "relation existante", "connaissance", "recommandé", "recommande", "mise en relation"]) ? "réseau ou relation existante" : "",
+  ].filter(Boolean);
+  if (aReasons.length >= 2) return { category: "A – Pilier", reasons: aReasons };
+  if (
+    headcountMin >= 20 &&
+    headcountMin <= 199 &&
+    ["industrie", "logistique", "agro", "btp"].some((item) => sector.includes(item)) &&
+    ["sst fi", "sst mac", "formation sst"].some((item) => offer.includes(item))
+  ) {
+    return { category: "B – Socle prévention", reasons: ["20–199 salariés", "secteur terrain", "offre SST"] };
+  }
+  if (
+    headcountMin < 20 ||
+    ["tertiaire", "services", "artisanal", "artisan"].some((item) => sector.includes(item)) ||
+    offer === "excel" ||
+    input.contactKnown === false
+  ) {
+    return { category: "C – Porte d'entrée", reasons: ["cible simple ou contact à qualifier"] };
+  }
+  return null;
+}
+
 export function statusBandClass(status: ProspectStatus | null | undefined) {
   if (status === "Chaud") return "bg-status-hot";
   if (status === "Tiède") return "bg-status-warm";
