@@ -160,10 +160,15 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
   J1: {
     key: "J1",
     label: "J1 – Premier contact",
-    objective: "Identifier le bon interlocuteur et ouvrir une discussion santé-sécurité au travail.",
+    objective:
+      "Identifier le bon interlocuteur et ouvrir une discussion santé-sécurité au travail.",
     script:
       "Bonjour, je m'appelle Julie Baijot. J'accompagne les entreprises sur leurs sujets formation, prévention et santé-sécurité au travail : SST, DUERP, QVCT, CSE ou besoins sur mesure. Qui pilote ces sujets chez vous ?",
-    checklist: ["Identifier RH / direction / HSE / CSE", "Valider l'effectif approximatif", "Repérer la porte d'entrée : formation, DUERP, QVCT, SSCT ou conseil"],
+    checklist: [
+      "Identifier RH / direction / HSE / CSE",
+      "Valider l'effectif approximatif",
+      "Repérer la porte d'entrée : formation, DUERP, QVCT, SSCT ou conseil",
+    ],
     outcomes: [
       {
         key: "nrp",
@@ -216,7 +221,11 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
     objective: "Rebondir sans pression et comprendre qui pilote les sujets prévention.",
     script:
       "Je me permets de vous recontacter suite à mon précédent message. Est-ce que les sujets formation sécurité, DUERP, QVCT ou CSE sont gérés en interne, par la direction/RH, ou avec un intervenant externe ?",
-    checklist: ["Identifier le décideur", "Repérer prestataire ou organisation actuelle", "Noter fenêtre budgétaire ou réglementaire"],
+    checklist: [
+      "Identifier le décideur",
+      "Repérer prestataire ou organisation actuelle",
+      "Noter fenêtre budgétaire ou réglementaire",
+    ],
     outcomes: [
       {
         key: "nrp",
@@ -269,7 +278,12 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
     objective: "Identifier la porte d'entrée commerciale et le niveau d'urgence.",
     script:
       "Pour voir comment je peux vous être utile : votre priorité actuelle concerne plutôt la formation SST, le DUERP, la QVCT/RPS, le CSE-SSCT, ou un besoin spécifique de conseil ou formation sur mesure ?",
-    checklist: ["Sujet prioritaire", "Échéance réglementaire ou opérationnelle", "Décideur et budget", "Contraintes site / équipes"],
+    checklist: [
+      "Sujet prioritaire",
+      "Échéance réglementaire ou opérationnelle",
+      "Décideur et budget",
+      "Contraintes site / équipes",
+    ],
     outcomes: [
       {
         key: "besoin-urgent",
@@ -320,10 +334,15 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
   J6: {
     key: "J6",
     label: "J6 – Apport de valeur",
-    objective: "Rendre le sujet concret avec un angle utile : obligation, échéance ou irritant terrain.",
+    objective:
+      "Rendre le sujet concret avec un angle utile : obligation, échéance ou irritant terrain.",
     script:
       "Je peux vous envoyer un mémo très court selon votre sujet : DUERP, renouvellement SST, rôle du CSE en SSCT, QVCT/RPS ou plan d'actions prévention. Quel angle serait le plus utile pour vous ?",
-    checklist: ["Choisir l'angle utile", "Envoyer mémo ou ressource", "Proposer deux créneaux de cadrage"],
+    checklist: [
+      "Choisir l'angle utile",
+      "Envoyer mémo ou ressource",
+      "Proposer deux créneaux de cadrage",
+    ],
     outcomes: [
       {
         key: "contenu-envoye",
@@ -365,7 +384,11 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
     objective: "Obtenir un créneau court pour diagnostiquer besoin, contexte et suite possible.",
     script:
       "Est-ce qu'on bloque 20 à 30 minutes pour faire le point sur vos besoins santé-sécurité au travail et voir si une formation, un accompagnement ou un conseil sur mesure serait pertinent ?",
-    checklist: ["Proposer deux créneaux", "Confirmer les personnes à inviter", "Préparer questions diagnostic"],
+    checklist: [
+      "Proposer deux créneaux",
+      "Confirmer les personnes à inviter",
+      "Préparer questions diagnostic",
+    ],
     outcomes: [
       {
         key: "rdv",
@@ -408,7 +431,12 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
     objective: "Transformer l'échange en devis, plan d'action ou prochaine décision datée.",
     script:
       "Pour avancer concrètement, je peux vous envoyer une proposition cadrée : formation, accompagnement DUERP/QVCT/SSCT, diagnostic ou format sur mesure. Quels éléments doivent absolument apparaître pour que ce soit utile ?",
-    checklist: ["Valider périmètre", "Valider livrables", "Identifier validation interne", "Envoyer proposition"],
+    checklist: [
+      "Valider périmètre",
+      "Valider livrables",
+      "Identifier validation interne",
+      "Envoyer proposition",
+    ],
     outcomes: [
       {
         key: "devis",
@@ -501,10 +529,109 @@ export const stageScripts: Record<CycleStage, { label: string; text: string; obj
 
 export function categoryClass(category: Category | null | undefined) {
   if (category === "A – Pilier") return "bg-category-a text-category-a-foreground";
-  if (category === "B – Socle prévention" || category === "B – Socle SST") return "bg-category-b text-category-b-foreground";
+  if (category === "B – Socle prévention" || category === "B – Socle SST")
+    return "bg-category-b text-category-b-foreground";
   if (category === "C – Porte d'entrée") return "bg-category-c text-category-c-foreground";
   if (category === "Récurrent") return "bg-category-recurring text-category-recurring-foreground";
   return "bg-category-exceptional text-category-exceptional-foreground";
+}
+
+export function suggestProspectCategory(input: {
+  headcount_range?: HeadcountRange | string | null;
+  offer_target?: OfferTarget | string | null;
+  sector?: string | null;
+  estimated_value?: number | string | null;
+  comments?: string | null;
+  contactKnown?: boolean;
+  history?: Array<{
+    notes?: string | null;
+    action_type?: string | null;
+    objective?: string | null;
+  }>;
+}): { category: Category; reasons: string[] } | null {
+  const text = [
+    input.sector,
+    input.offer_target,
+    input.comments,
+    ...(input.history || []).flatMap((log) => [log.notes, log.action_type, log.objective]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const value = Number(input.estimated_value || 0);
+  const headcountMin = input.headcount_range?.toString().startsWith("1000")
+    ? 1000
+    : Number(input.headcount_range?.toString().split("-")[0] || 0);
+  const offer = (input.offer_target || "").toString().toLowerCase();
+  const sector = (input.sector || "").toLowerCase();
+  const hasWords = (words: string[]) => words.some((word) => text.includes(word));
+  if (
+    hasWords([
+      "client existant",
+      "déjà client",
+      "contrat signé",
+      "contrat signe",
+      "signé",
+      "signe",
+      "accord obtenu",
+      "commande",
+    ])
+  ) {
+    return { category: "Récurrent", reasons: ["relation client ou contrat identifié"] };
+  }
+  const aReasons = [
+    headcountMin >= 200 ? "effectif ≥ 200" : "",
+    ["cse", "cssct", "ssct", "qvct", "rps", "émotions", "emotions"].some((item) =>
+      offer.includes(item),
+    )
+      ? "offre stratégique"
+      : "",
+    [
+      "médico",
+      "medico",
+      "collectivité",
+      "collectivite",
+      "hôpital",
+      "hopital",
+      "santé",
+      "sante",
+    ].some((item) => sector.includes(item))
+      ? "secteur prioritaire"
+      : "",
+    value >= 4000 ? "valeur ≥ 4 000 €" : "",
+    hasWords([
+      "réseau commun",
+      "reseau commun",
+      "relation existante",
+      "connaissance",
+      "recommandé",
+      "recommande",
+      "mise en relation",
+    ])
+      ? "réseau ou relation existante"
+      : "",
+  ].filter(Boolean);
+  if (aReasons.length >= 2) return { category: "A – Pilier", reasons: aReasons };
+  if (
+    headcountMin >= 20 &&
+    headcountMin <= 199 &&
+    ["industrie", "logistique", "agro", "btp"].some((item) => sector.includes(item)) &&
+    ["sst fi", "sst mac", "formation sst"].some((item) => offer.includes(item))
+  ) {
+    return {
+      category: "B – Socle prévention",
+      reasons: ["20–199 salariés", "secteur terrain", "offre SST"],
+    };
+  }
+  if (
+    headcountMin < 20 ||
+    ["tertiaire", "services", "artisanal", "artisan"].some((item) => sector.includes(item)) ||
+    offer === "excel" ||
+    input.contactKnown === false
+  ) {
+    return { category: "C – Porte d'entrée", reasons: ["cible simple ou contact à qualifier"] };
+  }
+  return null;
 }
 
 export function statusBandClass(status: ProspectStatus | null | undefined) {
