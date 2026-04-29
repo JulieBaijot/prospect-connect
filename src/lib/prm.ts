@@ -808,7 +808,10 @@ export async function updateProspect(id: string, payload: Partial<Prospect>) {
 }
 
 export async function deleteProspect(id: string) {
-  const { error: logsError } = await supabase.from("prospection_logs").delete().eq("prospect_id", id);
+  const { error: logsError } = await supabase
+    .from("prospection_logs")
+    .delete()
+    .eq("prospect_id", id);
   if (logsError) throw logsError;
   const { error: contactsError } = await supabase.from("contacts").delete().eq("prospect_id", id);
   if (contactsError) throw contactsError;
