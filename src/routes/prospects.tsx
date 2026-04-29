@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink, Plus, Save, Wand2 } from "lucide-react";
+import { ExternalLink, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import {
@@ -17,6 +17,7 @@ import {
   contactName,
   bestPhone,
   dataQualityIssues,
+  deleteProspect,
   formatDate,
   formatEuro,
   isDueTodayOrLate,
@@ -102,6 +103,7 @@ function ProspectsPage() {
   const [placesStatus, setPlacesStatus] = useState("");
   const [batchStatus, setBatchStatus] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
+  const [deleteStatus, setDeleteStatus] = useState("");
 
   useEffect(() => {
     void refresh();
@@ -246,6 +248,20 @@ function ProspectsPage() {
     );
     await refresh();
     setPlacesStatus("Prospect sauvegardé.");
+    setDeleteStatus("");
+  }
+
+  async function removeSelected() {
+    if (!selected) return;
+    const confirmed = window.confirm(
+      `Supprimer définitivement ${selected.company_name} et son historique ?`,
+    );
+    if (!confirmed) return;
+    await deleteProspect(selected.id);
+    setProspects((current) => current.filter((prospect) => prospect.id !== selected.id));
+    addNew();
+    setPlacesStatus("");
+    setDeleteStatus("Prospect supprimé.");
   }
 
   function openPappers() {
@@ -372,6 +388,9 @@ function ProspectsPage() {
         }
       />
       {batchStatus ? <p className="mb-4 rounded-lg bg-script p-3 text-sm">{batchStatus}</p> : null}
+      {deleteStatus ? (
+        <p className="mb-4 rounded-lg bg-script p-3 text-sm">{deleteStatus}</p>
+      ) : null}
       <div className="mb-4 grid gap-3 md:grid-cols-5">
         <MiniKpi label="Total" value={counters.total} />
         <MiniKpi label="À appeler" value={counters.due} />
@@ -494,7 +513,13 @@ function ProspectsPage() {
                       ) : null}
                     </td>
                     <td className="px-4 py-3">
-                      <Button variant="neutral" onClick={() => openProspect(p)}>
+                      <Button
+                        variant="neutral"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openProspect(p);
+                        }}
+                      >
                         Modifier
                       </Button>
                     </td>
@@ -522,14 +547,22 @@ function ProspectsPage() {
           </div>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <h3 className="text-[16px] font-medium">
               {selected ? "Modifier le prospect" : "Ajouter un prospect"}
             </h3>
-            <Button onClick={save}>
-              <Save className="mr-2 h-4 w-4" />
-              Sauvegarder
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {selected ? (
+                <Button variant="danger" onClick={removeSelected}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Supprimer
+                </Button>
+              ) : null}
+              <Button onClick={save}>
+                <Save className="mr-2 h-4 w-4" />
+                Sauvegarder
+              </Button>
+            </div>
           </div>
           <div className="mt-4 grid gap-3">
             <Field label="Entreprise">
