@@ -5,7 +5,15 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   return <div className={`rounded-xl border border-border bg-card ${className}`}>{children}</div>;
 }
 
-export function PageTitle({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
+export function PageTitle({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
       <div>
@@ -18,14 +26,33 @@ export function PageTitle({ title, subtitle, action }: { title: string; subtitle
 }
 
 export function CategoryBadge({ category }: { category: Category | null | undefined }) {
-  return <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-normal ${categoryClass(category)}`}>{category || "Non classé"}</span>;
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-normal ${categoryClass(category)}`}
+    >
+      {category || "Non classé"}
+    </span>
+  );
 }
 
 export function StatusBadge({ status }: { status: ProspectStatus | null | undefined }) {
-  return <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-normal ${statusBandClass(status)} text-status-foreground`}>{status || "—"}</span>;
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-normal ${statusBandClass(status)} text-status-foreground`}
+    >
+      {status || "—"}
+    </span>
+  );
 }
 
-export function Button({ children, variant = "primary", className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "neutral" | "danger" | "warning" | "info" | "success" }) {
+export function Button({
+  children,
+  variant = "primary",
+  className = "",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "neutral" | "danger" | "warning" | "info" | "success";
+}) {
   const variants = {
     primary: "bg-primary text-primary-foreground hover:bg-primary/90",
     neutral: "bg-secondary text-secondary-foreground hover:bg-accent",
@@ -35,11 +62,15 @@ export function Button({ children, variant = "primary", className = "", ...props
     success: "bg-action-meeting text-action-meeting-foreground hover:bg-action-meeting/80",
   } as const;
   return (
-    <button {...props} className={`inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}>
+    <button
+      {...props}
+      className={`inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
+    >
       {children}
     </button>
   );
 }
 
-export const fieldClass = "min-h-10 rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring";
+export const fieldClass =
+  "min-h-10 rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring";
 export const labelClass = "text-xs font-medium uppercase tracking-normal text-muted-foreground";
