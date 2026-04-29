@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Check, ChevronLeft, ChevronRight, ExternalLink, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
@@ -20,6 +21,7 @@ import {
   type OfferTarget,
   type SearchSource,
 } from "@/lib/prm";
+import { enrichCompany, findEmail, searchCompaniesBatch } from "@/server/prospect-search.functions";
 
 export const Route = createFileRoute("/integration-prospects")({
   head: () => ({
@@ -48,6 +50,9 @@ type Company = {
   address?: string;
   sector?: string;
   source?: SearchSource;
+  keyword?: string;
+  externalId?: string;
+  score?: number;
   representatives?: { name: string; role: string }[];
   enrichment: "En attente" | "En cours" | "Trouvé" | "Non trouvé";
   qualification: "À qualifier" | "Qualifié";
@@ -77,10 +82,12 @@ type ContactDraft = {
 
 type Filters = {
   q: string;
+  keywords: string;
   departments: string[];
   headcounts: string[];
   sector: string;
   legal: string;
+  limit: number;
 };
 
 type Step1Props = {
@@ -91,6 +98,8 @@ type Step1Props = {
   loading: boolean;
   results: Company[];
   quotaBanner: boolean;
+  batchRuns: Array<{ keyword: string; source: SearchSource; status: "terminé" | "erreur"; count: number; error?: string }>;
+  missingKeys: string[];
   searchCompanies: (source?: SearchSource) => void;
   switchSource: (source: SearchSource) => void;
   selectCompany: (company: Company) => void;
@@ -98,6 +107,7 @@ type Step1Props = {
 };
 
 type UpdateContact = (company: Company, idx: number, patch: Partial<ContactDraft>) => void;
+type FindContactEmail = (company: Company, idx: number) => void;
 
 const defaultDepartments = ["07", "26", "38", "42", "69", "01", "73", "74"];
 const sectors = [
@@ -122,21 +132,30 @@ const quotas = {
 
 function IntegrationPage() {
   const navigate = useNavigate();
+  const runBatchSearch = useServerFn(searchCompaniesBatch);
+  const runEnrichment = useServerFn(enrichCompany);
+  const runEmailFinder = useServerFn(findEmail);
   const [step, setStep] = useState(1);
   const [source, setSource] = useState<SearchSource>(
     () => (localStorage.getItem("prm-search-source") as SearchSource) || "annuaire",
   );
   const [filters, setFilters] = useState({
     q: "",
+    keywords: "industrie annonay\nlogistique valence\nehpad ardèche",
     departments: defaultDepartments,
     headcounts: ["20-49", "50-99"],
     sector: "Industrie manufacturière",
     legal: "",
+    limit: 8,
   });
   const [results, setResults] = useState<Company[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [quotaBanner, setQuotaBanner] = useState(false);
+  const [batchRuns, setBatchRuns] = useState<
+    Array<{ keyword: string; source: SearchSource; status: "terminé" | "erreur"; count: number; error?: string }>
+  >([]);
+  const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [activeCompany, setActiveCompany] = useState<string | null>(null);
 
   useEffect(() => {
@@ -155,33 +174,44 @@ function IntegrationPage() {
   async function searchCompanies(nextSource = source) {
     setLoading(true);
     setQuotaBanner(false);
+    setBatchRuns([]);
+    setMissingKeys([]);
     try {
-      if (nextSource === "pappers" && !import.meta.env.VITE_PAPPERS_API_KEY)
-        throw new Error("quota");
-      const sample = [
-        "Atelier Rhône Sécurité",
-        "Mécaniques Annonéennes",
-        "Logistique Nord Ardèche",
-        "Clinique des Cèdres",
-        "Groupe Alpin Services",
-      ].map((name, index) => ({
-        id: crypto.randomUUID(),
-        name: filters.q || name,
-        city: ["Annonay", "Valence", "Vienne", "Lyon", "Chambéry"][index] || "Annonay",
-        headcount: filters.headcounts[index % filters.headcounts.length] || "20-49",
-        naf: ["25.62B", "49.41A", "10.89Z", "86.10Z", "43.21A"][index],
-        siren: String(800000000 + index * 13791),
-        address: `${index + 3} rue des Entreprises`,
-        sector: filters.sector,
-        source: nextSource,
-        representatives:
-          nextSource === "pappers" ? [{ name: "Camille Martin", role: "Dirigeant" }] : [],
-        enrichment: "En attente" as const,
-        qualification: "À qualifier" as const,
-        contacts: [],
-      }));
-      setResults(sample);
-    } catch {
+      const keywords = filters.keywords
+        .split("\n")
+        .map((keyword) => keyword.trim())
+        .filter(Boolean);
+      const response = await runBatchSearch({
+        data: {
+          source: nextSource,
+          filters: { ...filters, keywords, limit: Number(filters.limit) || 8 },
+        },
+      });
+      setBatchRuns(response.runs);
+      setMissingKeys(response.missingKeys);
+      setQuotaBanner(response.runs.some((run) => run.status === "erreur"));
+      setResults(
+        response.results.map((result) => ({
+          id: result.id,
+          name: result.name,
+          city: result.city,
+          headcount: result.headcount,
+          naf: result.naf,
+          siren: result.siren,
+          address: result.address,
+          sector: result.sector,
+          source: result.source,
+          keyword: result.keyword,
+          externalId: result.externalId,
+          score: result.score,
+          representatives: result.representatives || [],
+          enrichment: "En attente" as const,
+          qualification: "À qualifier" as const,
+          contacts: [],
+        })),
+      );
+    } catch (error) {
+      setBatchRuns([{ keyword: "Batch", source: nextSource, status: "erreur", count: 0, error: error instanceof Error ? error.message : "Erreur API" }]);
       setQuotaBanner(true);
     } finally {
       setLoading(false);
@@ -198,7 +228,6 @@ function IntegrationPage() {
   }
 
   async function enrichAll() {
-    const key = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
     setCompanies((prev) =>
       prev.map((c) => ({
         ...c,
@@ -208,20 +237,12 @@ function IntegrationPage() {
     await Promise.all(
       companies.map(async (company) => {
         if (company.enrichment !== "En attente") return;
-        if (!key) {
-          updateCompany(company.id, { enrichment: "Non trouvé" });
-          return;
-        }
         try {
-          const res = await fetch(
-            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(`${company.name} ${company.city}`)}&key=${key}`,
-          );
-          const json = await res.json();
-          const place = json.results?.[0];
+          const place = await runEnrichment({ data: { name: company.name, city: company.city } });
           updateCompany(
             company.id,
-            place
-              ? { enrichment: "Trouvé", address: place.formatted_address, placeId: place.place_id }
+            place.status === "found"
+              ? { enrichment: "Trouvé", address: place.address, phone: place.phone, website: place.website, placeId: place.placeId, hours: place.hours }
               : { enrichment: "Non trouvé" },
           );
         } catch {
@@ -256,6 +277,19 @@ function IntegrationPage() {
       qualification: "Qualifié",
     });
   }
+  async function findContactEmail(company: Company, idx: number) {
+    const contact = company.contacts[idx];
+    const response = await runEmailFinder({
+      data: {
+        domain: company.website,
+        company: company.name,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+      },
+    });
+    if (response.status === "found") updateContact(company, idx, { email: response.email });
+    if (response.status === "missing_key") updateContact(company, idx, { comments: "Hunter.io non configuré : recherche manuelle à faire." });
+  }
 
   async function saveAll(continueAfter = false) {
     for (const company of companies) {
@@ -280,6 +314,9 @@ function IntegrationPage() {
           naf_code: company.naf || "",
           source: company.source || source,
           sector: company.sector || "",
+          batch_keyword: company.keyword || "",
+          external_source_id: company.externalId || company.siren || "",
+          import_source: "api_batch",
         },
         first
           ? {
@@ -325,20 +362,23 @@ function IntegrationPage() {
               loading={loading}
               results={results}
               quotaBanner={quotaBanner}
+              batchRuns={batchRuns}
+              missingKeys={missingKeys}
               searchCompanies={searchCompanies}
               switchSource={switchSource}
               selectCompany={selectCompany}
               selected={companies}
             />
           )}
-          {step === 2 && <Step2 companies={companies} updateCompany={updateCompany} />}
+          {step === 2 && <Step2 companies={companies} updateCompany={updateCompany} enrichAll={enrichAll} />}
           {step === 3 && (
-            <Step3 companies={companies} addContact={addContact} updateContact={updateContact} />
+            <Step3 companies={companies} addContact={addContact} updateContact={updateContact} findContactEmail={findContactEmail} />
           )}
           {step === 4 && (
             <Step4
               companies={companies}
               updateContact={updateContact}
+              findContactEmail={findContactEmail}
               updateCompany={updateCompany}
               saveAll={saveAll}
             />
@@ -393,14 +433,15 @@ function Stepper({ step, setStep }: { step: number; setStep: (s: number) => void
   );
 }
 function Step1(props: Step1Props) {
+  const keywordCount = props.filters.keywords.split("\n").map((x) => x.trim()).filter(Boolean).length;
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        <input
-          className={fieldClass}
-          placeholder="Mot-clé / Nom entreprise"
-          value={props.filters.q}
-          onChange={(e) => props.setFilters({ ...props.filters, q: e.target.value })}
+      <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
+        <textarea
+          className={`${fieldClass} min-h-28 py-2`}
+          placeholder={"Mots-clés batch, un par ligne\nindustrie annonay\nlogistique valence"}
+          value={props.filters.keywords}
+          onChange={(e) => props.setFilters({ ...props.filters, keywords: e.target.value, q: e.target.value.split("\n")[0] || "" })}
         />
         <select
           className={fieldClass}
@@ -418,7 +459,7 @@ function Step1(props: Step1Props) {
           onChange={(e) => props.setFilters({ ...props.filters, legal: e.target.value })}
         />
       </div>
-      <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+      <div className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
         <div>
           <label className={labelClass}>Source de recherche</label>
           <select
@@ -436,14 +477,26 @@ function Step1(props: Step1Props) {
             {quotas[props.source as SearchSource]}
           </p>
         </div>
-        <Button onClick={() => props.searchCompanies()}>
+        <div>
+          <label className={labelClass}>Résultats par mot-clé</label>
+          <input
+            className={`${fieldClass} mt-1 w-full`}
+            type="number"
+            min={1}
+            max={25}
+            value={props.filters.limit}
+            onChange={(e) => props.setFilters({ ...props.filters, limit: Number(e.target.value) })}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">{keywordCount} mot(s)-clé(s)</p>
+        </div>
+        <Button onClick={() => props.searchCompanies()} disabled={props.loading}>
           <Search className="mr-2 h-4 w-4" />
-          Rechercher
+          {props.loading ? "Batch en cours…" : "Lancer le batch"}
         </Button>
       </div>
       {props.quotaBanner ? (
         <div className="rounded-lg bg-script p-3 text-sm">
-          Quota Pappers atteint — basculer vers une autre source ?{" "}
+          Certaines recherches n'ont pas abouti — basculer vers une autre source ?{" "}
           <button className="ml-3 underline" onClick={() => props.switchSource("insee")}>
             INSEE Sirene
           </button>
@@ -452,11 +505,27 @@ function Step1(props: Step1Props) {
           </button>
         </div>
       ) : null}
+      {props.missingKeys.length ? (
+        <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
+          API à configurer : {props.missingKeys.join(", ")}. Les sources gratuites ou la saisie manuelle restent utilisables.
+        </div>
+      ) : null}
+      {props.batchRuns.length ? (
+        <div className="grid gap-2 md:grid-cols-3">
+          {props.batchRuns.map((run) => (
+            <div key={`${run.keyword}-${run.source}`} className="rounded-lg border border-border bg-card p-3 text-sm">
+              <p className="font-medium">{run.keyword}</p>
+              <p className="text-muted-foreground">{sources[run.source]} · {run.count} résultat(s)</p>
+              {run.error ? <p className="text-xs text-muted-foreground">{run.error}</p> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-left text-sm">
           <thead className="bg-secondary text-xs uppercase text-muted-foreground">
             <tr>
-              {["Nom", "Ville", "Effectifs", "NAF", "SIREN", "Adresse", ""].map((h) => (
+              {["Mot-clé", "Source", "Nom", "Ville", "Effectifs", "NAF", "SIREN", "Score", ""].map((h) => (
                 <th key={h} className="px-3 py-2">
                   {h}
                 </th>
@@ -466,12 +535,14 @@ function Step1(props: Step1Props) {
           <tbody>
             {props.results.map((r: Company) => (
               <tr key={r.id} className="border-t border-border">
+                <td className="px-3 py-2">{r.keyword || "—"}</td>
+                <td className="px-3 py-2">{r.source ? sources[r.source] : "—"}</td>
                 <td className="px-3 py-2">{r.name}</td>
                 <td className="px-3 py-2">{r.city}</td>
                 <td className="px-3 py-2">{r.headcount}</td>
                 <td className="px-3 py-2">{r.naf}</td>
                 <td className="px-3 py-2">{r.siren}</td>
-                <td className="px-3 py-2">{r.address}</td>
+                <td className="px-3 py-2">{r.score || "—"}</td>
                 <td className="px-3 py-2">
                   <Button variant="neutral" onClick={() => props.selectCompany(r)}>
                     Sélectionner
@@ -491,12 +562,17 @@ function Step1(props: Step1Props) {
 function Step2({
   companies,
   updateCompany,
+  enrichAll,
 }: {
   companies: Company[];
   updateCompany: (id: string, p: Partial<Company>) => void;
+  enrichAll: () => void;
 }) {
   return (
     <div className="grid gap-3">
+      <div className="flex justify-end">
+        <Button variant="neutral" onClick={enrichAll}>Relancer l'enrichissement</Button>
+      </div>
       {companies.map((c) => (
         <Card key={c.id} className="p-4">
           <div className="flex justify-between">
@@ -544,10 +620,12 @@ function Step3({
   companies,
   addContact,
   updateContact,
+  findContactEmail,
 }: {
   companies: Company[];
   addContact: (company: Company, contact?: Partial<ContactDraft>) => void;
   updateContact: UpdateContact;
+  findContactEmail: FindContactEmail;
 }) {
   return (
     <div className="grid gap-3">
@@ -603,7 +681,7 @@ function Step3({
               Ajouter {r.name}
             </Button>
           ))}
-          <ContactEditors company={c} updateContact={updateContact} />
+          <ContactEditors company={c} updateContact={updateContact} findContactEmail={findContactEmail} />
         </Card>
       ))}
     </div>
@@ -612,11 +690,13 @@ function Step3({
 function Step4({
   companies,
   updateContact,
+  findContactEmail,
   updateCompany,
   saveAll,
 }: {
   companies: Company[];
   updateContact: UpdateContact;
+  findContactEmail: FindContactEmail;
   updateCompany: (id: string, patch: Partial<Company>) => void;
   saveAll: (continueAfter?: boolean) => void;
 }) {
@@ -630,7 +710,7 @@ function Step4({
               category={c.contacts[0]?.category || c.category || "C – Porte d'entrée"}
             />
           </div>
-          <ContactEditors company={c} updateContact={updateContact} qualification />
+          <ContactEditors company={c} updateContact={updateContact} findContactEmail={findContactEmail} qualification />
           <textarea
             className={`${fieldClass} mt-3 min-h-20 w-full py-2`}
             placeholder="Commentaires entreprise"
@@ -651,10 +731,12 @@ function Step4({
 function ContactEditors({
   company,
   updateContact,
+  findContactEmail,
   qualification = false,
 }: {
   company: Company;
   updateContact: UpdateContact;
+  findContactEmail: FindContactEmail;
   qualification?: boolean;
 }) {
   return (
@@ -760,6 +842,9 @@ function ContactEditors({
             >
               <ExternalLink className="mr-2 h-4 w-4" />
               Rechercher sur LinkedIn
+            </Button>
+            <Button variant="neutral" onClick={() => findContactEmail(company, idx)}>
+              Trouver email Hunter.io
             </Button>
           </div>
         </div>

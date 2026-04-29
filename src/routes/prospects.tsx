@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ExternalLink, Plus, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
@@ -31,6 +32,7 @@ import {
   type ProspectStatus,
   type ProspectWithRelations,
 } from "@/lib/prm";
+import { enrichCompany } from "@/server/prospect-search.functions";
 
 export const Route = createFileRoute("/prospects")({
   head: () => ({
@@ -75,6 +77,7 @@ const emptyContact = {
 };
 
 function ProspectsPage() {
+  const runEnrichment = useServerFn(enrichCompany);
   const [prospects, setProspects] = useState<ProspectWithRelations[]>([]);
   const [selected, setSelected] = useState<ProspectWithRelations | null>(null);
   const [form, setForm] = useState(emptyProspect);
@@ -178,27 +181,24 @@ function ProspectsPage() {
   }
 
   async function enrichPlaces() {
-    const key = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-    if (!key) {
-      setPlacesStatus("Clé Google Places absente : remplissez les champs manuellement.");
-      return;
-    }
     setPlacesStatus("Recherche Google Places en cours…");
     try {
-      const query = encodeURIComponent(`${form.company_name} ${form.city}`);
-      const res = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${key}`,
-      );
-      const json = await res.json();
-      const place = json.results?.[0];
-      if (!place) {
+      const place = await runEnrichment({ data: { name: form.company_name, city: form.city } });
+      if (place.status === "missing_key") {
+        setPlacesStatus("Clé Google Places absente : remplissez les champs manuellement.");
+        return;
+      }
+      if (place.status !== "found") {
         setPlacesStatus("Aucun établissement trouvé.");
         return;
       }
       setForm((prev) => ({
         ...prev,
-        address: place.formatted_address || prev.address,
-        google_place_id: place.place_id || prev.google_place_id,
+        address: place.address || prev.address,
+        main_phone: place.phone || prev.main_phone,
+        website: place.website || prev.website,
+        reception_hours: place.hours || prev.reception_hours,
+        google_place_id: place.placeId || prev.google_place_id,
       }));
       setPlacesStatus("Établissement trouvé : vérifiez les champs puis sauvegardez.");
     } catch {

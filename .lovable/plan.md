@@ -1,369 +1,186 @@
-Je vais construire l’application PRM comme un outil de travail principalement conçu pour ordinateur, avec une interface dense, confortable au clavier et adaptée aux sessions d’appels sur grand écran. Elle restera utilisable sur mobile si besoin, mais le design ne sera pas mobile-first.
+Voici le plan de modification pour répondre aux 3 points.
 
-## Orientation UX révisée
+## Objectif
 
-L’usage principal sera ordinateur :
+Transformer l’intégration prospects en vrai outil de recherche par batch, brancher les API utiles côté backend, puis importer votre fichier Excel dans la base afin que la session d’appels, la base prospects, le journal et les stats affichent vos données réelles.
 
-- pages en largeur confortable avec tableaux, panneaux latéraux et cartes détaillées
-- navigation par onglets horizontaux
-- session d’appels pensée comme un cockpit desktop avec fiche centrale et informations secondaires autour
-- raccourcis clavier prioritaires pour aller vite pendant les appels
-- mobile en responsive : les colonnes se replient, les panneaux deviennent empilés, les boutons restent tactiles
+## 1. Intégration prospects : rendre le batch clair et utilisable
 
-## Objectif produit
+### Ce qui va changer côté interface
 
-Créer un prospect relationship manager pour une formatrice freelance en santé/sécurité au travail, centré sur les sessions d’appels : préparer les prospects, appeler un par un, consigner rapidement les résultats, planifier les relances et suivre les performances.
+La page **Intégration prospects** deviendra un outil de batch avec :
 
-Toute l’interface sera en français.
+- Un champ **Mots-clés batch** où vous pourrez saisir plusieurs recherches, une par ligne.
+  - Exemple :
+    ```text
+    industrie annonay
+    logistique valence
+    ehpad ardèche
+    responsable qhse drôme
+    ```
+- Des filtres communs au batch : départements, tranche d’effectif, secteur, statut juridique, nombre max de résultats par mot-clé.
+- Une prévisualisation du batch :
+  - nombre de mots-clés,
+  - source utilisée,
+  - résultats par mot-clé,
+  - doublons détectés par SIREN ou nom + ville.
+- Un tableau de staging plus lisible :
+  - mot-clé d’origine,
+  - source d’origine,
+  - entreprise,
+  - ville,
+  - effectif,
+  - SIREN,
+  - NAF,
+  - score / pertinence si disponible,
+  - bouton sélectionner / ignorer.
 
-## Navigation principale
+### Comportement attendu
 
-J’ajouterai une barre d’onglets horizontale :
+Au lieu d’une seule recherche, le bouton deviendra :
 
-1. Session d’appels
-2. Base prospects
-3. Intégration prospects
-4. Journal de prospection
-5. Stats
+- **Lancer le batch** : exécute chaque mot-clé avec les filtres choisis.
+- **Ajouter les résultats sélectionnés** : place les sociétés dans l’étape d’enrichissement.
+- **Relancer les erreurs** : utile si une API répond mal ou si un quota est atteint.
 
-La page d’accueil affichera ou redirigera vers `Session d’appels`.
+Le mot-clé servira donc à segmenter le batch : il ne sera pas un simple champ isolé, mais la base d’une série de recherches successives.
 
-## Base de données Supabase
+## 2. API Pappers, Sirene, Annuaire Entreprises et autres API utiles
 
-Je créerai les tables nécessaires :
+### Architecture prévue
 
-- `prospects` : entreprise, ville, effectif, catégorie, offre cible, valeur estimée, étape du cycle, statut, commentaires, données Google Places, prochaine action, etc.
-- `contacts` : prénom, nom, rôle, téléphone principal/direct, email, LinkedIn, commentaires, qualification, relié à un prospect.
-- `prospection_logs` : date, action, canal, étape, objectif, résultat, notes, prochaine action, date de RDV, lien visio.
+Je déplacerai les appels API dans des fonctions backend TanStack Start, pour éviter d’exposer les clés privées dans le navigateur.
 
-L’app étant sans auth pour l’instant, le schéma sera simple et adapté à une application mono-utilisateur. Il restera structuré pour pouvoir ajouter l’auth plus tard.
-
-## Design system
-
-J’appliquerai la palette demandée : terracotta, vert sauge, ocre et neutres.
-
-Règles visuelles :
-
-- fond général `#F7F3EE`
-- cartes blanches avec bordure fine `0.5px`, radius `12px`
-- aucune ombre, aucun dégradé
-- typographie Inter/system-ui
-- poids 400 pour le corps, 500 pour titres et labels uniquement
-- pas de 600/700
-- badges catégorie conformes aux couleurs fournies
-- boutons principaux terracotta
-- états succès/RDV en vert sauge
-- alertes douces en ocre
-- tableaux lisibles sur ordinateur avec colonnes compactes
-- responsive mobile par repli progressif
-
-## Page 1 — Session d’appels
-
-Je construirai un cockpit d’appel desktop.
-
-Disposition ordinateur :
+Les appels côté navigateur actuels seront remplacés par :
 
 ```text
-------------------------------------------------------
-Navigation
-------------------------------------------------------
-Progression session + boutons démarrer / terminer
-------------------------------------------------------
-| Historique / contexte | Fiche appel principale | Actions rapides |
-| derniers logs         | entreprise + contact   | NRP, RDV, etc.  |
-| infos utiles          | script + notes         | résumé session  |
-------------------------------------------------------
+Interface React
+  -> fonctions backend sécurisées
+    -> API Pappers / INSEE Sirene / Annuaire Entreprises / Google Places / Hunter si configuré
+  -> résultats normalisés
+  -> staging dans le wizard
 ```
 
-Sur mobile, cette disposition passera en une colonne : fiche, actions, historique.
-
-Fonctionnalités :
-
-- bouton `Démarrer une session`
-- sélection automatique de jusqu’à 20 prospects selon :
-  1. catégorie A, puis B, puis C, puis autres
-  2. date de prochaine action la plus ancienne
-  3. statut `Chaud` avant `Tiède`
-- affichage d’un prospect à la fois
-- progression `X/20`
-- carte avec :
-  - entreprise, ville, effectif, catégorie, offre, valeur estimée
-  - bandeau supérieur coloré selon statut
-  - contact, rôle, téléphone, email, LinkedIn, horaires, commentaires
-  - étape courante et script complet
-  - historique des 3 dernières actions
-- actions :
-  - `NRP`
-  - `Pas dispo`
-  - `Échange`
-  - `RDV obtenu`
-  - `Suivant`
-- raccourcis clavier :
-  - `1` = NRP
-  - `2` = Pas dispo
-  - `3` = Échange
-  - `4` = RDV obtenu
-  - `5` = Suivant
-
-Comportement :
+### Sources entreprises
 
-- `NRP` : log + horodatage + prospect suivant
-- `Pas dispo` : champ `Rappeler le`, sauvegarde date de rappel
-- `Échange` : notes + sélecteur prochaine étape, sauvegarde log
-- `RDV obtenu` : mini-formulaire date, durée, lien visio optionnel, sauvegarde log et génère un lien Google Calendar prérempli ouvrant dans un nouvel onglet
-- `Suivant` : passe sans journaliser
+Je prévois 3 connecteurs logiques :
 
-Fin de session : résumé NRP, RDV, échanges, prospects traités.
+1. **Annuaire Entreprises**
+   - Recherche d’entreprises françaises.
+   - Bonne source gratuite pour démarrer.
+   - Utilisable sans clé si l’endpoint public suffit.
 
-## Scripts de cycle intégrés
+2. **INSEE Sirene**
+   - Recherche officielle par raison sociale, SIREN/SIRET, code NAF, commune, département.
+   - Si la version utilisée nécessite un jeton, l’app affichera un message clair et utilisera l’Annuaire en fallback.
 
-J’intégrerai les scripts J1, J2, J4, J6, J10, J15 et J21 exactement comme fournis, en constantes applicatives typées.
+3. **Pappers**
+   - Recherche entreprise enrichie avec dirigeants / représentants quand disponible.
+   - Nécessite une clé API Pappers.
+   - La clé sera demandée et stockée en secret backend, pas dans le code frontend.
 
-Ils apparaîtront dans un bloc script avec bord gauche ocre.
+### Enrichissement après sélection
 
-## Page 2 — Base prospects
+Je brancherai ensuite les étapes suivantes :
 
-Je construirai une vue tableau optimisée ordinateur.
+- **Google Places** pour téléphone, adresse, site web, horaires, place ID.
+  - Cette API nécessite une clé Google Places.
+  - Vu que Google Places peut poser des contraintes CORS, l’appel passera aussi par le backend.
+- **Hunter.io** pour enrichissement email, si vous avez une clé Hunter.
+  - Sinon l’interface gardera les boutons d’aide manuelle Google / LinkedIn / site web.
 
-Colonnes :
+### Gestion des clés API
 
-- Entreprise
-- Contact
-- Ville
-- Catégorie
-- Étape
-- Statut
-- Prochaine action
-- Valeur estimée
+Les clés nécessaires seront :
 
-Filtres :
+- `PAPPERS_API_KEY` pour Pappers,
+- éventuellement `SIRENE_API_KEY` si l’API Sirene retenue exige un token,
+- `GOOGLE_PLACES_API_KEY` pour Google Places,
+- `HUNTER_API_KEY` pour Hunter.io.
 
-- statut
-- catégorie
-- offre cible
-- ville / zone
+Je ne les mettrai pas dans le frontend. Si elles ne sont pas déjà disponibles, je prévoirai une étape où Lovable vous demandera de les renseigner de manière sécurisée.
 
-Actions :
+### Si une API n’est pas encore configurée
 
-- clic sur une ligne → panneau latéral de détail/édition
-- bouton `Ajouter un prospect`
-- formulaire complet prospect + contact
-- helpers :
-  - `Rechercher sur Pappers`
-  - `Rechercher sur Google`
-  - `Rechercher sur LinkedIn`
-  - `Enrichir via Google Places`
-
-Google Places :
+L’app ne bloquera pas tout le process. Elle affichera :
 
-- utilise `VITE_GOOGLE_PLACES_API_KEY`
-- recherche `[entreprise] [ville]`
-- préremplit numéro accueil, site web, adresse, horaires, Google Place ID
-- affiche un panneau de confirmation avant sauvegarde
-
-Sur mobile, le tableau deviendra une liste de cartes compactes.
+- source indisponible,
+- raison claire : clé absente, quota atteint, erreur API,
+- action proposée : basculer vers Annuaire / INSEE, ou continuer en saisie manuelle.
 
-## Page 3 — Intégration prospects
+## 3. Import de votre fichier Excel
 
-Je construirai un wizard 4 étapes avec stepper visuel et panneau récapitulatif persistant à droite sur ordinateur.
+J’ai commencé à analyser le fichier **Stratégie_de_prospection.xlsx**. Le parseur montre surtout les onglets de stratégie, objectifs et catégories, mais l’extraction textuelle ne révèle pas encore clairement une table complète de contacts et d’historique.
 
-Disposition ordinateur :
+Une fois le plan approuvé, je traiterai le fichier directement avec un script Excel afin de lire les vrais onglets, colonnes et lignes, pas seulement l’aperçu textuel.
 
-```text
-------------------------------------------------------
-Stepper : 1 Recherche > 2 Enrichissement > 3 Contact > 4 Qualification
-------------------------------------------------------
-| Zone de travail principale                  | Résumé session |
-| formulaires, tableaux, cartes entreprises   | entreprises    |
-------------------------------------------------------
-```
+### Données à importer
 
-Sur mobile, le résumé passera sous forme de section repliable.
+Je vais détecter et importer autant que possible :
 
-### Étape 1 — Recherche entreprise
+- sociétés / prospects,
+- contacts associés,
+- téléphone,
+- email,
+- rôle,
+- ville,
+- catégorie A/B/C/récurrent/exceptionnel,
+- offre cible,
+- valeur estimée,
+- statut / niveau de maturité,
+- étape J1 à J21,
+- prochaines actions,
+- historique d’appels / emails / RDV si présent.
 
-Formulaire :
+### Correspondance vers l’app
 
-- mot-clé / nom entreprise
-- départements multi-select : 07, 26, 38, 42, 69, 01, 73, 74 préremplis
-- tranches d’effectifs
-- secteur / code NAF
-- statut juridique optionnel
-- source de recherche au-dessus du bouton de recherche, persistée dans `localStorage`
+Les données seront insérées dans les tables existantes :
 
-Sources :
+- `prospects` pour les entreprises,
+- `contacts` pour les interlocuteurs,
+- `prospection_logs` pour l’historique.
 
-- Pappers API avec `VITE_PAPPERS_API_KEY`
-- INSEE Sirene
-- Annuaire Entreprises
+Les imports éviteront les doublons autant que possible avec une logique :
 
-Indicateur de quota :
+- SIREN si présent,
+- sinon nom d’entreprise + ville,
+- puis rattachement des contacts à l’entreprise trouvée.
 
-- Pappers : `Quota : 100 req/mois gratuites`
-- INSEE Sirene : `Gratuit, sans limite`
-- Annuaire Entreprises : `Gratuit, sans limite`
+### Résultat visible après import
 
-Si Pappers renvoie une erreur quota/429 :
+Après import, vous devriez voir :
 
-- bannière `Quota Pappers atteint — basculer vers une autre source ?`
-- boutons `INSEE Sirene` et `Annuaire Entreprises`
-- changement de source et relance immédiate sans perdre les filtres
+- vos prospects dans **Base prospects**,
+- les contacts dans les fiches entreprise,
+- les actions passées dans **Journal de prospection**,
+- les prospects prioritaires dans **Session d’appels**,
+- les indicateurs actualisés dans **Stats**.
 
-Résultats :
+## 4. Ajustements de données nécessaires
 
-- tableau Nom, Ville, Effectifs, NAF, SIREN, Adresse
-- checkbox et bouton `Sélectionner`
-- liste de staging en bas
-- bouton `Passer à l’étape 2 →`
+Le modèle actuel a déjà les bonnes tables principales. Je prévois seulement d’ajouter quelques champs utiles au batch et à l’import si nécessaire :
 
-### Étape 2 — Enrichissement Google Places
-
-Pour chaque entreprise sélectionnée :
-
-- appel automatique Google Places Text Search
-- statut `En cours`, `Trouvé`, `Non trouvé`
-- si trouvé : champs éditables numéro, site web, adresse, horaires, Google Place ID
-- si non trouvé : saisie manuelle
-- bouton vers étape 3 activé quand toutes les entreprises ont un statut
-
-### Étape 3 — Recherche de contact
-
-Pour chaque entreprise :
-
-- dirigeants Pappers affichés si disponibles
-- bouton `Ajouter comme contact`
-- helpers :
-  - `Site web → Page équipe`
-  - `Google : responsable RH/Sécurité`
-  - `Hunter.io : trouver email`
-  - `Ajouter contact manuellement`
-- Hunter.io : si `VITE_HUNTER_API_KEY` est disponible, appel Domain Search ; sinon ouverture Hunter.io dans un nouvel onglet
-- contacts multiples sous forme de chips
-- conseils contextualisés par secteur
-
-### Étape 4 — LinkedIn & qualification finale
-
-Pour chaque contact :
-
-- recherche LinkedIn contact
-- recherche LinkedIn profil + rôle
-- champ LinkedIn URL
-- niveau de maturité
-- offre cible
-- valeur estimée
-- catégorie
-- commentaires
-
-Avant sauvegarde :
-
-- résumé final par entreprise
-- édition de dernière minute
-- `Ajouter au PRM` : sauvegarde, initialise J1 et `Tiède`, puis redirige vers la base prospects
-- `Sauvegarder et continuer` : sauvegarde puis relance un nouveau batch
-
-## Page 4 — Journal de prospection
-
-Table alimentée automatiquement par les logs.
-
-Colonnes :
-
-- Date
-- Entreprise
-- Contact
-- Canal
-- Étape
-- Objectif
-- Résultat
-- Notes
-- Date RDV
-
-Filtres :
-
-- semaine
-- mois
-- canal
-- catégorie
-
-Export :
-
-- bouton `Exporter CSV` pour les lignes filtrées.
-
-## Page 5 — Stats
-
-Tableau de bord avec :
-
-- total prospects
-- appels passés cette semaine
-- taux de pénétration : barrages passés / appels
-- taux de RDV
-- taux de transformation
-- CA potentiel pipeline
-
-Graphique hebdomadaire :
-
-- emails envoyés
-- appels passés
-- RDV obtenus
-
-## Intégrations API
-
-Cette première version sans auth utilisera les clés publiques demandées :
-
-- `VITE_GOOGLE_PLACES_API_KEY`
-- `VITE_PAPPERS_API_KEY`
-- `VITE_HUNTER_API_KEY`
-
-Les sources gratuites INSEE Sirene et Annuaire Entreprises seront appelées directement.
-
-L’interface prévoira :
-
-- chargement
-- aucun résultat
-- erreur API
-- clé manquante
-- quota Pappers atteint
-
-## Structure technique prévue
-
-Routes TanStack Start :
-
-- `/` ou `/session-appels`
-- `/prospects`
-- `/integration-prospects`
-- `/journal`
-- `/stats`
-
-Composants :
-
-- navigation principale
-- badges catégorie/statut
-- fiche appel
-- panneau d’action d’appel
-- tableaux filtrables
-- panneaux latéraux d’édition
-- stepper
-- résumé d’intégration
-- cartes KPI
-
-Utilitaires :
-
-- priorisation des sessions d’appel
-- génération Google Calendar
-- export CSV
-- mapping des résultats Pappers / INSEE / Annuaire / Google Places / Hunter
-- constantes scripts et options métier
-
-## Priorités de mise en œuvre
-
-1. Créer le schéma Supabase et les types applicatifs.
-2. Installer le design system global.
-3. Construire navigation + routes principales.
-4. Construire la Base prospects avec ajout/édition.
-5. Construire la Session d’appels desktop-first avec raccourcis clavier.
-6. Construire Journal et Stats.
-7. Construire le wizard d’intégration et ses appels API.
-8. Ajouter les états vides, erreurs, responsive mobile et finitions UX.
-
-## Point clé révisé
-
-L’application sera donc desktop-first, car l’usage principal est sur ordinateur. Le mobile sera supporté comme mode secondaire, avec une interface adaptée mais non prioritaire.
+- `batch_keyword` ou équivalent pour savoir de quel mot-clé vient une entreprise,
+- `external_source_id` pour tracer l’identifiant API,
+- `import_source` / `import_batch_id` pour distinguer les données venues du fichier Excel ou d’une recherche API,
+- éventuellement une table légère `api_search_runs` pour historiser les recherches batch, erreurs, quotas et résultats.
+
+Ces changements seront faits par migration, avec les règles de sécurité existantes adaptées au mode mono-utilisateur sans auth.
+
+## 5. Points techniques
+
+- Les appels aux API privées seront faits côté backend via server functions, pas directement dans React.
+- Les résultats des différentes APIs seront normalisés dans un même format interne `CompanySearchResult`.
+- Le batch sera asynchrone côté interface : chaque mot-clé pourra avoir son statut `en attente`, `en cours`, `terminé`, `erreur`.
+- Le fichier Excel sera importé via script ponctuel dans la base, puis les données seront visibles dans l’app.
+- Je conserverai le style actuel : interface française, desktop-first, cartes blanches, bordures fines, pas d’ombres ni gradients.
+
+## 6. Ce que je ferai après approbation
+
+1. Lire précisément les onglets et colonnes du fichier Excel avec un script dédié.
+2. Préparer le mapping Excel → prospects / contacts / historique.
+3. Ajouter les champs/tables nécessaires au suivi des batches si besoin.
+4. Créer les fonctions backend de recherche API et enrichissement.
+5. Remplacer le faux batch actuel par un vrai batch multi-mots-clés.
+6. Importer vos données Excel dans la base.
+7. Vérifier que les données apparaissent dans Base prospects, Session d’appels et Journal.
