@@ -142,9 +142,7 @@ function IntegrationPage() {
   const runEnrichment = useServerFn(enrichCompany);
   const runEmailFinder = useServerFn(findEmail);
   const [step, setStep] = useState(1);
-  const [source, setSource] = useState<SearchSource>(
-    () => (localStorage.getItem("prm-search-source") as SearchSource) || "annuaire",
-  );
+  const [source, setSource] = useState<SearchSource>("annuaire");
   const [filters, setFilters] = useState({
     q: "",
     keywords: "industrie annonay\nlogistique valence\nehpad ardèche",
@@ -164,6 +162,10 @@ function IntegrationPage() {
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [activeCompany, setActiveCompany] = useState<string | null>(null);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("prm-search-source") as SearchSource | null;
+    if (saved) setSource(saved);
+  }, []);
   useEffect(() => {
     localStorage.setItem("prm-search-source", source);
   }, [source]);
