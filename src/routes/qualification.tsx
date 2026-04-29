@@ -37,6 +37,8 @@ const blankForm = {
   main_phone: "",
   website: "",
   address: "",
+  reception_hours: "",
+  google_place_id: "",
   siren: "",
   sector: "",
   headcount_range: "20-49" as HeadcountRange,
@@ -88,6 +90,8 @@ function QualificationPage() {
       main_phone: current.main_phone || "",
       website: current.website || "",
       address: current.address || "",
+      reception_hours: current.reception_hours || "",
+      google_place_id: current.google_place_id || "",
       siren: current.siren || "",
       sector: current.sector || "",
       headcount_range: current.headcount_range || "20-49",
@@ -128,8 +132,12 @@ function QualificationPage() {
     setMessage("Recherche en cours…");
     try {
       const place = await runEnrichment({ data: { name: current.company_name, city: current.city || "" } });
+      if (place.status === "missing_key") {
+        setMessage("Clé Google Places manquante : l'enrichissement automatique est indisponible.");
+        return;
+      }
       if (place.status !== "found") {
-        setMessage("Aucun enrichissement automatique trouvé.");
+        setMessage("Aucun établissement trouvé via Google Places.");
         return;
       }
       setForm((prev) => ({
@@ -137,8 +145,12 @@ function QualificationPage() {
         main_phone: place.phone || prev.main_phone,
         website: place.website || prev.website,
         address: place.address || prev.address,
+        reception_hours: place.hours || prev.reception_hours,
+        google_place_id: place.placeId || prev.google_place_id,
       }));
-      setMessage("Informations trouvées : vérifiez puis sauvegardez.");
+      setMessage("Informations Google Places ajoutées : vérifiez puis sauvegardez.");
+    } catch {
+      setMessage("Google Places est indisponible ou le quota est atteint.");
     } finally {
       setBusy(false);
     }
@@ -226,6 +238,10 @@ function QualificationPage() {
               <Field label="Prochaine action" type="date" value={form.next_action_date} onChange={(value) => setForm((prev) => ({ ...prev, next_action_date: value }))} />
               <Field label="Adresse" value={form.address} onChange={(value) => setForm((prev) => ({ ...prev, address: value }))} />
             </div>
+            <label className="mt-3 grid gap-2 text-sm">
+              <span className={labelClass}>Horaires accueil</span>
+              <textarea className={`${fieldClass} min-h-20 py-2`} value={form.reception_hours} onChange={(e) => setForm((prev) => ({ ...prev, reception_hours: e.target.value }))} />
+            </label>
             <label className="mt-3 grid gap-2 text-sm">
               <span className={labelClass}>Commentaires</span>
               <textarea className={`${fieldClass} min-h-24 py-2`} value={form.comments} onChange={(e) => setForm((prev) => ({ ...prev, comments: e.target.value }))} />
