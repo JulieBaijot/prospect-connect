@@ -7,7 +7,6 @@ import { Card, CategoryBadge, PageTitle, StatusBadge, labelClass } from "@/compo
 import {
   bestPhone,
   contactName,
-  dataQualityIssues,
   formatDate,
   formatEuro,
   isDueTodayOrLate,
