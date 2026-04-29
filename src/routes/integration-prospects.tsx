@@ -912,3 +912,14 @@ function Summary({
     </Card>
   );
 }
+
+function ServiceStatus({ label, ok, fallback }: { label: string; ok: boolean; fallback: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <p className="font-medium">{label}</p>
+      <p className="text-xs text-muted-foreground">
+        {ok ? "Configuré ou disponible" : "Non configuré"} · {fallback}
+      </p>
+    </div>
+  );
+}
