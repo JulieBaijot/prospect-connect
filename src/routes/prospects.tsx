@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink, Plus, Save } from "lucide-react";
+import { ExternalLink, Plus, Save, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import {
@@ -27,6 +27,7 @@ import {
   statuses,
   stages,
   suggestProspectCategory,
+  updateProspect,
   type Category,
   type Contact,
   type CycleStage,
@@ -67,6 +68,9 @@ const emptyProspect = {
   address: "",
   reception_hours: "",
   comments: "",
+  sector: "",
+  siren: "",
+  naf_code: "",
   google_place_id: "",
 };
 const emptyContact = {
@@ -96,6 +100,8 @@ function ProspectsPage() {
     source: "",
   });
   const [placesStatus, setPlacesStatus] = useState("");
+  const [batchStatus, setBatchStatus] = useState("");
+  const [batchBusy, setBatchBusy] = useState(false);
 
   useEffect(() => {
     void refresh();
@@ -152,6 +158,10 @@ function ProspectsPage() {
       hot: prospects.filter((p) => p.status === "Chaud").length,
       converted: prospects.filter((p) => p.status === "Converti").length,
     }),
+    [prospects],
+  );
+  const incompleteProspects = useMemo(
+    () => prospects.filter((p) => dataQualityIssues(p).length > 0),
     [prospects],
   );
   const autoCategory = useMemo(
