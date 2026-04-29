@@ -122,6 +122,7 @@ async function searchPappers(keyword: string, filters: CompanySearchFilters): Pr
   const json = await res.json() as { resultats?: Array<Record<string, unknown>> };
   const rows = (json.resultats || []).map((item) => {
     const reps = Array.isArray(item.representants) ? item.representants as Array<Record<string, unknown>> : [];
+    const siege = (item.siege || {}) as Record<string, unknown>;
     const name = String(item.nom_entreprise || item.denomination || "Entreprise sans nom");
     return {
       id: safeId("pappers", keyword, String(item.siren || name)),
@@ -130,7 +131,7 @@ async function searchPappers(keyword: string, filters: CompanySearchFilters): Pr
       headcount: normalizeHeadcount(item.tranche_effectif || item.effectif),
       naf: String(item.code_naf || ""),
       siren: String(item.siren || ""),
-      address: String(item.siege?.adresse_ligne_1 || item.adresse || ""),
+      address: String(siege.adresse_ligne_1 || item.adresse || ""),
       sector: filters.sector,
       source: "pappers" as const,
       keyword,
