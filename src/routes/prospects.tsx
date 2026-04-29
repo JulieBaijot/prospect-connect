@@ -296,6 +296,40 @@ function ProspectsPage() {
     }
   }
 
+  async function qualifyIncompleteBatch() {
+    const targets = incompleteProspects.slice(0, 20);
+    if (!targets.length || batchBusy) return;
+    setBatchBusy(true);
+    setBatchStatus(`Qualification de ${targets.length} prospect(s) incomplet(s)…`);
+    let updated = 0;
+    for (const prospect of targets) {
+      const suggested = suggestProspectCategory({
+        headcount_range: prospect.headcount_range,
+        offer_target: prospect.offer_target,
+        sector: prospect.sector,
+        estimated_value: prospect.estimated_value,
+        comments: prospect.comments,
+        contactKnown: prospect.contacts.length > 0,
+        history: prospect.prospection_logs,
+      });
+      const patch: Partial<Prospect> = {};
+      if (suggested && (!prospect.category || prospect.category === "C – Porte d'entrée")) {
+        patch.category = suggested.category;
+      }
+      if (!prospect.next_action_date) patch.next_action_date = new Date().toISOString().slice(0, 10);
+      if (!prospect.offer_target) patch.offer_target = "Formation SST";
+      if (!prospect.status) patch.status = "Tiède";
+      if (Object.keys(patch).length) {
+        await updateProspect(prospect.id, patch);
+        updated += 1;
+      }
+    }
+    await refresh();
+    setBatchBusy(false);
+    setFilters((prev) => ({ ...prev, view: "incomplete" }));
+    setBatchStatus(`${updated} prospect(s) qualifié(s). Les fiches restantes sont à compléter manuellement ou via enrichissement.`);
+  }
+
   return (
     <>
       <PageTitle
