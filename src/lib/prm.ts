@@ -44,6 +44,10 @@ export interface Prospect {
   legal_status: string | null;
   source: string | null;
   sector: string | null;
+  batch_keyword: string | null;
+  external_source_id: string | null;
+  import_source: string | null;
+  import_batch_id: string | null;
   created_at: string;
   updated_at: string;
 }
