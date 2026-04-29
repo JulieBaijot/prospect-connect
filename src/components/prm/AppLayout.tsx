@@ -8,11 +8,13 @@ import {
   ListChecks,
   PhoneCall,
   Search,
+  Wand2,
 } from "lucide-react";
 
 const navItems = [
   { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
   { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
+  { to: "/qualification", label: "Qualification", icon: Wand2 },
   { to: "/process", label: "Process", icon: GitBranch },
   { to: "/prospects", label: "Base prospects", icon: Database },
   { to: "/integration-prospects", label: "Intégration prospects", icon: Search },
