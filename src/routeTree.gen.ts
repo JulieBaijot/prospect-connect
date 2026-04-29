@@ -13,6 +13,7 @@ import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SessionAppelsRouteImport } from './routes/session-appels'
 import { Route as ProspectsRouteImport } from './routes/prospects'
 import { Route as JournalRouteImport } from './routes/journal'
+import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
 import { Route as IndexRouteImport } from './routes/index'
 
 const StatsRoute = StatsRouteImport.update({
@@ -35,6 +36,11 @@ const JournalRoute = JournalRouteImport.update({
   path: '/journal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegrationProspectsRoute = IntegrationProspectsRouteImport.update({
+  id: '/integration-prospects',
+  path: '/integration-prospects',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,6 +49,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
@@ -65,12 +74,25 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/journal' | '/prospects' | '/session-appels' | '/stats'
+  fullPaths:
+    | '/'
+    | '/integration-prospects'
+    | '/journal'
+    | '/prospects'
+    | '/session-appels'
+    | '/stats'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/journal' | '/prospects' | '/session-appels' | '/stats'
+  to:
+    | '/'
+    | '/integration-prospects'
+    | '/journal'
+    | '/prospects'
+    | '/session-appels'
+    | '/stats'
   id:
     | '__root__'
     | '/'
+    | '/integration-prospects'
     | '/journal'
     | '/prospects'
     | '/session-appels'
@@ -79,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  IntegrationProspectsRoute: typeof IntegrationProspectsRoute
   JournalRoute: typeof JournalRoute
   ProspectsRoute: typeof ProspectsRoute
   SessionAppelsRoute: typeof SessionAppelsRoute
@@ -115,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JournalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integration-prospects': {
+      id: '/integration-prospects'
+      path: '/integration-prospects'
+      fullPath: '/integration-prospects'
+      preLoaderRoute: typeof IntegrationProspectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -127,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  IntegrationProspectsRoute: IntegrationProspectsRoute,
   JournalRoute: JournalRoute,
   ProspectsRoute: ProspectsRoute,
   SessionAppelsRoute: SessionAppelsRoute,
