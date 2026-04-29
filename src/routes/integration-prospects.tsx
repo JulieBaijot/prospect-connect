@@ -512,12 +512,17 @@ function Step1(props: Step1Props) {
 function Step2({
   companies,
   updateCompany,
+  enrichAll,
 }: {
   companies: Company[];
   updateCompany: (id: string, p: Partial<Company>) => void;
+  enrichAll: () => void;
 }) {
   return (
     <div className="grid gap-3">
+      <div className="flex justify-end">
+        <Button variant="neutral" onClick={enrichAll}>Relancer l'enrichissement</Button>
+      </div>
       {companies.map((c) => (
         <Card key={c.id} className="p-4">
           <div className="flex justify-between">
