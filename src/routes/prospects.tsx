@@ -319,6 +319,22 @@ function ProspectsPage() {
       if (!prospect.next_action_date) patch.next_action_date = new Date().toISOString().slice(0, 10);
       if (!prospect.offer_target) patch.offer_target = "Formation SST";
       if (!prospect.status) patch.status = "Tiède";
+      if (!prospect.main_phone || !prospect.website || !prospect.address) {
+        try {
+          const place = await runEnrichment({
+            data: { name: prospect.company_name, city: prospect.city || "" },
+          });
+          if (place.status === "found") {
+            if (!prospect.main_phone && place.phone) patch.main_phone = place.phone;
+            if (!prospect.website && place.website) patch.website = place.website;
+            if (!prospect.address && place.address) patch.address = place.address;
+            if (!prospect.reception_hours && place.hours) patch.reception_hours = place.hours;
+            if (!prospect.google_place_id && place.placeId) patch.google_place_id = place.placeId;
+          }
+        } catch {
+          // Le batch continue même si un enrichissement échoue.
+        }
+      }
       if (Object.keys(patch).length) {
         await updateProspect(prospect.id, patch);
         updated += 1;
@@ -327,7 +343,9 @@ function ProspectsPage() {
     await refresh();
     setBatchBusy(false);
     setFilters((prev) => ({ ...prev, view: "incomplete" }));
-    setBatchStatus(`${updated} prospect(s) qualifié(s). Les fiches restantes sont à compléter manuellement ou via enrichissement.`);
+    setBatchStatus(
+      `${updated} prospect(s) qualifié(s). Les fiches restantes sont à compléter manuellement ou via enrichissement.`,
+    );
   }
 
   return (
