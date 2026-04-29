@@ -98,6 +98,8 @@ type Step1Props = {
   loading: boolean;
   results: Company[];
   quotaBanner: boolean;
+  batchRuns: Array<{ keyword: string; source: SearchSource; status: "terminé" | "erreur"; count: number; error?: string }>;
+  missingKeys: string[];
   searchCompanies: (source?: SearchSource) => void;
   switchSource: (source: SearchSource) => void;
   selectCompany: (company: Company) => void;
