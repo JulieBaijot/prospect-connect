@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink, Plus, Save } from "lucide-react";
+import { ExternalLink, Plus, Save, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import {
@@ -27,6 +27,7 @@ import {
   statuses,
   stages,
   suggestProspectCategory,
+  updateProspect,
   type Category,
   type Contact,
   type CycleStage,
@@ -67,6 +68,9 @@ const emptyProspect = {
   address: "",
   reception_hours: "",
   comments: "",
+  sector: "",
+  siren: "",
+  naf_code: "",
   google_place_id: "",
 };
 const emptyContact = {
@@ -96,6 +100,8 @@ function ProspectsPage() {
     source: "",
   });
   const [placesStatus, setPlacesStatus] = useState("");
+  const [batchStatus, setBatchStatus] = useState("");
+  const [batchBusy, setBatchBusy] = useState(false);
 
   useEffect(() => {
     void refresh();
@@ -154,6 +160,10 @@ function ProspectsPage() {
     }),
     [prospects],
   );
+  const incompleteProspects = useMemo(
+    () => prospects.filter((p) => dataQualityIssues(p).length > 0),
+    [prospects],
+  );
   const autoCategory = useMemo(
     () =>
       suggestProspectCategory({
@@ -195,6 +205,9 @@ function ProspectsPage() {
       address: prospect.address || "",
       reception_hours: prospect.reception_hours || "",
       comments: prospect.comments || "",
+      sector: prospect.sector || "",
+      siren: prospect.siren || "",
+      naf_code: prospect.naf_code || "",
       google_place_id: prospect.google_place_id || "",
     });
     const contact = prospect.contacts[0];
@@ -283,18 +296,82 @@ function ProspectsPage() {
     }
   }
 
+  async function qualifyIncompleteBatch() {
+    const targets = incompleteProspects.slice(0, 20);
+    if (!targets.length || batchBusy) return;
+    setBatchBusy(true);
+    setBatchStatus(`Qualification de ${targets.length} prospect(s) incomplet(s)…`);
+    let updated = 0;
+    for (const prospect of targets) {
+      const suggested = suggestProspectCategory({
+        headcount_range: prospect.headcount_range,
+        offer_target: prospect.offer_target,
+        sector: prospect.sector,
+        estimated_value: prospect.estimated_value,
+        comments: prospect.comments,
+        contactKnown: prospect.contacts.length > 0,
+        history: prospect.prospection_logs,
+      });
+      const patch: Partial<Prospect> = {};
+      if (suggested && (!prospect.category || prospect.category === "C – Porte d'entrée")) {
+        patch.category = suggested.category;
+      }
+      if (!prospect.next_action_date)
+        patch.next_action_date = new Date().toISOString().slice(0, 10);
+      if (!prospect.offer_target) patch.offer_target = "Formation SST";
+      if (!prospect.status) patch.status = "Tiède";
+      if (!prospect.main_phone || !prospect.website || !prospect.address) {
+        try {
+          const place = await runEnrichment({
+            data: { name: prospect.company_name, city: prospect.city || "" },
+          });
+          if (place.status === "found") {
+            if (!prospect.main_phone && place.phone) patch.main_phone = place.phone;
+            if (!prospect.website && place.website) patch.website = place.website;
+            if (!prospect.address && place.address) patch.address = place.address;
+            if (!prospect.reception_hours && place.hours) patch.reception_hours = place.hours;
+            if (!prospect.google_place_id && place.placeId) patch.google_place_id = place.placeId;
+          }
+        } catch {
+          // Le batch continue même si un enrichissement échoue.
+        }
+      }
+      if (Object.keys(patch).length) {
+        await updateProspect(prospect.id, patch);
+        updated += 1;
+      }
+    }
+    await refresh();
+    setBatchBusy(false);
+    setFilters((prev) => ({ ...prev, view: "incomplete" }));
+    setBatchStatus(
+      `${updated} prospect(s) qualifié(s). Les fiches restantes sont à compléter manuellement ou via enrichissement.`,
+    );
+  }
+
   return (
     <>
       <PageTitle
         title="Base prospects"
         subtitle="Tableau desktop filtrable avec panneau d'ajout et d'édition."
         action={
-          <Button onClick={addNew}>
-            <Plus className="mr-2 h-4 w-4" />
-            Ajouter un prospect
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="neutral"
+              onClick={qualifyIncompleteBatch}
+              disabled={batchBusy || !incompleteProspects.length}
+            >
+              <Wand2 className="mr-2 h-4 w-4" />
+              Qualifier incomplets
+            </Button>
+            <Button onClick={addNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              Ajouter un prospect
+            </Button>
+          </div>
         }
       />
+      {batchStatus ? <p className="mb-4 rounded-lg bg-script p-3 text-sm">{batchStatus}</p> : null}
       <div className="mb-4 grid gap-3 md:grid-cols-5">
         <MiniKpi label="Total" value={counters.total} />
         <MiniKpi label="À appeler" value={counters.due} />
@@ -382,6 +459,7 @@ function ProspectsPage() {
                     "Statut",
                     "Prochaine action",
                     "Valeur",
+                    "Actions",
                   ].map((h) => (
                     <th key={h} className="px-4 py-3">
                       {h}
@@ -414,6 +492,11 @@ function ProspectsPage() {
                           {dataQualityIssues(p).length} point(s) à compléter
                         </div>
                       ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button variant="neutral" onClick={() => openProspect(p)}>
+                        Modifier
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -464,6 +547,15 @@ function ProspectsPage() {
                   onChange={(e) => setForm({ ...form, city: e.target.value })}
                 />
               </Field>
+              <Field label="Secteur">
+                <input
+                  className={fieldClass}
+                  value={form.sector}
+                  onChange={(e) => setForm({ ...form, sector: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
               <Field label="Effectifs">
                 <select
                   className={fieldClass}
@@ -477,8 +569,6 @@ function ProspectsPage() {
                   ))}
                 </select>
               </Field>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
               <Field label="Catégorie">
                 <select
                   className={fieldClass}
