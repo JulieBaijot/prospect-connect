@@ -162,10 +162,23 @@ function ProspectsPage() {
         sector: selected?.sector,
         estimated_value: form.estimated_value,
         comments: form.comments,
-        contactKnown: Boolean(contactForm.first_name || contactForm.last_name || contactForm.role_title || contactForm.email || contactForm.direct_phone),
+        contactKnown: Boolean(
+          contactForm.first_name ||
+          contactForm.last_name ||
+          contactForm.role_title ||
+          contactForm.email ||
+          contactForm.direct_phone,
+        ),
         history: selected?.prospection_logs,
       }),
-    [form.headcount_range, form.offer_target, form.estimated_value, form.comments, contactForm, selected],
+    [
+      form.headcount_range,
+      form.offer_target,
+      form.estimated_value,
+      form.comments,
+      contactForm,
+      selected,
+    ],
   );
 
   function openProspect(prospect: ProspectWithRelations) {
@@ -482,7 +495,9 @@ function ProspectsPage() {
                     onClick={() => setForm({ ...form, category: autoCategory.category })}
                     className="mt-1 inline-flex min-h-8 items-center gap-2 rounded-lg bg-secondary px-3 text-left text-xs text-secondary-foreground hover:bg-accent"
                   >
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium uppercase text-primary-foreground">Auto</span>
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium uppercase text-primary-foreground">
+                      Auto
+                    </span>
                     {autoCategory.category} · {autoCategory.reasons.join(", ")}
                   </button>
                 ) : null}

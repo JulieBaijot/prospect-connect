@@ -374,7 +374,8 @@ function IntegrationPage() {
           company_name: company.name,
           city: company.city,
           headcount_range: (company.headcount || "20-49") as HeadcountRange,
-          category: first?.category || company.category || suggested?.category || "C – Porte d'entrée",
+          category:
+            first?.category || company.category || suggested?.category || "C – Porte d'entrée",
           offer_target: first?.offer || company.offer || "Formation SST",
           estimated_value: first?.value || company.value || 0,
           current_stage: "J1",
@@ -907,122 +908,124 @@ function ContactEditors({
           contactKnown: Boolean(ct.firstName || ct.lastName || ct.role || ct.email || ct.phone),
         });
         return (
-        <div key={idx} className="rounded-lg border border-border bg-background p-3">
-          <div className="grid gap-2 md:grid-cols-3">
-            <input
-              className={fieldClass}
-              placeholder="Prénom"
-              value={ct.firstName}
-              onChange={(e) => updateContact(company, idx, { firstName: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Nom"
-              value={ct.lastName}
-              onChange={(e) => updateContact(company, idx, { lastName: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Rôle/Titre"
-              value={ct.role}
-              onChange={(e) => updateContact(company, idx, { role: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Téléphone direct"
-              value={ct.phone}
-              onChange={(e) => updateContact(company, idx, { phone: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Email"
-              value={ct.email}
-              onChange={(e) => updateContact(company, idx, { email: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="LinkedIn URL"
-              value={ct.linkedin}
-              onChange={(e) => updateContact(company, idx, { linkedin: e.target.value })}
-            />
-          </div>
-          {qualification ? (
-            <div className="mt-2 grid gap-2 md:grid-cols-4">
-              <select
-                className={fieldClass}
-                value={ct.maturity}
-                onChange={(e) => updateContact(company, idx, { maturity: e.target.value })}
-              >
-                {[
-                  "Pas joint",
-                  "Intérêt",
-                  "RDV",
-                  "Devis",
-                  "Décision",
-                  "Pas de sujet",
-                  "Intérêt à relancer",
-                ].map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
-              </select>
-              <select
-                className={fieldClass}
-                value={ct.offer}
-                onChange={(e) =>
-                  updateContact(company, idx, { offer: e.target.value as OfferTarget })
-                }
-              >
-                {offerTargets.map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
-              </select>
-              <select
-                className={fieldClass}
-                value={ct.category}
-                onChange={(e) =>
-                  updateContact(company, idx, { category: e.target.value as Category })
-                }
-              >
-                {categories.map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
-              </select>
+          <div key={idx} className="rounded-lg border border-border bg-background p-3">
+            <div className="grid gap-2 md:grid-cols-3">
               <input
                 className={fieldClass}
-                type="number"
-                value={ct.value}
-                onChange={(e) => updateContact(company, idx, { value: Number(e.target.value) })}
+                placeholder="Prénom"
+                value={ct.firstName}
+                onChange={(e) => updateContact(company, idx, { firstName: e.target.value })}
               />
-              {autoCategory && autoCategory.category !== ct.category ? (
-                <button
-                  type="button"
-                  onClick={() => updateContact(company, idx, { category: autoCategory.category })}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs text-secondary-foreground hover:bg-accent md:col-span-4"
-                >
-                  <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium uppercase text-primary-foreground">Auto</span>
-                  {autoCategory.category} · {autoCategory.reasons.join(", ")}
-                </button>
-              ) : null}
+              <input
+                className={fieldClass}
+                placeholder="Nom"
+                value={ct.lastName}
+                onChange={(e) => updateContact(company, idx, { lastName: e.target.value })}
+              />
+              <input
+                className={fieldClass}
+                placeholder="Rôle/Titre"
+                value={ct.role}
+                onChange={(e) => updateContact(company, idx, { role: e.target.value })}
+              />
+              <input
+                className={fieldClass}
+                placeholder="Téléphone direct"
+                value={ct.phone}
+                onChange={(e) => updateContact(company, idx, { phone: e.target.value })}
+              />
+              <input
+                className={fieldClass}
+                placeholder="Email"
+                value={ct.email}
+                onChange={(e) => updateContact(company, idx, { email: e.target.value })}
+              />
+              <input
+                className={fieldClass}
+                placeholder="LinkedIn URL"
+                value={ct.linkedin}
+                onChange={(e) => updateContact(company, idx, { linkedin: e.target.value })}
+              />
             </div>
-          ) : null}
-          <div className="mt-2 flex gap-2">
-            <Button
-              variant="neutral"
-              onClick={() =>
-                window.open(
-                  `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${ct.firstName} ${ct.lastName} ${company.name}`)}`,
-                  "_blank",
-                )
-              }
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Rechercher sur LinkedIn
-            </Button>
-            <Button variant="neutral" onClick={() => findContactEmail(company, idx)}>
-              Trouver email Hunter.io
-            </Button>
+            {qualification ? (
+              <div className="mt-2 grid gap-2 md:grid-cols-4">
+                <select
+                  className={fieldClass}
+                  value={ct.maturity}
+                  onChange={(e) => updateContact(company, idx, { maturity: e.target.value })}
+                >
+                  {[
+                    "Pas joint",
+                    "Intérêt",
+                    "RDV",
+                    "Devis",
+                    "Décision",
+                    "Pas de sujet",
+                    "Intérêt à relancer",
+                  ].map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+                <select
+                  className={fieldClass}
+                  value={ct.offer}
+                  onChange={(e) =>
+                    updateContact(company, idx, { offer: e.target.value as OfferTarget })
+                  }
+                >
+                  {offerTargets.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+                <select
+                  className={fieldClass}
+                  value={ct.category}
+                  onChange={(e) =>
+                    updateContact(company, idx, { category: e.target.value as Category })
+                  }
+                >
+                  {categories.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+                <input
+                  className={fieldClass}
+                  type="number"
+                  value={ct.value}
+                  onChange={(e) => updateContact(company, idx, { value: Number(e.target.value) })}
+                />
+                {autoCategory && autoCategory.category !== ct.category ? (
+                  <button
+                    type="button"
+                    onClick={() => updateContact(company, idx, { category: autoCategory.category })}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs text-secondary-foreground hover:bg-accent md:col-span-4"
+                  >
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium uppercase text-primary-foreground">
+                      Auto
+                    </span>
+                    {autoCategory.category} · {autoCategory.reasons.join(", ")}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="mt-2 flex gap-2">
+              <Button
+                variant="neutral"
+                onClick={() =>
+                  window.open(
+                    `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${ct.firstName} ${ct.lastName} ${company.name}`)}`,
+                    "_blank",
+                  )
+                }
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Rechercher sur LinkedIn
+              </Button>
+              <Button variant="neutral" onClick={() => findContactEmail(company, idx)}>
+                Trouver email Hunter.io
+              </Button>
+            </div>
           </div>
-        </div>
         );
       })}
     </div>
