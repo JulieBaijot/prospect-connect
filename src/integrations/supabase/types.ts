@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_search_runs: {
+        Row: {
+          batch_keyword: string
+          created_at: string
+          error_message: string | null
+          filters: Json
+          id: string
+          result_count: number
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          batch_keyword: string
+          created_at?: string
+          error_message?: string | null
+          filters?: Json
+          id?: string
+          result_count?: number
+          source: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_keyword?: string
+          created_at?: string
+          error_message?: string | null
+          filters?: Json
+          id?: string
+          result_count?: number
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           category: string | null
@@ -184,6 +220,7 @@ export type Database = {
       prospects: {
         Row: {
           address: string | null
+          batch_keyword: string | null
           category: string
           city: string | null
           comments: string | null
@@ -191,9 +228,12 @@ export type Database = {
           created_at: string
           current_stage: string
           estimated_value: number
+          external_source_id: string | null
           google_place_id: string | null
           headcount_range: string | null
           id: string
+          import_batch_id: string | null
+          import_source: string | null
           legal_status: string | null
           main_phone: string | null
           naf_code: string | null
@@ -209,6 +249,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          batch_keyword?: string | null
           category?: string
           city?: string | null
           comments?: string | null
@@ -216,9 +257,12 @@ export type Database = {
           created_at?: string
           current_stage?: string
           estimated_value?: number
+          external_source_id?: string | null
           google_place_id?: string | null
           headcount_range?: string | null
           id?: string
+          import_batch_id?: string | null
+          import_source?: string | null
           legal_status?: string | null
           main_phone?: string | null
           naf_code?: string | null
@@ -234,6 +278,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          batch_keyword?: string | null
           category?: string
           city?: string | null
           comments?: string | null
@@ -241,9 +286,12 @@ export type Database = {
           created_at?: string
           current_stage?: string
           estimated_value?: number
+          external_source_id?: string | null
           google_place_id?: string | null
           headcount_range?: string | null
           id?: string
+          import_batch_id?: string | null
+          import_source?: string | null
           legal_status?: string | null
           main_phone?: string | null
           naf_code?: string | null
