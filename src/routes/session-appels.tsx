@@ -11,9 +11,7 @@ export const Route = createFileRoute("/session-appels")({
 
 type Mode = "idle" | "callback" | "exchange" | "meeting";
 
-function SessionRoute() { return <AppLayout />; }
-
-export function Component() { return <SessionPage />; }
+function SessionRoute() { return <AppLayout><SessionPage /></AppLayout>; }
 
 function SessionPage() {
   const [prospects, setProspects] = useState<ProspectWithRelations[]>([]);

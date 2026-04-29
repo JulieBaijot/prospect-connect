@@ -1,4 +1,4 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { BarChart3, Database, ListChecks, PhoneCall, Search } from "lucide-react";
 
 const navItems = [
@@ -9,7 +9,7 @@ const navItems = [
   { to: "/stats", label: "Stats", icon: BarChart3 },
 ] as const;
 
-export function AppLayout() {
+export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-background/95">
@@ -42,7 +42,7 @@ export function AppLayout() {
         </div>
       </header>
       <main className="mx-auto max-w-[1480px] px-4 py-5 lg:px-6">
-        <Outlet />
+        {children}
       </main>
     </div>
   );
