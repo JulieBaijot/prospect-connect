@@ -15,8 +15,11 @@ import {
 import {
   categories,
   contactName,
+  bestPhone,
+  dataQualityIssues,
   formatDate,
   formatEuro,
+  isDueTodayOrLate,
   headcountRanges,
   loadProspects,
   offerTargets,
@@ -82,7 +85,7 @@ function ProspectsPage() {
   const [selected, setSelected] = useState<ProspectWithRelations | null>(null);
   const [form, setForm] = useState(emptyProspect);
   const [contactForm, setContactForm] = useState(emptyContact);
-  const [filters, setFilters] = useState({ status: "", category: "", offer: "", city: "" });
+  const [filters, setFilters] = useState({ status: "", category: "", offer: "", city: "", q: "", view: "", source: "" });
   const [placesStatus, setPlacesStatus] = useState("");
 
   useEffect(() => {
@@ -94,15 +97,45 @@ function ProspectsPage() {
 
   const filtered = useMemo(
     () =>
-      prospects.filter(
-        (p) =>
+      prospects.filter((p) => {
+        const q = filters.q.toLowerCase();
+        const searchable = [
+          p.company_name,
+          p.city,
+          p.siren,
+          p.main_phone,
+          p.import_source,
+          ...p.contacts.flatMap((c) => [c.first_name, c.last_name, c.email, c.direct_phone, c.role_title]),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const issues = dataQualityIssues(p);
+        return (
+          (!filters.q || searchable.includes(q)) &&
           (!filters.status || p.status === filters.status) &&
           (!filters.category || p.category === filters.category) &&
           (!filters.offer || p.offer_target === filters.offer) &&
-          (!filters.city || (p.city || "").toLowerCase().includes(filters.city.toLowerCase())),
-      ),
+          (!filters.city || (p.city || "").toLowerCase().includes(filters.city.toLowerCase())) &&
+          (!filters.source || (p.import_source || p.source || "").includes(filters.source)) &&
+          (!filters.view ||
+            (filters.view === "due" && isDueTodayOrLate(p.next_action_date)) ||
+            (filters.view === "no_phone" && !bestPhone(p)) ||
+            (filters.view === "no_contact" && !p.contacts.length) ||
+            (filters.view === "no_next" && !p.next_action_date) ||
+            (filters.view === "incomplete" && issues.length > 0))
+        );
+      }),
     [prospects, filters],
   );
+
+  const counters = useMemo(() => ({
+    total: prospects.length,
+    due: prospects.filter((p) => isDueTodayOrLate(p.next_action_date)).length,
+    incomplete: prospects.filter((p) => dataQualityIssues(p).length > 0).length,
+    hot: prospects.filter((p) => p.status === "Chaud").length,
+    converted: prospects.filter((p) => p.status === "Converti").length,
+  }), [prospects]);
 
   function openProspect(prospect: ProspectWithRelations) {
     setSelected(prospect);
