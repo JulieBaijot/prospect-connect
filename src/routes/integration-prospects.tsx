@@ -170,33 +170,44 @@ function IntegrationPage() {
   async function searchCompanies(nextSource = source) {
     setLoading(true);
     setQuotaBanner(false);
+    setBatchRuns([]);
+    setMissingKeys([]);
     try {
-      if (nextSource === "pappers" && !import.meta.env.VITE_PAPPERS_API_KEY)
-        throw new Error("quota");
-      const sample = [
-        "Atelier Rhône Sécurité",
-        "Mécaniques Annonéennes",
-        "Logistique Nord Ardèche",
-        "Clinique des Cèdres",
-        "Groupe Alpin Services",
-      ].map((name, index) => ({
-        id: crypto.randomUUID(),
-        name: filters.q || name,
-        city: ["Annonay", "Valence", "Vienne", "Lyon", "Chambéry"][index] || "Annonay",
-        headcount: filters.headcounts[index % filters.headcounts.length] || "20-49",
-        naf: ["25.62B", "49.41A", "10.89Z", "86.10Z", "43.21A"][index],
-        siren: String(800000000 + index * 13791),
-        address: `${index + 3} rue des Entreprises`,
-        sector: filters.sector,
-        source: nextSource,
-        representatives:
-          nextSource === "pappers" ? [{ name: "Camille Martin", role: "Dirigeant" }] : [],
-        enrichment: "En attente" as const,
-        qualification: "À qualifier" as const,
-        contacts: [],
-      }));
-      setResults(sample);
-    } catch {
+      const keywords = filters.keywords
+        .split("\n")
+        .map((keyword) => keyword.trim())
+        .filter(Boolean);
+      const response = await runBatchSearch({
+        data: {
+          source: nextSource,
+          filters: { ...filters, keywords, limit: Number(filters.limit) || 8 },
+        },
+      });
+      setBatchRuns(response.runs);
+      setMissingKeys(response.missingKeys);
+      setQuotaBanner(response.runs.some((run) => run.status === "erreur"));
+      setResults(
+        response.results.map((result) => ({
+          id: result.id,
+          name: result.name,
+          city: result.city,
+          headcount: result.headcount,
+          naf: result.naf,
+          siren: result.siren,
+          address: result.address,
+          sector: result.sector,
+          source: result.source,
+          keyword: result.keyword,
+          externalId: result.externalId,
+          score: result.score,
+          representatives: result.representatives || [],
+          enrichment: "En attente" as const,
+          qualification: "À qualifier" as const,
+          contacts: [],
+        })),
+      );
+    } catch (error) {
+      setBatchRuns([{ keyword: "Batch", source: nextSource, status: "erreur", count: 0, error: error instanceof Error ? error.message : "Erreur API" }]);
       setQuotaBanner(true);
     } finally {
       setLoading(false);
@@ -213,7 +224,6 @@ function IntegrationPage() {
   }
 
   async function enrichAll() {
-    const key = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
     setCompanies((prev) =>
       prev.map((c) => ({
         ...c,
@@ -223,20 +233,12 @@ function IntegrationPage() {
     await Promise.all(
       companies.map(async (company) => {
         if (company.enrichment !== "En attente") return;
-        if (!key) {
-          updateCompany(company.id, { enrichment: "Non trouvé" });
-          return;
-        }
         try {
-          const res = await fetch(
-            `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(`${company.name} ${company.city}`)}&key=${key}`,
-          );
-          const json = await res.json();
-          const place = json.results?.[0];
+          const place = await runEnrichment({ data: { name: company.name, city: company.city } });
           updateCompany(
             company.id,
-            place
-              ? { enrichment: "Trouvé", address: place.formatted_address, placeId: place.place_id }
+            place.status === "found"
+              ? { enrichment: "Trouvé", address: place.address, phone: place.phone, website: place.website, placeId: place.placeId, hours: place.hours }
               : { enrichment: "Non trouvé" },
           );
         } catch {
