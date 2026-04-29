@@ -477,7 +477,7 @@ function Step1(props: Step1Props) {
       </div>
       {props.quotaBanner ? (
         <div className="rounded-lg bg-script p-3 text-sm">
-          Quota Pappers atteint — basculer vers une autre source ?{" "}
+          Certaines recherches n'ont pas abouti — basculer vers une autre source ?{" "}
           <button className="ml-3 underline" onClick={() => props.switchSource("insee")}>
             INSEE Sirene
           </button>
@@ -486,11 +486,27 @@ function Step1(props: Step1Props) {
           </button>
         </div>
       ) : null}
+      {props.missingKeys.length ? (
+        <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
+          API à configurer : {props.missingKeys.join(", ")}. Les sources gratuites ou la saisie manuelle restent utilisables.
+        </div>
+      ) : null}
+      {props.batchRuns.length ? (
+        <div className="grid gap-2 md:grid-cols-3">
+          {props.batchRuns.map((run) => (
+            <div key={`${run.keyword}-${run.source}`} className="rounded-lg border border-border bg-card p-3 text-sm">
+              <p className="font-medium">{run.keyword}</p>
+              <p className="text-muted-foreground">{sources[run.source]} · {run.count} résultat(s)</p>
+              {run.error ? <p className="text-xs text-muted-foreground">{run.error}</p> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-left text-sm">
           <thead className="bg-secondary text-xs uppercase text-muted-foreground">
             <tr>
-              {["Nom", "Ville", "Effectifs", "NAF", "SIREN", "Adresse", ""].map((h) => (
+              {["Mot-clé", "Source", "Nom", "Ville", "Effectifs", "NAF", "SIREN", "Score", ""].map((h) => (
                 <th key={h} className="px-3 py-2">
                   {h}
                 </th>
@@ -500,12 +516,14 @@ function Step1(props: Step1Props) {
           <tbody>
             {props.results.map((r: Company) => (
               <tr key={r.id} className="border-t border-border">
+                <td className="px-3 py-2">{r.keyword || "—"}</td>
+                <td className="px-3 py-2">{r.source ? sources[r.source] : "—"}</td>
                 <td className="px-3 py-2">{r.name}</td>
                 <td className="px-3 py-2">{r.city}</td>
                 <td className="px-3 py-2">{r.headcount}</td>
                 <td className="px-3 py-2">{r.naf}</td>
                 <td className="px-3 py-2">{r.siren}</td>
-                <td className="px-3 py-2">{r.address}</td>
+                <td className="px-3 py-2">{r.score || "—"}</td>
                 <td className="px-3 py-2">
                   <Button variant="neutral" onClick={() => props.selectCompany(r)}>
                     Sélectionner
