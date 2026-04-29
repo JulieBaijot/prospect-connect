@@ -3,7 +3,14 @@ import { CalendarClock, PhoneCall, Search, UserRoundCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Button, Card, CategoryBadge, PageTitle, StatusBadge, labelClass } from "@/components/prm/ui";
+import {
+  Button,
+  Card,
+  CategoryBadge,
+  PageTitle,
+  StatusBadge,
+  labelClass,
+} from "@/components/prm/ui";
 import {
   bestPhone,
   contactName,
@@ -25,7 +32,10 @@ export const Route = createFileRoute("/aujourdhui")({
   head: () => ({
     meta: [
       { title: "Aujourd'hui — PRM Santé-Sécurité" },
-      { name: "description", content: "Tableau de bord quotidien des rappels, RDV, appels et qualifications." },
+      {
+        name: "description",
+        content: "Tableau de bord quotidien des rappels, RDV, appels et qualifications.",
+      },
     ],
   }),
   component: () => (
@@ -80,16 +90,40 @@ function TodayPage() {
       />
 
       <div className="grid gap-3 md:grid-cols-4">
-        <Kpi icon={<CalendarClock className="h-4 w-4" />} label="Rappels dus" value={dashboard.reminders.length} />
-        <Kpi icon={<UserRoundCheck className="h-4 w-4" />} label="RDV du jour" value={dashboard.meetings.length} />
-        <Kpi icon={<PhoneCall className="h-4 w-4" />} label="Cycle appels" value={`${dashboard.callCycle.length}/20`} />
-        <Kpi icon={<Search className="h-4 w-4" />} label="Qualification" value={`${dashboard.qualificationCycle.length}/20`} />
+        <Kpi
+          icon={<CalendarClock className="h-4 w-4" />}
+          label="Rappels dus"
+          value={dashboard.reminders.length}
+        />
+        <Kpi
+          icon={<UserRoundCheck className="h-4 w-4" />}
+          label="RDV du jour"
+          value={dashboard.meetings.length}
+        />
+        <Kpi
+          icon={<PhoneCall className="h-4 w-4" />}
+          label="Cycle appels"
+          value={`${dashboard.callCycle.length}/20`}
+        />
+        <Kpi
+          icon={<Search className="h-4 w-4" />}
+          label="Qualification"
+          value={`${dashboard.qualificationCycle.length}/20`}
+        />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <ActionSection title="Rappels prévus" items={dashboard.reminders} empty="Aucun rappel prévu ou en retard." />
+        <ActionSection
+          title="Rappels prévus"
+          items={dashboard.reminders}
+          empty="Aucun rappel prévu ou en retard."
+        />
         <MeetingSection logs={dashboard.meetings} />
-        <ActionSection title="Cycle d'appel — 20" items={dashboard.callCycle} empty="Aucun prospect appelable." />
+        <ActionSection
+          title="Cycle d'appel — 20"
+          items={dashboard.callCycle}
+          empty="Aucun prospect appelable."
+        />
         <QualificationSection items={dashboard.qualificationCycle} />
       </div>
     </>
@@ -108,12 +142,24 @@ function Kpi({ icon, label, value }: { icon: ReactNode; label: string; value: st
   );
 }
 
-function ActionSection({ title, items, empty }: { title: string; items: ProspectWithRelations[]; empty: string }) {
+function ActionSection({
+  title,
+  items,
+  empty,
+}: {
+  title: string;
+  items: ProspectWithRelations[];
+  empty: string;
+}) {
   return (
     <Card className="p-4">
       <h3 className="text-[16px] font-medium">{title}</h3>
       <div className="mt-3 grid gap-2">
-        {items.length ? items.map((p) => <ProspectRow key={p.id} prospect={p} />) : <p className="text-sm text-muted-foreground">{empty}</p>}
+        {items.length ? (
+          items.map((p) => <ProspectRow key={p.id} prospect={p} />)
+        ) : (
+          <p className="text-sm text-muted-foreground">{empty}</p>
+        )}
       </div>
     </Card>
   );
@@ -130,7 +176,9 @@ function QualificationSection({ items }: { items: ProspectWithRelations[] }) {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-medium">{p.company_name}</p>
-                  <p className="text-sm text-muted-foreground">{p.city || "Ville à compléter"} · {dataQualityIssues(p).join(" · ")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {p.city || "Ville à compléter"} · {dataQualityIssues(p).join(" · ")}
+                  </p>
                 </div>
                 <CategoryBadge category={p.category} />
               </div>
@@ -144,7 +192,11 @@ function QualificationSection({ items }: { items: ProspectWithRelations[] }) {
   );
 }
 
-function MeetingSection({ logs }: { logs: Array<ProspectionLog & { prospects: Prospect | null }> }) {
+function MeetingSection({
+  logs,
+}: {
+  logs: Array<ProspectionLog & { prospects: Prospect | null }>;
+}) {
   return (
     <Card className="p-4">
       <h3 className="text-[16px] font-medium">Rendez-vous du jour</h3>
@@ -156,7 +208,10 @@ function MeetingSection({ logs }: { logs: Array<ProspectionLog & { prospects: Pr
                 <p className="font-medium">{log.prospects?.company_name || "Prospect"}</p>
                 <p className="text-sm text-muted-foreground">{shortDateTime(log.meeting_date)}</p>
               </div>
-              <p className="text-sm text-muted-foreground">{log.objective || log.action_type} · {log.video_link || "Lien à compléter si besoin"}</p>
+              <p className="text-sm text-muted-foreground">
+                {log.objective || log.action_type} ·{" "}
+                {log.video_link || "Lien à compléter si besoin"}
+              </p>
             </div>
           ))
         ) : (
@@ -173,7 +228,9 @@ function ProspectRow({ prospect }: { prospect: ProspectWithRelations }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium">{prospect.company_name}</p>
-          <p className="text-sm text-muted-foreground">{contactName(prospect.contacts[0])} · {prospect.city || "Ville à compléter"}</p>
+          <p className="text-sm text-muted-foreground">
+            {contactName(prospect.contacts[0])} · {prospect.city || "Ville à compléter"}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <CategoryBadge category={prospect.category} />

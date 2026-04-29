@@ -1,6 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { BarChart3, CalendarDays, Database, GitBranch, ListChecks, PhoneCall, Search } from "lucide-react";
+import {
+  BarChart3,
+  CalendarDays,
+  Database,
+  GitBranch,
+  ListChecks,
+  PhoneCall,
+  Search,
+} from "lucide-react";
 
 const navItems = [
   { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
@@ -27,7 +35,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </h1>
             </div>
             <p className="max-w-xl text-sm text-muted-foreground">
-              Prospects, appels, relances et pipeline formation/conseil dans un espace de travail desktop.
+              Prospects, appels, relances et pipeline formation/conseil dans un espace de travail
+              desktop.
             </p>
           </div>
           <nav className="flex gap-2 overflow-x-auto rounded-[10px] border border-border bg-card p-1">
