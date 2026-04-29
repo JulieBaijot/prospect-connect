@@ -392,7 +392,7 @@ function Stepper({ step, setStep }: { step: number; setStep: (s: number) => void
     </div>
   );
 }
-function Step1(props: any) {
+function Step1(props: Step1Props) {
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 md:grid-cols-3">
@@ -540,7 +540,15 @@ function Step2({
     </div>
   );
 }
-function Step3({ companies, addContact, updateContact }: any) {
+function Step3({
+  companies,
+  addContact,
+  updateContact,
+}: {
+  companies: Company[];
+  addContact: (company: Company, contact?: Partial<ContactDraft>) => void;
+  updateContact: UpdateContact;
+}) {
   return (
     <div className="grid gap-3">
       {companies.map((c: Company) => (
@@ -601,7 +609,17 @@ function Step3({ companies, addContact, updateContact }: any) {
     </div>
   );
 }
-function Step4({ companies, updateContact, updateCompany, saveAll }: any) {
+function Step4({
+  companies,
+  updateContact,
+  updateCompany,
+  saveAll,
+}: {
+  companies: Company[];
+  updateContact: UpdateContact;
+  updateCompany: (id: string, patch: Partial<Company>) => void;
+  saveAll: (continueAfter?: boolean) => void;
+}) {
   return (
     <div className="grid gap-3">
       {companies.map((c: Company) => (
@@ -630,7 +648,15 @@ function Step4({ companies, updateContact, updateCompany, saveAll }: any) {
     </div>
   );
 }
-function ContactEditors({ company, updateContact, qualification = false }: any) {
+function ContactEditors({
+  company,
+  updateContact,
+  qualification = false,
+}: {
+  company: Company;
+  updateContact: UpdateContact;
+  qualification?: boolean;
+}) {
   return (
     <div className="mt-3 grid gap-3">
       {company.contacts.map((ct: ContactDraft, idx: number) => (
