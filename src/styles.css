@@ -91,15 +91,15 @@
   --status-won: oklch(0.8 0.085 155);
   --status-waiting: oklch(0.93 0.018 255);
   --status-foreground: oklch(0.27 0.02 248);
-  --script: oklch(0.974 0.027 96);
-  --script-border: oklch(0.88 0.055 88);
-  --action-nrp: oklch(0.958 0.033 22);
-  --action-nrp-foreground: oklch(0.42 0.075 24);
-  --action-callback: oklch(0.972 0.03 92);
-  --action-callback-foreground: oklch(0.38 0.055 82);
-  --action-exchange: oklch(0.952 0.036 210);
-  --action-exchange-foreground: oklch(0.34 0.052 220);
-  --action-meeting: oklch(0.95 0.038 154);
+  --script: oklch(0.974 0.034 96);
+  --script-border: oklch(0.88 0.065 92);
+  --action-nrp: oklch(0.96 0.044 18);
+  --action-nrp-foreground: oklch(0.42 0.08 20);
+  --action-callback: oklch(0.972 0.04 96);
+  --action-callback-foreground: oklch(0.38 0.06 88);
+  --action-exchange: oklch(0.948 0.046 215);
+  --action-exchange-foreground: oklch(0.34 0.06 222);
+  --action-meeting: oklch(0.95 0.048 155);
   --action-meeting-foreground: oklch(0.34 0.06 155);
 }
 
