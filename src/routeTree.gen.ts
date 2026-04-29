@@ -9,12 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SessionAppelsRouteImport } from './routes/session-appels'
+import { Route as ProspectsRouteImport } from './routes/prospects'
+import { Route as JournalRouteImport } from './routes/journal'
 import { Route as IndexRouteImport } from './routes/index'
 
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SessionAppelsRoute = SessionAppelsRouteImport.update({
   id: '/session-appels',
   path: '/session-appels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProspectsRoute = ProspectsRouteImport.update({
+  id: '/prospects',
+  path: '/prospects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JournalRoute = JournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,37 +43,76 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/journal': typeof JournalRoute
+  '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
+  '/stats': typeof StatsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/journal': typeof JournalRoute
+  '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
+  '/stats': typeof StatsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/journal': typeof JournalRoute
+  '/prospects': typeof ProspectsRoute
   '/session-appels': typeof SessionAppelsRoute
+  '/stats': typeof StatsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/session-appels'
+  fullPaths: '/' | '/journal' | '/prospects' | '/session-appels' | '/stats'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/session-appels'
-  id: '__root__' | '/' | '/session-appels'
+  to: '/' | '/journal' | '/prospects' | '/session-appels' | '/stats'
+  id:
+    | '__root__'
+    | '/'
+    | '/journal'
+    | '/prospects'
+    | '/session-appels'
+    | '/stats'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  JournalRoute: typeof JournalRoute
+  ProspectsRoute: typeof ProspectsRoute
   SessionAppelsRoute: typeof SessionAppelsRoute
+  StatsRoute: typeof StatsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/session-appels': {
       id: '/session-appels'
       path: '/session-appels'
       fullPath: '/session-appels'
       preLoaderRoute: typeof SessionAppelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prospects': {
+      id: '/prospects'
+      path: '/prospects'
+      fullPath: '/prospects'
+      preLoaderRoute: typeof ProspectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journal': {
+      id: '/journal'
+      path: '/journal'
+      fullPath: '/journal'
+      preLoaderRoute: typeof JournalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,7 +127,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  JournalRoute: JournalRoute,
+  ProspectsRoute: ProspectsRoute,
   SessionAppelsRoute: SessionAppelsRoute,
+  StatsRoute: StatsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
