@@ -731,10 +731,12 @@ function Step4({
 function ContactEditors({
   company,
   updateContact,
+  findContactEmail,
   qualification = false,
 }: {
   company: Company;
   updateContact: UpdateContact;
+  findContactEmail: FindContactEmail;
   qualification?: boolean;
 }) {
   return (
@@ -840,6 +842,9 @@ function ContactEditors({
             >
               <ExternalLink className="mr-2 h-4 w-4" />
               Rechercher sur LinkedIn
+            </Button>
+            <Button variant="neutral" onClick={() => findContactEmail(company, idx)}>
+              Trouver email Hunter.io
             </Button>
           </div>
         </div>
