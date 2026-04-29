@@ -129,6 +129,12 @@ const quotas = {
   insee: "Gratuit, sans limite",
   annuaire: "Gratuit, sans limite",
 } as const;
+const batchPresets = [
+  { label: "Industrie 07/26", keywords: "industrie annonay\nindustrie valence\nindustrie romans-sur-isère", sector: "Industrie manufacturière", departments: ["07", "26"] },
+  { label: "Logistique vallée du Rhône", keywords: "logistique valence\ntransport annonay\nentrepôt drôme", sector: "Logistique & transport", departments: ["07", "26", "38"] },
+  { label: "Médico-social Ardèche/Drôme", keywords: "ehpad ardèche\nmaison de retraite drôme\nétablissement médico-social", sector: "Médico-social & santé", departments: ["07", "26"] },
+  { label: "BTP local", keywords: "btp annonay\ntravaux publics ardèche\nconstruction drôme", sector: "BTP", departments: ["07", "26"] },
+];
 
 function IntegrationPage() {
   const navigate = useNavigate();
@@ -436,6 +442,27 @@ function Step1(props: Step1Props) {
   const keywordCount = props.filters.keywords.split("\n").map((x) => x.trim()).filter(Boolean).length;
   return (
     <div className="grid gap-4">
+      <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
+        Un mot-clé lance une recherche. Plusieurs lignes créent un batch complet, avec un suivi par mot-clé.
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {batchPresets.map((preset) => (
+          <Button
+            key={preset.label}
+            variant="neutral"
+            onClick={() => props.setFilters({ ...props.filters, keywords: preset.keywords, sector: preset.sector, departments: preset.departments })}
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
+      <div className="grid gap-2 rounded-lg border border-border bg-card p-3 text-sm md:grid-cols-5">
+        <ServiceStatus label="Pappers" ok={!props.missingKeys.some((key) => key.includes("PAPPERS"))} fallback="fallback Annuaire" />
+        <ServiceStatus label="INSEE Sirene" ok={!props.missingKeys.some((key) => key.includes("SIRENE"))} fallback="fallback Annuaire" />
+        <ServiceStatus label="Annuaire" ok fallback="gratuit" />
+        <ServiceStatus label="Google Places" ok={!props.missingKeys.some((key) => key.includes("GOOGLE"))} fallback="saisie manuelle" />
+        <ServiceStatus label="Hunter.io" ok={!props.missingKeys.some((key) => key.includes("HUNTER"))} fallback="recherche manuelle" />
+      </div>
       <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
         <textarea
           className={`${fieldClass} min-h-28 py-2`}
@@ -543,6 +570,7 @@ function Step1(props: Step1Props) {
                 <td className="px-3 py-2">{r.naf}</td>
                 <td className="px-3 py-2">{r.siren}</td>
                 <td className="px-3 py-2">{r.score || "—"}</td>
+                
                 <td className="px-3 py-2">
                   <Button variant="neutral" onClick={() => props.selectCompany(r)}>
                     Sélectionner
