@@ -355,7 +355,11 @@ function ProspectsPage() {
         subtitle="Tableau desktop filtrable avec panneau d'ajout et d'édition."
         action={
           <div className="flex flex-wrap gap-2">
-            <Button variant="neutral" onClick={qualifyIncompleteBatch} disabled={batchBusy || !incompleteProspects.length}>
+            <Button
+              variant="neutral"
+              onClick={qualifyIncompleteBatch}
+              disabled={batchBusy || !incompleteProspects.length}
+            >
               <Wand2 className="mr-2 h-4 w-4" />
               Qualifier incomplets
             </Button>
@@ -542,6 +546,15 @@ function ProspectsPage() {
                   onChange={(e) => setForm({ ...form, city: e.target.value })}
                 />
               </Field>
+              <Field label="Secteur">
+                <input
+                  className={fieldClass}
+                  value={form.sector}
+                  onChange={(e) => setForm({ ...form, sector: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
               <Field label="Effectifs">
                 <select
                   className={fieldClass}
@@ -555,8 +568,6 @@ function ProspectsPage() {
                   ))}
                 </select>
               </Field>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
               <Field label="Catégorie">
                 <select
                   className={fieldClass}
