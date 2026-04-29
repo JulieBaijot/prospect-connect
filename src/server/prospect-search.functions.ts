@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { enrichCompanyServer, searchCompaniesBatchServer } from "./prospect-search.server";
+import { enrichCompanyServer, findEmailServer, searchCompaniesBatchServer } from "./prospect-search.server";
 
 const sourceSchema = z.enum(["pappers", "insee", "annuaire"]);
 
@@ -21,6 +21,13 @@ const enrichSchema = z.object({
   city: z.string().trim().max(120).optional(),
 });
 
+const emailSchema = z.object({
+  domain: z.string().trim().max(180).optional(),
+  company: z.string().trim().max(180).optional(),
+  firstName: z.string().trim().max(80).optional(),
+  lastName: z.string().trim().max(120).optional(),
+});
+
 export const searchCompaniesBatch = createServerFn({ method: "POST" })
   .inputValidator((data) => searchSchema.parse(data))
   .handler(async ({ data }) => searchCompaniesBatchServer(data));
@@ -28,3 +35,7 @@ export const searchCompaniesBatch = createServerFn({ method: "POST" })
 export const enrichCompany = createServerFn({ method: "POST" })
   .inputValidator((data) => enrichSchema.parse(data))
   .handler(async ({ data }) => enrichCompanyServer(data));
+
+export const findEmail = createServerFn({ method: "POST" })
+  .inputValidator((data) => emailSchema.parse(data))
+  .handler(async ({ data }) => findEmailServer(data));
