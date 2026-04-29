@@ -205,6 +205,9 @@ function ProspectsPage() {
       address: prospect.address || "",
       reception_hours: prospect.reception_hours || "",
       comments: prospect.comments || "",
+      sector: prospect.sector || "",
+      siren: prospect.siren || "",
+      naf_code: prospect.naf_code || "",
       google_place_id: prospect.google_place_id || "",
     });
     const contact = prospect.contacts[0];
