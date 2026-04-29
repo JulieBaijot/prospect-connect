@@ -223,26 +223,36 @@ export async function searchCompaniesBatchServer(input: { source: SearchSource; 
 export async function enrichCompanyServer(input: { name: string; city?: string }) {
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (!key) return { status: "missing_key" as const, missingKey: "GOOGLE_PLACES_API_KEY" };
-  const text = encodeURIComponent(`${input.name} ${input.city || ""}`.trim());
-  const search = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${text}&key=${key}`);
+  const searchUrl = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+  searchUrl.searchParams.set("query", `${input.name} ${input.city || ""}`.trim());
+  searchUrl.searchParams.set("key", key);
+  const search = await fetch(searchUrl);
   if (!search.ok) throw new Error(`Google Places ${search.status}`);
-  const json = await search.json();
+  const json = await search.json() as { status?: string; error_message?: string; results?: Array<Record<string, unknown>> };
+  if (!["OK", "ZERO_RESULTS"].includes(json.status || "")) {
+    throw new Error(json.error_message || `Google Places ${json.status || "erreur"}`);
+  }
   const place = json.results?.[0];
   if (!place?.place_id) return { status: "not_found" as const };
   const detailsUrl = new URL("https://maps.googleapis.com/maps/api/place/details/json");
-  detailsUrl.searchParams.set("place_id", place.place_id);
-  detailsUrl.searchParams.set("fields", "formatted_address,formatted_phone_number,website,opening_hours,place_id");
+  detailsUrl.searchParams.set("place_id", String(place.place_id));
+  detailsUrl.searchParams.set("fields", "formatted_address,formatted_phone_number,international_phone_number,website,opening_hours,place_id");
   detailsUrl.searchParams.set("key", key);
   const detailsRes = await fetch(detailsUrl);
-  const details = detailsRes.ok ? await detailsRes.json() : {};
+  if (!detailsRes.ok) throw new Error(`Google Places details ${detailsRes.status}`);
+  const details = await detailsRes.json() as { status?: string; error_message?: string; result?: Record<string, unknown> };
+  if (!["OK", "ZERO_RESULTS"].includes(details.status || "")) {
+    throw new Error(details.error_message || `Google Places details ${details.status || "erreur"}`);
+  }
   const result = details.result || place;
+  const openingHours = result.opening_hours as { weekday_text?: string[] } | undefined;
   return {
     status: "found" as const,
-    address: result.formatted_address || place.formatted_address || "",
-    phone: result.formatted_phone_number || "",
-    website: result.website || "",
-    placeId: result.place_id || place.place_id || "",
-    hours: Array.isArray(result.opening_hours?.weekday_text) ? result.opening_hours.weekday_text.join("\n") : "",
+    address: String(result.formatted_address || place.formatted_address || ""),
+    phone: String(result.formatted_phone_number || result.international_phone_number || ""),
+    website: String(result.website || ""),
+    placeId: String(result.place_id || place.place_id || ""),
+    hours: Array.isArray(openingHours?.weekday_text) ? openingHours.weekday_text.join("\n") : "",
   };
 }
 
