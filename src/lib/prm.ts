@@ -208,6 +208,62 @@ export function shortDateTime(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+export function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function addDaysIso(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function isDueTodayOrLate(value: string | null | undefined) {
+  return Boolean(value && value <= todayIsoDate());
+}
+
+export function bestPhone(prospect: ProspectWithRelations) {
+  const contactPhone = prospect.contacts.find((c) => c.direct_phone || c.main_phone);
+  return contactPhone?.direct_phone || contactPhone?.main_phone || prospect.main_phone || "";
+}
+
+export function dataQualityIssues(prospect: ProspectWithRelations) {
+  return [
+    !bestPhone(prospect) ? "Téléphone manquant" : "",
+    !prospect.contacts.length ? "Contact manquant" : "",
+    !prospect.next_action_date ? "Relance non planifiée" : "",
+    !prospect.siren ? "SIREN manquant" : "",
+    !prospect.prospection_logs.length ? "Aucun historique" : "",
+  ].filter(Boolean);
+}
+
+export function nextStage(stage: CycleStage): CycleStage {
+  const index = stages.indexOf(stage);
+  return stages[Math.min(index + 1, stages.length - 1)] || "J2";
+}
+
+export function nextDateForStage(stage: CycleStage) {
+  const delays: Record<CycleStage, number> = {
+    J1: 1,
+    J2: 2,
+    J4: 2,
+    J6: 4,
+    J10: 5,
+    J15: 6,
+    J21: 30,
+  };
+  return addDaysIso(delays[stage] || 2);
+}
+
+export function sessionReason(prospect: ProspectWithRelations) {
+  if (isDueTodayOrLate(prospect.next_action_date)) return "Relance prévue aujourd'hui ou en retard";
+  if (!bestPhone(prospect)) return "À enrichir avant appel";
+  if (!prospect.contacts.length) return "Contact à identifier";
+  if (prospect.status === "Chaud") return "Prospect chaud à suivre";
+  if (prospect.import_source) return "Prospect importé à qualifier";
+  return "Priorité selon catégorie et statut";
+}
+
 export async function loadProspects(): Promise<ProspectWithRelations[]> {
   const { data, error } = await supabase
     .from("prospects")
@@ -296,13 +352,21 @@ export function prioritizeSession(prospects: ProspectWithRelations[]) {
   return [...prospects]
     .filter((prospect) => !["Perdu", "Converti"].includes(prospect.status))
     .sort((a, b) => {
+      const byDue =
+        Number(!isDueTodayOrLate(a.next_action_date)) -
+        Number(!isDueTodayOrLate(b.next_action_date));
+      if (byDue !== 0) return byDue;
+      const byCallable = Number(!bestPhone(a)) - Number(!bestPhone(b));
+      if (byCallable !== 0) return byCallable;
       const byCategory = (categoryRank[a.category] ?? 9) - (categoryRank[b.category] ?? 9);
       if (byCategory !== 0) return byCategory;
       const byDate =
         +new Date(a.next_action_date || "2099-12-31") -
         +new Date(b.next_action_date || "2099-12-31");
       if (byDate !== 0) return byDate;
-      return (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9);
+      const byStatus = (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9);
+      if (byStatus !== 0) return byStatus;
+      return dataQualityIssues(a).length - dataQualityIssues(b).length;
     })
     .slice(0, 20);
 }

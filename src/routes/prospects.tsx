@@ -15,8 +15,11 @@ import {
 import {
   categories,
   contactName,
+  bestPhone,
+  dataQualityIssues,
   formatDate,
   formatEuro,
+  isDueTodayOrLate,
   headcountRanges,
   loadProspects,
   offerTargets,
@@ -82,7 +85,15 @@ function ProspectsPage() {
   const [selected, setSelected] = useState<ProspectWithRelations | null>(null);
   const [form, setForm] = useState(emptyProspect);
   const [contactForm, setContactForm] = useState(emptyContact);
-  const [filters, setFilters] = useState({ status: "", category: "", offer: "", city: "" });
+  const [filters, setFilters] = useState({
+    status: "",
+    category: "",
+    offer: "",
+    city: "",
+    q: "",
+    view: "",
+    source: "",
+  });
   const [placesStatus, setPlacesStatus] = useState("");
 
   useEffect(() => {
@@ -94,14 +105,53 @@ function ProspectsPage() {
 
   const filtered = useMemo(
     () =>
-      prospects.filter(
-        (p) =>
+      prospects.filter((p) => {
+        const q = filters.q.toLowerCase();
+        const searchable = [
+          p.company_name,
+          p.city,
+          p.siren,
+          p.main_phone,
+          p.import_source,
+          ...p.contacts.flatMap((c) => [
+            c.first_name,
+            c.last_name,
+            c.email,
+            c.direct_phone,
+            c.role_title,
+          ]),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const issues = dataQualityIssues(p);
+        return (
+          (!filters.q || searchable.includes(q)) &&
           (!filters.status || p.status === filters.status) &&
           (!filters.category || p.category === filters.category) &&
           (!filters.offer || p.offer_target === filters.offer) &&
-          (!filters.city || (p.city || "").toLowerCase().includes(filters.city.toLowerCase())),
-      ),
+          (!filters.city || (p.city || "").toLowerCase().includes(filters.city.toLowerCase())) &&
+          (!filters.source || (p.import_source || p.source || "").includes(filters.source)) &&
+          (!filters.view ||
+            (filters.view === "due" && isDueTodayOrLate(p.next_action_date)) ||
+            (filters.view === "no_phone" && !bestPhone(p)) ||
+            (filters.view === "no_contact" && !p.contacts.length) ||
+            (filters.view === "no_next" && !p.next_action_date) ||
+            (filters.view === "incomplete" && issues.length > 0))
+        );
+      }),
     [prospects, filters],
+  );
+
+  const counters = useMemo(
+    () => ({
+      total: prospects.length,
+      due: prospects.filter((p) => isDueTodayOrLate(p.next_action_date)).length,
+      incomplete: prospects.filter((p) => dataQualityIssues(p).length > 0).length,
+      hot: prospects.filter((p) => p.status === "Chaud").length,
+      converted: prospects.filter((p) => p.status === "Converti").length,
+    }),
+    [prospects],
   );
 
   function openProspect(prospect: ProspectWithRelations) {
@@ -218,9 +268,34 @@ function ProspectsPage() {
           </Button>
         }
       />
+      <div className="mb-4 grid gap-3 md:grid-cols-5">
+        <MiniKpi label="Total" value={counters.total} />
+        <MiniKpi label="À appeler" value={counters.due} />
+        <MiniKpi label="À compléter" value={counters.incomplete} />
+        <MiniKpi label="Chauds" value={counters.hot} />
+        <MiniKpi label="Convertis" value={counters.converted} />
+      </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card className="overflow-hidden">
-          <div className="grid gap-3 border-b border-border p-4 md:grid-cols-4">
+          <div className="grid gap-3 border-b border-border p-4 md:grid-cols-4 xl:grid-cols-7">
+            <input
+              className={`${fieldClass} md:col-span-2`}
+              placeholder="Recherche entreprise, contact, email, téléphone…"
+              value={filters.q}
+              onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+            />
+            <select
+              className={fieldClass}
+              value={filters.view}
+              onChange={(e) => setFilters({ ...filters, view: e.target.value })}
+            >
+              <option value="">Toutes vues</option>
+              <option value="due">À appeler</option>
+              <option value="incomplete">À compléter</option>
+              <option value="no_phone">Sans téléphone</option>
+              <option value="no_contact">Sans contact</option>
+              <option value="no_next">Sans prochaine action</option>
+            </select>
             <select
               className={fieldClass}
               value={filters.status}
@@ -257,6 +332,15 @@ function ProspectsPage() {
               value={filters.city}
               onChange={(e) => setFilters({ ...filters, city: e.target.value })}
             />
+            <select
+              className={fieldClass}
+              value={filters.source}
+              onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+            >
+              <option value="">Toutes sources</option>
+              <option value="excel">Import Excel</option>
+              <option value="api_batch">Batch API</option>
+            </select>
           </div>
           <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-sm">
@@ -296,7 +380,14 @@ function ProspectsPage() {
                       <StatusBadge status={p.status} />
                     </td>
                     <td className="px-4 py-3">{formatDate(p.next_action_date)}</td>
-                    <td className="px-4 py-3">{formatEuro(p.estimated_value)}</td>
+                    <td className="px-4 py-3">
+                      <div>{formatEuro(p.estimated_value)}</div>
+                      {dataQualityIssues(p).length ? (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {dataQualityIssues(p).length} point(s) à compléter
+                        </div>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -505,6 +596,74 @@ function ProspectsPage() {
             {placesStatus ? (
               <p className="rounded-lg bg-script p-3 text-sm">{placesStatus}</p>
             ) : null}
+            {selected ? (
+              <div className="grid gap-3 border-t border-border pt-4">
+                <div>
+                  <p className={labelClass}>Contacts enregistrés</p>
+                  <div className="mt-2 grid gap-2">
+                    {selected.contacts.length ? (
+                      selected.contacts.map((contact) => (
+                        <div
+                          key={contact.id}
+                          className="rounded-lg border border-border bg-card p-3 text-sm"
+                        >
+                          <p className="font-medium">{contactName(contact)}</p>
+                          <p className="text-muted-foreground">
+                            {contact.role_title || "Rôle à qualifier"}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {contact.direct_phone || contact.main_phone ? (
+                              <a
+                                href={`tel:${contact.direct_phone || contact.main_phone}`}
+                                className="underline"
+                              >
+                                Appeler
+                              </a>
+                            ) : null}
+                            {contact.email ? (
+                              <a href={`mailto:${contact.email}`} className="underline">
+                                Email
+                              </a>
+                            ) : null}
+                            {contact.linkedin_url ? (
+                              <a
+                                href={contact.linkedin_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                LinkedIn
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Aucun contact enregistré.</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className={labelClass}>Historique récent</p>
+                  <div className="mt-2 grid gap-2">
+                    {selected.prospection_logs.slice(0, 5).map((log) => (
+                      <div
+                        key={log.id}
+                        className="rounded-lg border border-border bg-card p-3 text-sm"
+                      >
+                        <p className="font-medium">
+                          {formatDate(log.action_date)} · {log.result || log.action_type}
+                        </p>
+                        <p className="text-muted-foreground">{log.notes || log.objective || "—"}</p>
+                      </div>
+                    ))}
+                    {!selected.prospection_logs.length ? (
+                      <p className="text-sm text-muted-foreground">Aucun historique.</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </Card>
       </div>
@@ -517,5 +676,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className={labelClass}>{label}</span>
       {children}
     </label>
+  );
+}
+
+function MiniKpi({ label, value }: { label: string; value: string | number }) {
+  return (
+    <Card className="p-3">
+      <p className={labelClass}>{label}</p>
+      <p className="mt-1 text-[20px] font-medium">{value}</p>
+    </Card>
   );
 }

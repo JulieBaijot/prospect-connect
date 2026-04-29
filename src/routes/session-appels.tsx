@@ -14,10 +14,14 @@ import {
   addLog,
   buildCalendarUrl,
   contactName,
+  dataQualityIssues,
   formatDate,
   formatEuro,
   loadProspects,
+  nextDateForStage,
+  nextStage as getNextStage,
   prioritizeSession,
+  sessionReason,
   shortDateTime,
   stageScripts,
   stages,
@@ -59,9 +63,13 @@ function SessionPage() {
   const [meetingDate, setMeetingDate] = useState("");
   const [duration, setDuration] = useState(30);
   const [videoLink, setVideoLink] = useState("");
+  const [activeContactId, setActiveContactId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
   const current = session[index];
-  const contact = current?.contacts[0];
+  const contact =
+    current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
   const progress = session.length ? Math.round((summary.done / session.length) * 100) : 0;
 
   useEffect(() => {
@@ -100,12 +108,22 @@ function SessionPage() {
     setCallbackDate("");
     setMeetingDate("");
     setVideoLink("");
-    setSummary((prev) => ({ ...prev, done: Math.min(prev.done + 1, session.length) }));
+    setMessage("");
+    setActiveContactId(null);
     setIndex((prev) => prev + 1);
   }
 
+  function markDoneAndNext() {
+    setSummary((prev) => ({ ...prev, done: Math.min(prev.done + 1, session.length) }));
+    nextCard();
+  }
+
   async function handleNrp() {
-    if (!current) return;
+    if (!current || busy) return;
+    setBusy(true);
+    setMessage("");
+    const nextDate = nextDateForStage(current.current_stage);
+    const next = getNextStage(current.current_stage);
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
@@ -114,14 +132,18 @@ function SessionPage() {
       stage: current.current_stage,
       objective: stageScripts[current.current_stage].objective,
       result: "NRP",
-      notes: "Pas de réponse",
+      notes: `Pas de réponse. Relance proposée : ${next}`,
+      next_action_date: nextDate,
     });
+    await updateProspect(current.id, { current_stage: next, next_action_date: nextDate });
     setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
-    nextCard();
+    setBusy(false);
+    markDoneAndNext();
   }
 
   async function saveCallback() {
-    if (!current || !callbackDate) return;
+    if (!current || !callbackDate || busy) return;
+    setBusy(true);
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
@@ -134,11 +156,17 @@ function SessionPage() {
       next_action_date: callbackDate,
     });
     await updateProspect(current.id, { next_action_date: callbackDate });
-    nextCard();
+    setBusy(false);
+    markDoneAndNext();
   }
 
   async function saveExchange() {
-    if (!current) return;
+    if (!current || busy) return;
+    if (!callbackDate) {
+      setMessage("Choisissez une prochaine date d'action pour garder la relance sous contrôle.");
+      return;
+    }
+    setBusy(true);
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
@@ -148,14 +176,17 @@ function SessionPage() {
       objective: stageScripts[current.current_stage].objective,
       result: "Échange",
       notes,
+      next_action_date: callbackDate,
     });
-    await updateProspect(current.id, { current_stage: nextStage });
+    await updateProspect(current.id, { current_stage: nextStage, next_action_date: callbackDate });
     setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
-    nextCard();
+    setBusy(false);
+    markDoneAndNext();
   }
 
   async function saveMeeting() {
-    if (!current || !meetingDate) return;
+    if (!current || !meetingDate || busy) return;
+    setBusy(true);
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
@@ -179,7 +210,8 @@ function SessionPage() {
       "noopener,noreferrer",
     );
     setSummary((prev) => ({ ...prev, rdv: prev.rdv + 1 }));
-    nextCard();
+    setBusy(false);
+    markDoneAndNext();
   }
 
   return (
@@ -254,6 +286,19 @@ function SessionPage() {
               </div>
               <div className="mt-5 rounded-lg bg-muted p-4">
                 <p className={labelClass}>Contact</p>
+                {current.contacts.length > 1 ? (
+                  <select
+                    className={`${fieldClass} mt-2 w-full`}
+                    value={contact?.id || ""}
+                    onChange={(e) => setActiveContactId(e.target.value)}
+                  >
+                    {current.contacts.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {contactName(item)} · {item.role_title || "Rôle à qualifier"}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
                 <h4 className="mt-1 text-[16px] font-medium">{contactName(contact)}</h4>
                 <p className="text-sm text-muted-foreground">
                   {contact?.role_title || "Rôle à qualifier"}
@@ -280,6 +325,22 @@ function SessionPage() {
                   <span>{current.reception_hours || "Horaires à compléter"}</span>
                 </div>
                 {current.comments ? <p className="mt-3 text-sm">{current.comments}</p> : null}
+                <div className="mt-4 grid gap-2 md:grid-cols-2">
+                  <Info label="Pourquoi maintenant" value={sessionReason(current)} />
+                  <Info label="Prochaine action" value={formatDate(current.next_action_date)} />
+                </div>
+                {dataQualityIssues(current).length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {dataQualityIssues(current).map((issue) => (
+                      <span
+                        key={issue}
+                        className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground"
+                      >
+                        {issue}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <div className="mt-5 rounded-r-md border-l-[3px] border-script-border bg-script p-4">
                 <p className={labelClass}>{stageScripts[current.current_stage].label}</p>
@@ -302,10 +363,11 @@ function SessionPage() {
               <Button variant="success" onClick={() => setMode("meeting")}>
                 4 · RDV obtenu
               </Button>
-              <Button variant="neutral" onClick={nextCard}>
-                5 · Suivant
+              <Button variant="neutral" onClick={nextCard} disabled={busy}>
+                5 · Passer sans log
               </Button>
             </div>
+            {message ? <p className="mt-3 rounded-lg bg-script p-3 text-sm">{message}</p> : null}
             {mode === "callback" ? (
               <Panel>
                 <label className={labelClass}>Rappeler le</label>
@@ -336,6 +398,13 @@ function SessionPage() {
                     <option key={stage}>{stage}</option>
                   ))}
                 </select>
+                <label className={labelClass}>Prochaine action</label>
+                <input
+                  className={fieldClass}
+                  type="date"
+                  value={callbackDate}
+                  onChange={(e) => setCallbackDate(e.target.value)}
+                />
                 <Button onClick={saveExchange}>Sauvegarder l'échange</Button>
               </Panel>
             ) : null}

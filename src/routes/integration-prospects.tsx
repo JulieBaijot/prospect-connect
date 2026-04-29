@@ -98,7 +98,13 @@ type Step1Props = {
   loading: boolean;
   results: Company[];
   quotaBanner: boolean;
-  batchRuns: Array<{ keyword: string; source: SearchSource; status: "terminé" | "erreur"; count: number; error?: string }>;
+  batchRuns: Array<{
+    keyword: string;
+    source: SearchSource;
+    status: "terminé" | "erreur";
+    count: number;
+    error?: string;
+  }>;
   missingKeys: string[];
   searchCompanies: (source?: SearchSource) => void;
   switchSource: (source: SearchSource) => void;
@@ -129,6 +135,32 @@ const quotas = {
   insee: "Gratuit, sans limite",
   annuaire: "Gratuit, sans limite",
 } as const;
+const batchPresets = [
+  {
+    label: "Industrie 07/26",
+    keywords: "industrie annonay\nindustrie valence\nindustrie romans-sur-isère",
+    sector: "Industrie manufacturière",
+    departments: ["07", "26"],
+  },
+  {
+    label: "Logistique vallée du Rhône",
+    keywords: "logistique valence\ntransport annonay\nentrepôt drôme",
+    sector: "Logistique & transport",
+    departments: ["07", "26", "38"],
+  },
+  {
+    label: "Médico-social Ardèche/Drôme",
+    keywords: "ehpad ardèche\nmaison de retraite drôme\nétablissement médico-social",
+    sector: "Médico-social & santé",
+    departments: ["07", "26"],
+  },
+  {
+    label: "BTP local",
+    keywords: "btp annonay\ntravaux publics ardèche\nconstruction drôme",
+    sector: "BTP",
+    departments: ["07", "26"],
+  },
+];
 
 function IntegrationPage() {
   const navigate = useNavigate();
@@ -136,9 +168,7 @@ function IntegrationPage() {
   const runEnrichment = useServerFn(enrichCompany);
   const runEmailFinder = useServerFn(findEmail);
   const [step, setStep] = useState(1);
-  const [source, setSource] = useState<SearchSource>(
-    () => (localStorage.getItem("prm-search-source") as SearchSource) || "annuaire",
-  );
+  const [source, setSource] = useState<SearchSource>("annuaire");
   const [filters, setFilters] = useState({
     q: "",
     keywords: "industrie annonay\nlogistique valence\nehpad ardèche",
@@ -153,11 +183,21 @@ function IntegrationPage() {
   const [loading, setLoading] = useState(false);
   const [quotaBanner, setQuotaBanner] = useState(false);
   const [batchRuns, setBatchRuns] = useState<
-    Array<{ keyword: string; source: SearchSource; status: "terminé" | "erreur"; count: number; error?: string }>
+    Array<{
+      keyword: string;
+      source: SearchSource;
+      status: "terminé" | "erreur";
+      count: number;
+      error?: string;
+    }>
   >([]);
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [activeCompany, setActiveCompany] = useState<string | null>(null);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("prm-search-source") as SearchSource | null;
+    if (saved) setSource(saved);
+  }, []);
   useEffect(() => {
     localStorage.setItem("prm-search-source", source);
   }, [source]);
@@ -211,7 +251,15 @@ function IntegrationPage() {
         })),
       );
     } catch (error) {
-      setBatchRuns([{ keyword: "Batch", source: nextSource, status: "erreur", count: 0, error: error instanceof Error ? error.message : "Erreur API" }]);
+      setBatchRuns([
+        {
+          keyword: "Batch",
+          source: nextSource,
+          status: "erreur",
+          count: 0,
+          error: error instanceof Error ? error.message : "Erreur API",
+        },
+      ]);
       setQuotaBanner(true);
     } finally {
       setLoading(false);
@@ -242,7 +290,14 @@ function IntegrationPage() {
           updateCompany(
             company.id,
             place.status === "found"
-              ? { enrichment: "Trouvé", address: place.address, phone: place.phone, website: place.website, placeId: place.placeId, hours: place.hours }
+              ? {
+                  enrichment: "Trouvé",
+                  address: place.address,
+                  phone: place.phone,
+                  website: place.website,
+                  placeId: place.placeId,
+                  hours: place.hours,
+                }
               : { enrichment: "Non trouvé" },
           );
         } catch {
@@ -288,7 +343,10 @@ function IntegrationPage() {
       },
     });
     if (response.status === "found") updateContact(company, idx, { email: response.email });
-    if (response.status === "missing_key") updateContact(company, idx, { comments: "Hunter.io non configuré : recherche manuelle à faire." });
+    if (response.status === "missing_key")
+      updateContact(company, idx, {
+        comments: "Hunter.io non configuré : recherche manuelle à faire.",
+      });
   }
 
   async function saveAll(continueAfter = false) {
@@ -370,9 +428,16 @@ function IntegrationPage() {
               selected={companies}
             />
           )}
-          {step === 2 && <Step2 companies={companies} updateCompany={updateCompany} enrichAll={enrichAll} />}
+          {step === 2 && (
+            <Step2 companies={companies} updateCompany={updateCompany} enrichAll={enrichAll} />
+          )}
           {step === 3 && (
-            <Step3 companies={companies} addContact={addContact} updateContact={updateContact} findContactEmail={findContactEmail} />
+            <Step3
+              companies={companies}
+              addContact={addContact}
+              updateContact={updateContact}
+              findContactEmail={findContactEmail}
+            />
           )}
           {step === 4 && (
             <Step4
@@ -433,15 +498,69 @@ function Stepper({ step, setStep }: { step: number; setStep: (s: number) => void
   );
 }
 function Step1(props: Step1Props) {
-  const keywordCount = props.filters.keywords.split("\n").map((x) => x.trim()).filter(Boolean).length;
+  const keywordCount = props.filters.keywords
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean).length;
   return (
     <div className="grid gap-4">
+      <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
+        Un mot-clé lance une recherche. Plusieurs lignes créent un batch complet, avec un suivi par
+        mot-clé.
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {batchPresets.map((preset) => (
+          <Button
+            key={preset.label}
+            variant="neutral"
+            onClick={() =>
+              props.setFilters({
+                ...props.filters,
+                keywords: preset.keywords,
+                sector: preset.sector,
+                departments: preset.departments,
+              })
+            }
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
+      <div className="grid gap-2 rounded-lg border border-border bg-card p-3 text-sm md:grid-cols-5">
+        <ServiceStatus
+          label="Pappers"
+          ok={!props.missingKeys.some((key) => key.includes("PAPPERS"))}
+          fallback="fallback Annuaire"
+        />
+        <ServiceStatus
+          label="INSEE Sirene"
+          ok={!props.missingKeys.some((key) => key.includes("SIRENE"))}
+          fallback="fallback Annuaire"
+        />
+        <ServiceStatus label="Annuaire" ok fallback="gratuit" />
+        <ServiceStatus
+          label="Google Places"
+          ok={!props.missingKeys.some((key) => key.includes("GOOGLE"))}
+          fallback="saisie manuelle"
+        />
+        <ServiceStatus
+          label="Hunter.io"
+          ok={!props.missingKeys.some((key) => key.includes("HUNTER"))}
+          fallback="recherche manuelle"
+        />
+      </div>
       <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
         <textarea
           className={`${fieldClass} min-h-28 py-2`}
           placeholder={"Mots-clés batch, un par ligne\nindustrie annonay\nlogistique valence"}
           value={props.filters.keywords}
-          onChange={(e) => props.setFilters({ ...props.filters, keywords: e.target.value, q: e.target.value.split("\n")[0] || "" })}
+          onChange={(e) =>
+            props.setFilters({
+              ...props.filters,
+              keywords: e.target.value,
+              q: e.target.value.split("\n")[0] || "",
+            })
+          }
         />
         <select
           className={fieldClass}
@@ -507,15 +626,21 @@ function Step1(props: Step1Props) {
       ) : null}
       {props.missingKeys.length ? (
         <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
-          API à configurer : {props.missingKeys.join(", ")}. Les sources gratuites ou la saisie manuelle restent utilisables.
+          API à configurer : {props.missingKeys.join(", ")}. Les sources gratuites ou la saisie
+          manuelle restent utilisables.
         </div>
       ) : null}
       {props.batchRuns.length ? (
         <div className="grid gap-2 md:grid-cols-3">
           {props.batchRuns.map((run) => (
-            <div key={`${run.keyword}-${run.source}`} className="rounded-lg border border-border bg-card p-3 text-sm">
+            <div
+              key={`${run.keyword}-${run.source}`}
+              className="rounded-lg border border-border bg-card p-3 text-sm"
+            >
               <p className="font-medium">{run.keyword}</p>
-              <p className="text-muted-foreground">{sources[run.source]} · {run.count} résultat(s)</p>
+              <p className="text-muted-foreground">
+                {sources[run.source]} · {run.count} résultat(s)
+              </p>
               {run.error ? <p className="text-xs text-muted-foreground">{run.error}</p> : null}
             </div>
           ))}
@@ -525,11 +650,13 @@ function Step1(props: Step1Props) {
         <table className="w-full text-left text-sm">
           <thead className="bg-secondary text-xs uppercase text-muted-foreground">
             <tr>
-              {["Mot-clé", "Source", "Nom", "Ville", "Effectifs", "NAF", "SIREN", "Score", ""].map((h) => (
-                <th key={h} className="px-3 py-2">
-                  {h}
-                </th>
-              ))}
+              {["Mot-clé", "Source", "Nom", "Ville", "Effectifs", "NAF", "SIREN", "Score", ""].map(
+                (h) => (
+                  <th key={h} className="px-3 py-2">
+                    {h}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
@@ -543,6 +670,7 @@ function Step1(props: Step1Props) {
                 <td className="px-3 py-2">{r.naf}</td>
                 <td className="px-3 py-2">{r.siren}</td>
                 <td className="px-3 py-2">{r.score || "—"}</td>
+
                 <td className="px-3 py-2">
                   <Button variant="neutral" onClick={() => props.selectCompany(r)}>
                     Sélectionner
@@ -571,7 +699,9 @@ function Step2({
   return (
     <div className="grid gap-3">
       <div className="flex justify-end">
-        <Button variant="neutral" onClick={enrichAll}>Relancer l'enrichissement</Button>
+        <Button variant="neutral" onClick={enrichAll}>
+          Relancer l'enrichissement
+        </Button>
       </div>
       {companies.map((c) => (
         <Card key={c.id} className="p-4">
@@ -681,7 +811,11 @@ function Step3({
               Ajouter {r.name}
             </Button>
           ))}
-          <ContactEditors company={c} updateContact={updateContact} findContactEmail={findContactEmail} />
+          <ContactEditors
+            company={c}
+            updateContact={updateContact}
+            findContactEmail={findContactEmail}
+          />
         </Card>
       ))}
     </div>
@@ -710,7 +844,12 @@ function Step4({
               category={c.contacts[0]?.category || c.category || "C – Porte d'entrée"}
             />
           </div>
-          <ContactEditors company={c} updateContact={updateContact} findContactEmail={findContactEmail} qualification />
+          <ContactEditors
+            company={c}
+            updateContact={updateContact}
+            findContactEmail={findContactEmail}
+            qualification
+          />
           <textarea
             className={`${fieldClass} mt-3 min-h-20 w-full py-2`}
             placeholder="Commentaires entreprise"
@@ -882,5 +1021,16 @@ function Summary({
         ))}
       </div>
     </Card>
+  );
+}
+
+function ServiceStatus({ label, ok, fallback }: { label: string; ok: boolean; fallback: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <p className="font-medium">{label}</p>
+      <p className="text-xs text-muted-foreground">
+        {ok ? "Configuré ou disponible" : "Non configuré"} · {fallback}
+      </p>
+    </div>
   );
 }

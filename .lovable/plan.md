@@ -1,186 +1,198 @@
-Voici le plan de modification pour répondre aux 3 points.
+Voici la revue de l’app et le plan d’amélioration proposé. L’objectif n’est pas de tout reconstruire : la base est bonne, mais il faut rendre l’outil plus fiable, plus orienté “session d’appels réelle”, et plus clair pour un usage quotidien sur ordinateur.
 
-## Objectif
+## Diagnostic rapide
 
-Transformer l’intégration prospects en vrai outil de recherche par batch, brancher les API utiles côté backend, puis importer votre fichier Excel dans la base afin que la session d’appels, la base prospects, le journal et les stats affichent vos données réelles.
+### Ce qui est déjà solide
+- Les 5 grandes zones sont en place : session d’appels, base prospects, intégration, journal, stats.
+- Le modèle de données couvre l’essentiel : prospects, contacts, historiques, imports batch.
+- Les appels aux API externes ont été déplacés côté serveur, ce qui est la bonne direction pour protéger les clés.
+- L’interface est déjà en français et respecte globalement la direction visuelle demandée.
+- L’import Excel a bien injecté une première base, ce qui permet de tester avec de vraies données.
 
-## 1. Intégration prospects : rendre le batch clair et utilisable
+### Points qui semblent moins idéaux aujourd’hui
 
-### Ce qui va changer côté interface
+#### 1. Session d’appels : trop fragile pour un usage quotidien
+- Le bouton “Suivant” compte un prospect comme traité même si aucune action n’a été enregistrée.
+- “NRP” crée un log, mais ne planifie pas forcément la prochaine relance ni ne fait avancer clairement le cycle.
+- “Échange” fait changer l’étape, mais ne force pas une prochaine date d’action.
+- “Pas dispo” sauvegarde un rappel, mais le résumé de session ne le compte pas vraiment comme catégorie distincte.
+- La carte affiche seulement le premier contact, alors qu’un prospect peut avoir plusieurs contacts.
+- Il n’y a pas assez d’aide au choix : “qui appeler maintenant ?”, “pourquoi ce prospect est prioritaire ?”, “quelle est la prochaine meilleure action ?”.
 
-La page **Intégration prospects** deviendra un outil de batch avec :
+#### 2. Données importées : présentes mais pas assez qualifiées
+- Beaucoup de prospects importés depuis Excel ont des champs vides : téléphone, site web, SIREN, secteur, commentaires, prochaine action.
+- Certains contacts ou historiques peuvent exister, mais l’interface ne rend pas assez visible la qualité de la donnée.
+- La priorité de session est donc mécaniquement moins pertinente : beaucoup de prospects se ressemblent.
 
-- Un champ **Mots-clés batch** où vous pourrez saisir plusieurs recherches, une par ligne.
-  - Exemple :
-    ```text
-    industrie annonay
-    logistique valence
-    ehpad ardèche
-    responsable qhse drôme
-    ```
-- Des filtres communs au batch : départements, tranche d’effectif, secteur, statut juridique, nombre max de résultats par mot-clé.
-- Une prévisualisation du batch :
-  - nombre de mots-clés,
-  - source utilisée,
-  - résultats par mot-clé,
-  - doublons détectés par SIREN ou nom + ville.
-- Un tableau de staging plus lisible :
-  - mot-clé d’origine,
-  - source d’origine,
-  - entreprise,
-  - ville,
-  - effectif,
-  - SIREN,
-  - NAF,
-  - score / pertinence si disponible,
-  - bouton sélectionner / ignorer.
+#### 3. Base prospects : utile, mais encore trop “table + formulaire”
+- Les filtres sont limités : pas de recherche globale entreprise/contact/téléphone/email, pas de filtre “à appeler aujourd’hui”, “sans téléphone”, “sans contact”, “chaud sans prochaine action”.
+- Le panneau d’édition ne met en avant qu’un contact principal.
+- Il manque une lecture rapide de l’historique complet et de la prochaine action.
+- Pas d’action rapide depuis la base : appeler, email, LinkedIn, créer log, enrichir, marquer perdu/converti.
 
-### Comportement attendu
+#### 4. Intégration prospects : le batch existe mais le workflow reste lourd
+- La logique “mots-clés batch” existe, mais elle est encore trop technique : l’utilisateur doit comprendre source, quota, mots-clés, étape suivante.
+- Il manque des modèles de recherche prêts à l’emploi : “industrie Ardèche/Drôme”, “logistique vallée du Rhône”, “médico-social 07/26”, etc.
+- Il n’y a pas assez de déduplication visible avant sauvegarde.
+- Le staging ne montre pas clairement : déjà en base / nouveau / incomplet / enrichi / à qualifier.
+- Le workflow devrait permettre d’importer rapidement un lot, puis d’enrichir progressivement, pas forcément tout compléter avant sauvegarde.
 
-Au lieu d’une seule recherche, le bouton deviendra :
+#### 5. API externes : intégrées, mais configuration et erreurs pas assez guidées
+- L’app signale parfois qu’une clé manque, mais ne donne pas un guide clair de quoi configurer et ce qui reste utilisable sans clé.
+- Les fallbacks Pappers → Annuaire / INSEE → Annuaire sont utiles, mais pas assez visibles dans l’interface.
+- Les résultats API ne sont pas historisés de façon exploitable côté UI : on voit le run courant, pas une vraie liste des batches passés.
 
-- **Lancer le batch** : exécute chaque mot-clé avec les filtres choisis.
-- **Ajouter les résultats sélectionnés** : place les sociétés dans l’étape d’enrichissement.
-- **Relancer les erreurs** : utile si une API répond mal ou si un quota est atteint.
+#### 6. Stats : trop générales pour piloter la prospection
+- Les stats actuelles sont correctes mais basiques.
+- Il manque les indicateurs utiles pour une formatrice SST freelance :
+  - prospects à appeler aujourd’hui,
+  - prospects sans téléphone,
+  - prospects sans contact identifié,
+  - taux de contact utile,
+  - RDV obtenus par semaine,
+  - valeur pipeline par catégorie/offre,
+  - lots importés non encore traités.
 
-Le mot-clé servira donc à segmenter le batch : il ne sera pas un simple champ isolé, mais la base d’une série de recherches successives.
+#### 7. Architecture et sécurité : acceptable pour mono-utilisateur, mais à surveiller
+- Le projet est volontairement sans auth pour l’instant, donc les règles d’accès sont ouvertes. C’est cohérent avec “single user app”, mais il faudra absolument verrouiller si l’app est publiée ou utilisée avec des données sensibles.
+- Les types backend générés ont été modifiés précédemment alors qu’ils devraient normalement être automatiques. À corriger si nécessaire pour éviter de futures incohérences.
+- Les opérations de données sont majoritairement côté client ; pour une app sans auth c’est simple, mais certaines actions métier gagneraient à être centralisées dans des fonctions serveur : session d’appel, import batch, déduplication.
 
-## 2. API Pappers, Sirene, Annuaire Entreprises et autres API utiles
+## Plan d’amélioration proposé
 
-### Architecture prévue
+### Étape 1 — Stabiliser la session d’appels
+Transformer `/session-appels` en vrai cockpit opérationnel.
 
-Je déplacerai les appels API dans des fonctions backend TanStack Start, pour éviter d’exposer les clés privées dans le navigateur.
+À faire :
+- Ajouter un état “action en cours” pour éviter les doubles clics et doubles logs.
+- Ne compter “traité” que lorsqu’une action est réellement enregistrée, ou distinguer “passé” de “traité”.
+- Pour chaque action :
+  - NRP : créer un log + proposer automatiquement la prochaine relance selon le cycle.
+  - Pas dispo : créer un log + date de rappel obligatoire.
+  - Échange : notes obligatoires ou recommandées + prochaine étape + prochaine date.
+  - RDV : date obligatoire + passage en “Chaud” + lien calendrier.
+  - Suivant : passer sans log, mais ne pas gonfler les stats d’actions.
+- Afficher tous les contacts du prospect, avec sélection du contact appelé.
+- Afficher pourquoi le prospect est dans la session : catégorie, date de relance, statut, absence de contact, import récent, etc.
+- Ajouter des messages de confirmation ou d’erreur en français.
 
-Les appels côté navigateur actuels seront remplacés par :
+### Étape 2 — Améliorer la priorisation métier
+Rendre la liste d’appel plus intelligente.
 
-```text
-Interface React
-  -> fonctions backend sécurisées
-    -> API Pappers / INSEE Sirene / Annuaire Entreprises / Google Places / Hunter si configuré
-  -> résultats normalisés
-  -> staging dans le wizard
-```
+À faire :
+- Prioriser d’abord les prospects avec `next_action_date <= aujourd’hui`.
+- Ensuite pondérer : catégorie A/B/C, statut Chaud/Tiède, présence d’un téléphone, présence d’un contact, ancienneté du dernier log.
+- Exclure ou reléguer les prospects impossibles à appeler : aucun téléphone prospect ni contact.
+- Ajouter des vues rapides :
+  - “À appeler aujourd’hui”
+  - “À enrichir avant appel”
+  - “Chauds à relancer”
+  - “Nouveaux imports”
 
-### Sources entreprises
+### Étape 3 — Revoir la base prospects
+Faire de `/prospects` un écran de pilotage, pas seulement une table.
 
-Je prévois 3 connecteurs logiques :
+À faire :
+- Ajouter une recherche globale : entreprise, ville, contact, email, téléphone, SIREN.
+- Ajouter des filtres utiles :
+  - à appeler aujourd’hui,
+  - sans téléphone,
+  - sans contact,
+  - sans prochaine action,
+  - par source/import,
+  - par catégorie/offre/statut.
+- Ajouter des compteurs visibles en haut : total, à appeler, incomplets, chauds, convertis.
+- Afficher les signaux de qualité de donnée : téléphone manquant, contact manquant, SIREN manquant, historique absent.
+- Dans le panneau de droite :
+  - liste complète des contacts,
+  - historique récent,
+  - boutons rapides : appeler, email, LinkedIn, enrichir, ajouter log.
 
-1. **Annuaire Entreprises**
-   - Recherche d’entreprises françaises.
-   - Bonne source gratuite pour démarrer.
-   - Utilisable sans clé si l’endpoint public suffit.
+### Étape 4 — Simplifier l’intégration batch
+Faire de `/integration-prospects` un flux plus guidé et moins technique.
 
-2. **INSEE Sirene**
-   - Recherche officielle par raison sociale, SIREN/SIRET, code NAF, commune, département.
-   - Si la version utilisée nécessite un jeton, l’app affichera un message clair et utilisera l’Annuaire en fallback.
+À faire :
+- Ajouter des presets de batch :
+  - “Industrie 07/26”
+  - “Logistique vallée du Rhône”
+  - “Médico-social Ardèche/Drôme”
+  - “BTP local”
+  - “Recherche personnalisée”
+- Expliquer clairement le rôle du mot-clé : un mot-clé = une recherche ; plusieurs lignes = un lot.
+- Afficher un statut par résultat :
+  - nouveau,
+  - déjà en base,
+  - doublon probable,
+  - incomplet,
+  - enrichi.
+- Ajouter sélection multiple : tout sélectionner, sélectionner uniquement les nouveaux, exclure doublons.
+- Permettre “sauvegarder en brouillon” plus tôt, sans obliger à compléter tous les contacts.
+- Ajouter une page ou section “Batches précédents” basée sur `api_search_runs` / `integration_batches`.
 
-3. **Pappers**
-   - Recherche entreprise enrichie avec dirigeants / représentants quand disponible.
-   - Nécessite une clé API Pappers.
-   - La clé sera demandée et stockée en secret backend, pas dans le code frontend.
+### Étape 5 — Mieux guider la configuration API
+Rendre la configuration compréhensible sans jargon technique.
 
-### Enrichissement après sélection
+À faire :
+- Ajouter un encart “Services connectés” dans l’intégration :
+  - Pappers : enrichissement légal / dirigeants,
+  - INSEE Sirene : données établissement,
+  - Annuaire Entreprises : fallback gratuit,
+  - Google Places : téléphone, site, horaires,
+  - Hunter.io : recherche email.
+- Pour chaque service : afficher “configuré / non configuré / fallback disponible”.
+- Quand une clé manque : afficher ce que l’app peut quand même faire.
+- Améliorer les messages d’erreur API : quota, clé absente, aucun résultat, service indisponible.
 
-Je brancherai ensuite les étapes suivantes :
+### Étape 6 — Nettoyer et enrichir les données existantes
+Exploiter la base importée pour donner un aperçu plus réaliste.
 
-- **Google Places** pour téléphone, adresse, site web, horaires, place ID.
-  - Cette API nécessite une clé Google Places.
-  - Vu que Google Places peut poser des contraintes CORS, l’appel passera aussi par le backend.
-- **Hunter.io** pour enrichissement email, si vous avez une clé Hunter.
-  - Sinon l’interface gardera les boutons d’aide manuelle Google / LinkedIn / site web.
+À faire :
+- Auditer les prospects importés : combien sans téléphone, sans contact, sans historique, sans prochaine action.
+- Ajouter si besoin une action de nettoyage : normalisation villes, catégories, statuts, offres, prochaines dates.
+- Marquer clairement les prospects issus d’Excel et ceux issus des recherches API.
+- Ajouter un filtre “import Excel” / “API batch”.
+- Optionnel : créer une vue “À compléter” pour traiter les fiches incomplètes avant session d’appel.
 
-### Gestion des clés API
+### Étape 7 — Renforcer le tableau de bord stats
+Créer des indicateurs plus actionnables.
 
-Les clés nécessaires seront :
+À faire :
+- Ajouter :
+  - appels aujourd’hui / semaine,
+  - prospects à appeler aujourd’hui,
+  - prospects en retard de relance,
+  - prospects sans téléphone,
+  - prospects sans contact,
+  - RDV obtenus sur 7/30 jours,
+  - pipeline par offre,
+  - pipeline par catégorie,
+  - taux NRP / échange / RDV.
+- Ajouter une section “Prochaines actions” avec les 10 relances les plus urgentes.
 
-- `PAPPERS_API_KEY` pour Pappers,
-- éventuellement `SIRENE_API_KEY` si l’API Sirene retenue exige un token,
-- `GOOGLE_PLACES_API_KEY` pour Google Places,
-- `HUNTER_API_KEY` pour Hunter.io.
+## Priorité recommandée
 
-Je ne les mettrai pas dans le frontend. Si elles ne sont pas déjà disponibles, je prévoirai une étape où Lovable vous demandera de les renseigner de manière sécurisée.
+Je recommande de commencer par :
 
-### Si une API n’est pas encore configurée
+1. Session d’appels : fiabilité des actions, contact sélectionnable, prochaine relance automatique.
+2. Base prospects : recherche globale, filtres “à appeler / à compléter”, signaux de qualité.
+3. Intégration batch : presets, déduplication visible, sauvegarde plus simple.
+4. Stats : indicateurs actionnables.
+5. Nettoyage de données : audit et normalisation des imports existants.
 
-L’app ne bloquera pas tout le process. Elle affichera :
+## Détails techniques
 
-- source indisponible,
-- raison claire : clé absente, quota atteint, erreur API,
-- action proposée : basculer vers Annuaire / INSEE, ou continuer en saisie manuelle.
+- Garder React + TypeScript + Tailwind + Lovable Cloud.
+- Ne pas ajouter d’auth maintenant, conformément au besoin mono-utilisateur, mais préparer le code pour pouvoir verrouiller plus tard.
+- Centraliser les règles métier dans `src/lib/prm.ts` ou dans des fonctions serveur dédiées : priorisation, prochaine étape, prochaine date, qualité de donnée.
+- Éviter les modifications manuelles des fichiers générés liés au backend.
+- Ajouter si nécessaire de petits champs de traçabilité, par exemple `last_contacted_at`, `data_quality_score`, ou `last_log_result`, mais uniquement si cela simplifie vraiment l’UI et les performances.
 
-## 3. Import de votre fichier Excel
+## Résultat attendu après amélioration
 
-J’ai commencé à analyser le fichier **Stratégie_de_prospection.xlsx**. Le parseur montre surtout les onglets de stratégie, objectifs et catégories, mais l’extraction textuelle ne révèle pas encore clairement une table complète de contacts et d’historique.
-
-Une fois le plan approuvé, je traiterai le fichier directement avec un script Excel afin de lire les vrais onglets, colonnes et lignes, pas seulement l’aperçu textuel.
-
-### Données à importer
-
-Je vais détecter et importer autant que possible :
-
-- sociétés / prospects,
-- contacts associés,
-- téléphone,
-- email,
-- rôle,
-- ville,
-- catégorie A/B/C/récurrent/exceptionnel,
-- offre cible,
-- valeur estimée,
-- statut / niveau de maturité,
-- étape J1 à J21,
-- prochaines actions,
-- historique d’appels / emails / RDV si présent.
-
-### Correspondance vers l’app
-
-Les données seront insérées dans les tables existantes :
-
-- `prospects` pour les entreprises,
-- `contacts` pour les interlocuteurs,
-- `prospection_logs` pour l’historique.
-
-Les imports éviteront les doublons autant que possible avec une logique :
-
-- SIREN si présent,
-- sinon nom d’entreprise + ville,
-- puis rattachement des contacts à l’entreprise trouvée.
-
-### Résultat visible après import
-
-Après import, vous devriez voir :
-
-- vos prospects dans **Base prospects**,
-- les contacts dans les fiches entreprise,
-- les actions passées dans **Journal de prospection**,
-- les prospects prioritaires dans **Session d’appels**,
-- les indicateurs actualisés dans **Stats**.
-
-## 4. Ajustements de données nécessaires
-
-Le modèle actuel a déjà les bonnes tables principales. Je prévois seulement d’ajouter quelques champs utiles au batch et à l’import si nécessaire :
-
-- `batch_keyword` ou équivalent pour savoir de quel mot-clé vient une entreprise,
-- `external_source_id` pour tracer l’identifiant API,
-- `import_source` / `import_batch_id` pour distinguer les données venues du fichier Excel ou d’une recherche API,
-- éventuellement une table légère `api_search_runs` pour historiser les recherches batch, erreurs, quotas et résultats.
-
-Ces changements seront faits par migration, avec les règles de sécurité existantes adaptées au mode mono-utilisateur sans auth.
-
-## 5. Points techniques
-
-- Les appels aux API privées seront faits côté backend via server functions, pas directement dans React.
-- Les résultats des différentes APIs seront normalisés dans un même format interne `CompanySearchResult`.
-- Le batch sera asynchrone côté interface : chaque mot-clé pourra avoir son statut `en attente`, `en cours`, `terminé`, `erreur`.
-- Le fichier Excel sera importé via script ponctuel dans la base, puis les données seront visibles dans l’app.
-- Je conserverai le style actuel : interface française, desktop-first, cartes blanches, bordures fines, pas d’ombres ni gradients.
-
-## 6. Ce que je ferai après approbation
-
-1. Lire précisément les onglets et colonnes du fichier Excel avec un script dédié.
-2. Préparer le mapping Excel → prospects / contacts / historique.
-3. Ajouter les champs/tables nécessaires au suivi des batches si besoin.
-4. Créer les fonctions backend de recherche API et enrichissement.
-5. Remplacer le faux batch actuel par un vrai batch multi-mots-clés.
-6. Importer vos données Excel dans la base.
-7. Vérifier que les données apparaissent dans Base prospects, Session d’appels et Journal.
+L’app devrait devenir moins “prototype fonctionnel” et plus “outil de travail quotidien” :
+- tu démarres une session et sais exactement qui appeler ;
+- chaque clic crée une trace fiable ;
+- les relances se planifient automatiquement ;
+- tu vois immédiatement les fiches à compléter ;
+- l’intégration batch devient un assistant de sourcing ;
+- les stats te disent quoi faire ensuite, pas seulement ce qui s’est passé.
