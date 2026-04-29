@@ -11,11 +11,24 @@ export type HeadcountRange =
   | "1000+";
 export type Category =
   | "A – Pilier"
+  | "B – Socle prévention"
   | "B – Socle SST"
   | "C – Porte d'entrée"
   | "Récurrent"
   | "Exceptionnel";
-export type OfferTarget = "SST FI" | "SST MAC" | "CSE-CSSCT" | "QVCT" | "Émotions" | "Excel";
+export type OfferTarget =
+  | "Formation SST"
+  | "DUERP"
+  | "QVCT / RPS"
+  | "SSCT / CSE"
+  | "Conseil prévention"
+  | "Sur mesure"
+  | "SST FI"
+  | "SST MAC"
+  | "CSE-CSSCT"
+  | "QVCT"
+  | "Émotions"
+  | "Excel";
 export type CycleStage = "J1" | "J2" | "J4" | "J6" | "J10" | "J15" | "J21";
 export type ProspectStatus = "Chaud" | "Tiède" | "En attente" | "Perdu" | "Converti";
 export type Canal = "email" | "téléphone" | "physique";
@@ -127,18 +140,18 @@ export const headcountRanges: HeadcountRange[] = [
 ];
 export const categories: Category[] = [
   "A – Pilier",
-  "B – Socle SST",
+  "B – Socle prévention",
   "C – Porte d'entrée",
   "Récurrent",
   "Exceptionnel",
 ];
 export const offerTargets: OfferTarget[] = [
-  "SST FI",
-  "SST MAC",
-  "CSE-CSSCT",
-  "QVCT",
-  "Émotions",
-  "Excel",
+  "Formation SST",
+  "DUERP",
+  "QVCT / RPS",
+  "SSCT / CSE",
+  "Conseil prévention",
+  "Sur mesure",
 ];
 export const stages: CycleStage[] = ["J1", "J2", "J4", "J6", "J10", "J15", "J21"];
 export const statuses: ProspectStatus[] = ["Chaud", "Tiède", "En attente", "Perdu", "Converti"];
@@ -147,10 +160,10 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
   J1: {
     key: "J1",
     label: "J1 – Premier contact",
-    objective: "Identifier le bon interlocuteur et ouvrir la discussion SST.",
+    objective: "Identifier le bon interlocuteur et ouvrir une discussion santé-sécurité au travail.",
     script:
-      "Bonjour, je m'appelle Julie Baijot, formatrice SST basée à Annonay. Je voulais vérifier qui pilote les formations sécurité chez vous et voir si le sujet SST est d'actualité cette année.",
-    checklist: ["Confirmer le bon contact", "Valider l'effectif approximatif", "Repérer SST initiale ou MAC"],
+      "Bonjour, je m'appelle Julie Baijot. J'accompagne les entreprises sur leurs sujets formation, prévention et santé-sécurité au travail : SST, DUERP, QVCT, CSE ou besoins sur mesure. Qui pilote ces sujets chez vous ?",
+    checklist: ["Identifier RH / direction / HSE / CSE", "Valider l'effectif approximatif", "Repérer la porte d'entrée : formation, DUERP, QVCT, SSCT ou conseil"],
     outcomes: [
       {
         key: "nrp",
@@ -170,29 +183,29 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J2",
         delayDays: 2,
         status: "Tiède",
-        note: "Accueil filtrant. Revenir avec une accroche réglementaire courte.",
+        note: "Accueil filtrant. Revenir avec une accroche courte sur formation, DUERP ou obligations prévention.",
         mode: "callback",
       },
       {
         key: "interet",
-        label: "Intérêt / sujet ouvert",
+        label: "Sujet prévention ouvert",
         result: "Échange",
         actionType: "Échange qualifiant",
         nextStage: "J4",
         delayDays: 2,
         status: "Chaud",
-        note: "Sujet SST identifié. Prochaine étape : qualifier besoin, volume et calendrier.",
+        note: "Ouverture identifiée. Prochaine étape : qualifier le besoin exact, le décideur et l'échéance.",
         mode: "exchange",
       },
       {
         key: "rdv",
         label: "RDV diagnostic",
         result: "RDV",
-        actionType: "RDV obtenu",
+        actionType: "RDV diagnostic obtenu",
         nextStage: "J10",
         delayDays: 0,
         status: "Chaud",
-        note: "Rendez-vous obtenu pour cadrer le besoin.",
+        note: "Rendez-vous obtenu pour cadrer les besoins formation, conseil ou accompagnement.",
         mode: "meeting",
       },
     ],
@@ -200,10 +213,10 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
   J2: {
     key: "J2",
     label: "J2 – Relance douce",
-    objective: "Rebondir sans pression et obtenir une première réponse utile.",
+    objective: "Rebondir sans pression et comprendre qui pilote les sujets prévention.",
     script:
-      "Je me permets de vous recontacter suite à mon précédent message. Je travaille avec des entreprises de la région sur la formation SST ; est-ce un sujet que vous gérez en interne ou avec un organisme externe ?",
-    checklist: ["Demander qui décide", "Identifier prestataire actuel", "Noter période de renouvellement"],
+      "Je me permets de vous recontacter suite à mon précédent message. Est-ce que les sujets formation sécurité, DUERP, QVCT ou CSE sont gérés en interne, par la direction/RH, ou avec un intervenant externe ?",
+    checklist: ["Identifier le décideur", "Repérer prestataire ou organisation actuelle", "Noter fenêtre budgétaire ou réglementaire"],
     outcomes: [
       {
         key: "nrp",
@@ -213,7 +226,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J4",
         delayDays: 2,
         status: "Tiède",
-        note: "Deuxième tentative sans réponse. Relance avec angle de qualification.",
+        note: "Deuxième tentative sans réponse. Relance avec angle de qualification prévention.",
       },
       {
         key: "pas-moment",
@@ -223,50 +236,50 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J6",
         delayDays: 4,
         status: "En attente",
-        note: "Moment peu favorable. Programmer un rappel contextualisé.",
+        note: "Moment peu favorable. Programmer un rappel contextualisé sur la prochaine échéance utile.",
         mode: "callback",
       },
       {
         key: "qualification",
-        label: "Qualification SST",
+        label: "Qualification prévention",
         result: "Échange",
-        actionType: "Qualification SST",
+        actionType: "Qualification prévention",
         nextStage: "J4",
         delayDays: 2,
         status: "Chaud",
-        note: "Informations obtenues. Approfondir besoin, échéance et décideur.",
+        note: "Informations obtenues. Approfondir le sujet prioritaire : SST, DUERP, QVCT, SSCT, audit ou sur mesure.",
         mode: "exchange",
       },
       {
         key: "rdv",
         label: "RDV diagnostic",
         result: "RDV",
-        actionType: "RDV obtenu",
+        actionType: "RDV diagnostic obtenu",
         nextStage: "J10",
         delayDays: 0,
         status: "Chaud",
-        note: "Rendez-vous planifié après relance.",
+        note: "Rendez-vous planifié pour diagnostiquer le besoin global santé-sécurité.",
         mode: "meeting",
       },
     ],
   },
   J4: {
     key: "J4",
-    label: "J4 – Qualification sujet",
-    objective: "Transformer l'intérêt en besoin concret ou en prochaine fenêtre claire.",
+    label: "J4 – Qualification besoin",
+    objective: "Identifier la porte d'entrée commerciale et le niveau d'urgence.",
     script:
-      "Pour savoir si je peux vous être utile : combien de personnes sont concernées, avez-vous des recyclages SST à prévoir, et à quelle période prenez-vous ces décisions ?",
-    checklist: ["Volume apprenants", "Échéance MAC ou FI", "Budget / décision", "Contraintes site"],
+      "Pour voir comment je peux vous être utile : votre priorité actuelle concerne plutôt la formation SST, le DUERP, la QVCT/RPS, le CSE-SSCT, ou un besoin spécifique de conseil ou formation sur mesure ?",
+    checklist: ["Sujet prioritaire", "Échéance réglementaire ou opérationnelle", "Décideur et budget", "Contraintes site / équipes"],
     outcomes: [
       {
         key: "besoin-urgent",
-        label: "Besoin urgent",
+        label: "Besoin prioritaire",
         result: "Échange",
-        actionType: "Besoin urgent identifié",
+        actionType: "Besoin prioritaire identifié",
         nextStage: "J10",
         delayDays: 1,
         status: "Chaud",
-        note: "Besoin prioritaire. Proposer RDV ou cadrage rapide.",
+        note: "Besoin concret identifié : DUERP à mettre à jour, formation à planifier, sujet QVCT/RPS, demande CSE ou accompagnement sur mesure.",
         mode: "exchange",
       },
       {
@@ -277,7 +290,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J6",
         delayDays: 7,
         status: "Tiède",
-        note: "Fenêtre future. Relance avec contenu réglementaire et proposition de planning.",
+        note: "Fenêtre future. Relance avec un contenu utile lié au sujet détecté et une proposition de cadrage.",
         mode: "exchange",
       },
       {
@@ -288,50 +301,50 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J21",
         delayDays: 30,
         status: "En attente",
-        note: "Prestataire déjà en place. Revenir sur une fenêtre trimestrielle.",
+        note: "Organisation ou intervenant déjà en place. Revenir sur une fenêtre trimestrielle avec un angle complémentaire.",
         mode: "callback",
       },
       {
         key: "rdv",
         label: "RDV diagnostic",
         result: "RDV",
-        actionType: "RDV obtenu",
+        actionType: "RDV diagnostic obtenu",
         nextStage: "J10",
         delayDays: 0,
         status: "Chaud",
-        note: "Rendez-vous obtenu suite à qualification.",
+        note: "Rendez-vous obtenu suite à qualification du besoin prévention.",
         mode: "meeting",
       },
     ],
   },
   J6: {
     key: "J6",
-    label: "J6 – Rappel réglementaire",
-    objective: "Rendre le sujet concret avec un rappel d'obligation et une question simple.",
+    label: "J6 – Apport de valeur",
+    objective: "Rendre le sujet concret avec un angle utile : obligation, échéance ou irritant terrain.",
     script:
-      "Je vous renvoie un mémo très court sur les obligations SST. La vraie question est surtout : où en êtes-vous sur vos recyclages et vos nouveaux entrants ?",
-    checklist: ["Envoyer mémo", "Poser une question fermée", "Proposer deux créneaux"],
+      "Je peux vous envoyer un mémo très court selon votre sujet : DUERP, renouvellement SST, rôle du CSE en SSCT, QVCT/RPS ou plan d'actions prévention. Quel angle serait le plus utile pour vous ?",
+    checklist: ["Choisir l'angle utile", "Envoyer mémo ou ressource", "Proposer deux créneaux de cadrage"],
     outcomes: [
       {
-        key: "memo-envoye",
-        label: "Mémo envoyé",
+        key: "contenu-envoye",
+        label: "Contenu envoyé",
         result: "Échange",
-        actionType: "Mémo réglementaire envoyé",
+        actionType: "Contenu prévention envoyé",
         nextStage: "J10",
         delayDays: 4,
         status: "Tiède",
-        note: "Contenu envoyé. Relancer sur une demande de rendez-vous.",
+        note: "Contenu envoyé. Relancer avec une demande de rendez-vous court pour cadrer l'action possible.",
         mode: "exchange",
       },
       {
         key: "nrp",
-        label: "NRP après mémo",
+        label: "NRP après contenu",
         result: "NRP",
         actionType: "NRP",
         nextStage: "J10",
         delayDays: 4,
         status: "Tiède",
-        note: "Pas de réponse après contenu. Relance demande RDV.",
+        note: "Pas de réponse après contenu. Relance demande RDV avec angle prévention global.",
       },
       {
         key: "hors-cible",
@@ -341,7 +354,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J21",
         delayDays: 30,
         status: "Perdu",
-        note: "Besoin non pertinent à court terme.",
+        note: "Besoin non pertinent à court terme ou structure hors cible.",
         mode: "callback",
       },
     ],
@@ -349,20 +362,20 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
   J10: {
     key: "J10",
     label: "J10 – Demande RDV",
-    objective: "Obtenir un créneau court pour cadrer besoin, dates et devis.",
+    objective: "Obtenir un créneau court pour diagnostiquer besoin, contexte et suite possible.",
     script:
-      "Je passe sur votre secteur prochainement. Est-ce qu'on bloque 20 à 30 minutes pour faire le point sur vos besoins SST et voir si je peux vous proposer quelque chose d'utile ?",
-    checklist: ["Proposer deux créneaux", "Confirmer décideur", "Préparer éléments devis"],
+      "Est-ce qu'on bloque 20 à 30 minutes pour faire le point sur vos besoins santé-sécurité au travail et voir si une formation, un accompagnement ou un conseil sur mesure serait pertinent ?",
+    checklist: ["Proposer deux créneaux", "Confirmer les personnes à inviter", "Préparer questions diagnostic"],
     outcomes: [
       {
         key: "rdv",
         label: "RDV accepté",
         result: "RDV",
-        actionType: "RDV obtenu",
+        actionType: "RDV diagnostic obtenu",
         nextStage: "J15",
         delayDays: 0,
         status: "Chaud",
-        note: "Rendez-vous accepté. Préparer diagnostic et offre.",
+        note: "Rendez-vous accepté. Préparer diagnostic, hypothèses d'offre et questions de cadrage.",
         mode: "meeting",
       },
       {
@@ -373,7 +386,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J15",
         delayDays: 5,
         status: "Chaud",
-        note: "Intérêt présent mais créneau non confirmé. Relancer avec proposition précise.",
+        note: "Intérêt présent mais créneau non confirmé. Relancer avec une proposition précise et l'angle de valeur détecté.",
         mode: "exchange",
       },
       {
@@ -384,28 +397,28 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J21",
         delayDays: 30,
         status: "En attente",
-        note: "Refus sans fermeture définitive. Revenir plus tard avec angle opportunité.",
+        note: "Refus sans fermeture définitive. Revenir plus tard avec un angle opportunité ou échéance réglementaire.",
         mode: "callback",
       },
     ],
   },
   J15: {
     key: "J15",
-    label: "J15 – Transformation devis",
-    objective: "Convertir l'échange en devis ou en décision datée.",
+    label: "J15 – Proposition",
+    objective: "Transformer l'échange en devis, plan d'action ou prochaine décision datée.",
     script:
-      "Pour avancer concrètement, je peux vous envoyer une proposition cadrée avec volume, dates possibles et tarif. Quels éléments doivent absolument apparaître pour que ce soit utile ?",
-    checklist: ["Valider volume", "Valider dates", "Identifier validation interne", "Envoyer devis"],
+      "Pour avancer concrètement, je peux vous envoyer une proposition cadrée : formation, accompagnement DUERP/QVCT/SSCT, diagnostic ou format sur mesure. Quels éléments doivent absolument apparaître pour que ce soit utile ?",
+    checklist: ["Valider périmètre", "Valider livrables", "Identifier validation interne", "Envoyer proposition"],
     outcomes: [
       {
         key: "devis",
-        label: "Devis à envoyer",
+        label: "Proposition à envoyer",
         result: "Échange",
-        actionType: "Devis à envoyer",
+        actionType: "Proposition à envoyer",
         nextStage: "J21",
         delayDays: 6,
         status: "Chaud",
-        note: "Devis attendu. Relance décision à programmer.",
+        note: "Proposition attendue. Relance décision à programmer avec prochaines étapes claires.",
         mode: "exchange",
       },
       {
@@ -416,7 +429,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J21",
         delayDays: 0,
         status: "Converti",
-        note: "Opportunité convertie. Passer en suivi client.",
+        note: "Opportunité convertie. Passer en suivi client et planifier la mise en œuvre.",
         mode: "meeting",
       },
       {
@@ -427,16 +440,16 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J21",
         delayDays: 6,
         status: "En attente",
-        note: "Décision en attente. Dernier contact avant archivage.",
+        note: "Décision en attente. Dernier contact avant relance longue ou archivage.",
       },
     ],
   },
   J21: {
     key: "J21",
-    label: "J21 – Dernier contact",
-    objective: "Clore proprement ou obtenir une fenêtre de reprise.",
+    label: "J21 – Reprise / archivage",
+    objective: "Clore proprement ou obtenir une fenêtre de reprise sur les sujets prévention.",
     script:
-      "Je tente un dernier message avant de vous laisser tranquille : soit ce n'est pas le bon moment, soit le sujet n'est plus prioritaire. Souhaitez-vous que je vous recontacte plus tard ?",
+      "Je tente un dernier message avant de vous laisser tranquille : soit ce n'est pas le bon moment, soit le sujet n'est plus prioritaire. Souhaitez-vous que je vous recontacte plus tard sur vos sujets formation, DUERP, QVCT, CSE ou prévention ?",
     checklist: ["Rester léger", "Demander fenêtre de reprise", "Archiver proprement"],
     outcomes: [
       {
@@ -447,7 +460,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J1",
         delayDays: 90,
         status: "En attente",
-        note: "Relance trimestrielle programmée.",
+        note: "Relance trimestrielle programmée sur une fenêtre réglementaire, budgétaire ou formation.",
         mode: "callback",
       },
       {
@@ -458,7 +471,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J10",
         delayDays: 1,
         status: "Chaud",
-        note: "Réactivation positive. Repartir sur une demande RDV.",
+        note: "Réactivation positive. Repartir sur un diagnostic court.",
         mode: "exchange",
       },
       {
@@ -469,12 +482,11 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         nextStage: "J21",
         delayDays: 90,
         status: "En attente",
-        note: "Aucune ouverture. Archivage avec relance longue.",
+        note: "Aucune ouverture. Archivage avec relance longue si la cible reste pertinente.",
       },
     ],
   },
 };
-
 export const stageScripts: Record<CycleStage, { label: string; text: string; objective: string }> =
   Object.fromEntries(
     stages.map((stage) => [
@@ -489,7 +501,7 @@ export const stageScripts: Record<CycleStage, { label: string; text: string; obj
 
 export function categoryClass(category: Category | null | undefined) {
   if (category === "A – Pilier") return "bg-category-a text-category-a-foreground";
-  if (category === "B – Socle SST") return "bg-category-b text-category-b-foreground";
+  if (category === "B – Socle prévention" || category === "B – Socle SST") return "bg-category-b text-category-b-foreground";
   if (category === "C – Porte d'entrée") return "bg-category-c text-category-c-foreground";
   if (category === "Récurrent") return "bg-category-recurring text-category-recurring-foreground";
   return "bg-category-exceptional text-category-exceptional-foreground";
@@ -671,6 +683,7 @@ export async function updateProspect(id: string, payload: Partial<Prospect>) {
 export function prioritizeSession(prospects: ProspectWithRelations[]) {
   const categoryRank: Record<string, number> = {
     "A – Pilier": 0,
+    "B – Socle prévention": 1,
     "B – Socle SST": 1,
     "C – Porte d'entrée": 2,
     Récurrent: 3,
@@ -715,7 +728,7 @@ export function buildCalendarUrl(args: {
   const start = new Date(args.date);
   const end = new Date(start.getTime() + args.duration * 60_000);
   const toGoogleDate = (date: Date) => date.toISOString().replace(/[-:]|\.\d{3}/g, "");
-  const title = `RDV ${args.prospect.company_name} – ${args.prospect.offer_target || "SST"}`;
+  const title = `RDV ${args.prospect.company_name} – ${args.prospect.offer_target || "Santé-sécurité"}`;
   const details = [
     `Contact : ${contactName(args.contact)}`,
     `Téléphone : ${args.contact?.direct_phone || args.contact?.main_phone || args.prospect.main_phone || "à compléter"}`,

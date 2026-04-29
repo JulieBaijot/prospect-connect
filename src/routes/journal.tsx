@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/journal")({
   head: () => ({
     meta: [
-      { title: "Journal de prospection — PRM SST" },
+      { title: "Journal de prospection — PRM Santé-Sécurité" },
       { name: "description", content: "Historique filtrable des actions de prospection." },
     ],
   }),
@@ -109,7 +109,7 @@ function JournalPage() {
             onChange={(e) => setFilters({ ...filters, category: e.target.value })}
           >
             <option value="">Toutes catégories</option>
-            {["A – Pilier", "B – Socle SST", "C – Porte d'entrée", "Récurrent", "Exceptionnel"].map(
+            {["A – Pilier", "B – Socle prévention", "C – Porte d'entrée", "Récurrent", "Exceptionnel"].map(
               (c) => (
                 <option key={c}>{c}</option>
               ),

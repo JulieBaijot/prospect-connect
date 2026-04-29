@@ -1,198 +1,97 @@
-Voici la revue de l’app et le plan d’amélioration proposé. L’objectif n’est pas de tout reconstruire : la base est bonne, mais il faut rendre l’outil plus fiable, plus orienté “session d’appels réelle”, et plus clair pour un usage quotidien sur ordinateur.
+Je vais corriger l’orientation trop “SST secourisme” pour refléter ton activité réelle : formation et conseil en santé/sécurité au travail, avec une logique commerciale plus ouverte et adaptable.
 
-## Diagnostic rapide
+## Objectif
 
-### Ce qui est déjà solide
-- Les 5 grandes zones sont en place : session d’appels, base prospects, intégration, journal, stats.
-- Le modèle de données couvre l’essentiel : prospects, contacts, historiques, imports batch.
-- Les appels aux API externes ont été déplacés côté serveur, ce qui est la bonne direction pour protéger les clés.
-- L’interface est déjà en français et respecte globalement la direction visuelle demandée.
-- L’import Excel a bien injecté une première base, ce qui permet de tester avec de vraies données.
+Transformer le playbook actuel en approche “prévention / santé-sécurité au travail” qui permet de détecter plusieurs types de besoins :
+- formations SST FI / MAC,
+- DUERP et plan d’actions prévention,
+- QVCT / RPS / conditions de travail,
+- SSCT pour CSE,
+- accompagnement réglementaire,
+- conseil et formations sur mesure.
 
-### Points qui semblent moins idéaux aujourd’hui
+## Changements prévus
 
-#### 1. Session d’appels : trop fragile pour un usage quotidien
-- Le bouton “Suivant” compte un prospect comme traité même si aucune action n’a été enregistrée.
-- “NRP” crée un log, mais ne planifie pas forcément la prochaine relance ni ne fait avancer clairement le cycle.
-- “Échange” fait changer l’étape, mais ne force pas une prochaine date d’action.
-- “Pas dispo” sauvegarde un rappel, mais le résumé de session ne le compte pas vraiment comme catégorie distincte.
-- La carte affiche seulement le premier contact, alors qu’un prospect peut avoir plusieurs contacts.
-- Il n’y a pas assez d’aide au choix : “qui appeler maintenant ?”, “pourquoi ce prospect est prioritaire ?”, “quelle est la prochaine meilleure action ?”.
+### 1. Repositionner les offres et catégories
+Je remplacerai les libellés trop centrés SST par des intitulés plus larges.
 
-#### 2. Données importées : présentes mais pas assez qualifiées
-- Beaucoup de prospects importés depuis Excel ont des champs vides : téléphone, site web, SIREN, secteur, commentaires, prochaine action.
-- Certains contacts ou historiques peuvent exister, mais l’interface ne rend pas assez visible la qualité de la donnée.
-- La priorité de session est donc mécaniquement moins pertinente : beaucoup de prospects se ressemblent.
+Exemples :
+- “B – Socle SST” deviendra plutôt “B – Socle prévention” ou équivalent.
+- Les offres proposées évolueront vers :
+  - “Formation SST”
+  - “DUERP”
+  - “QVCT / RPS”
+  - “SSCT / CSE”
+  - “Conseil prévention”
+  - “Sur mesure”
 
-#### 3. Base prospects : utile, mais encore trop “table + formulaire”
-- Les filtres sont limités : pas de recherche globale entreprise/contact/téléphone/email, pas de filtre “à appeler aujourd’hui”, “sans téléphone”, “sans contact”, “chaud sans prochaine action”.
-- Le panneau d’édition ne met en avant qu’un contact principal.
-- Il manque une lecture rapide de l’historique complet et de la prochaine action.
-- Pas d’action rapide depuis la base : appeler, email, LinkedIn, créer log, enrichir, marquer perdu/converti.
+Je garderai la compatibilité avec les données existantes autant que possible pour éviter de casser les prospects déjà créés.
 
-#### 4. Intégration prospects : le batch existe mais le workflow reste lourd
-- La logique “mots-clés batch” existe, mais elle est encore trop technique : l’utilisateur doit comprendre source, quota, mots-clés, étape suivante.
-- Il manque des modèles de recherche prêts à l’emploi : “industrie Ardèche/Drôme”, “logistique vallée du Rhône”, “médico-social 07/26”, etc.
-- Il n’y a pas assez de déduplication visible avant sauvegarde.
-- Le staging ne montre pas clairement : déjà en base / nouveau / incomplet / enrichi / à qualifier.
-- Le workflow devrait permettre d’importer rapidement un lot, puis d’enrichir progressivement, pas forcément tout compléter avant sauvegarde.
+### 2. Réécrire les nœuds du process commercial
+Le process ne partira plus du principe que le besoin est forcément SST. Il suivra plutôt une logique de diagnostic :
 
-#### 5. API externes : intégrées, mais configuration et erreurs pas assez guidées
-- L’app signale parfois qu’une clé manque, mais ne donne pas un guide clair de quoi configurer et ce qui reste utilisable sans clé.
-- Les fallbacks Pappers → Annuaire / INSEE → Annuaire sont utiles, mais pas assez visibles dans l’interface.
-- Les résultats API ne sont pas historisés de façon exploitable côté UI : on voit le run courant, pas une vraie liste des batches passés.
+```text
+J1 Premier contact
+  → Identifier le bon interlocuteur prévention / RH / direction / CSE
+  → Ouvrir sur les sujets santé-sécurité au sens large
 
-#### 6. Stats : trop générales pour piloter la prospection
-- Les stats actuelles sont correctes mais basiques.
-- Il manque les indicateurs utiles pour une formatrice SST freelance :
-  - prospects à appeler aujourd’hui,
-  - prospects sans téléphone,
-  - prospects sans contact identifié,
-  - taux de contact utile,
-  - RDV obtenus par semaine,
-  - valeur pipeline par catégorie/offre,
-  - lots importés non encore traités.
+J2 Relance douce
+  → Comprendre qui pilote les sujets formation, DUERP, prévention, QVCT, CSE
 
-#### 7. Architecture et sécurité : acceptable pour mono-utilisateur, mais à surveiller
-- Le projet est volontairement sans auth pour l’instant, donc les règles d’accès sont ouvertes. C’est cohérent avec “single user app”, mais il faudra absolument verrouiller si l’app est publiée ou utilisée avec des données sensibles.
-- Les types backend générés ont été modifiés précédemment alors qu’ils devraient normalement être automatiques. À corriger si nécessaire pour éviter de futures incohérences.
-- Les opérations de données sont majoritairement côté client ; pour une app sans auth c’est simple, mais certaines actions métier gagneraient à être centralisées dans des fonctions serveur : session d’appel, import batch, déduplication.
+J4 Qualification besoin
+  → Identifier la porte d’entrée : SST, DUERP, QVCT, SSCT, audit, sur mesure
 
-## Plan d’amélioration proposé
+J6 Apport de valeur
+  → Envoyer un angle utile selon le sujet détecté : obligation DUERP, renouvellement SST, SSCT, plan prévention, QVCT
 
-### Étape 1 — Stabiliser la session d’appels
-Transformer `/session-appels` en vrai cockpit opérationnel.
+J10 Demande RDV
+  → Proposer un diagnostic court plutôt qu’un rendez-vous “SST”
 
-À faire :
-- Ajouter un état “action en cours” pour éviter les doubles clics et doubles logs.
-- Ne compter “traité” que lorsqu’une action est réellement enregistrée, ou distinguer “passé” de “traité”.
-- Pour chaque action :
-  - NRP : créer un log + proposer automatiquement la prochaine relance selon le cycle.
-  - Pas dispo : créer un log + date de rappel obligatoire.
-  - Échange : notes obligatoires ou recommandées + prochaine étape + prochaine date.
-  - RDV : date obligatoire + passage en “Chaud” + lien calendrier.
-  - Suivant : passer sans log, mais ne pas gonfler les stats d’actions.
-- Afficher tous les contacts du prospect, avec sélection du contact appelé.
-- Afficher pourquoi le prospect est dans la session : catégorie, date de relance, statut, absence de contact, import récent, etc.
-- Ajouter des messages de confirmation ou d’erreur en français.
+J15 Proposition
+  → Transformer en devis, accompagnement, plan d’action ou formation ciblée
 
-### Étape 2 — Améliorer la priorisation métier
-Rendre la liste d’appel plus intelligente.
+J21 Reprise / archivage
+  → Garder une relance longue sur les fenêtres réglementaires ou budgétaires
+```
 
-À faire :
-- Prioriser d’abord les prospects avec `next_action_date <= aujourd’hui`.
-- Ensuite pondérer : catégorie A/B/C, statut Chaud/Tiède, présence d’un téléphone, présence d’un contact, ancienneté du dernier log.
-- Exclure ou reléguer les prospects impossibles à appeler : aucun téléphone prospect ni contact.
-- Ajouter des vues rapides :
-  - “À appeler aujourd’hui”
-  - “À enrichir avant appel”
-  - “Chauds à relancer”
-  - “Nouveaux imports”
+### 3. Adapter les scripts d’appel
+Les scripts seront reformulés pour être moins restrictifs.
 
-### Étape 3 — Revoir la base prospects
-Faire de `/prospects` un écran de pilotage, pas seulement une table.
+Par exemple, au lieu de :
+“Je voulais vérifier qui pilote les formations sécurité chez vous et voir si le sujet SST est d'actualité…”
 
-À faire :
-- Ajouter une recherche globale : entreprise, ville, contact, email, téléphone, SIREN.
-- Ajouter des filtres utiles :
-  - à appeler aujourd’hui,
-  - sans téléphone,
-  - sans contact,
-  - sans prochaine action,
-  - par source/import,
-  - par catégorie/offre/statut.
-- Ajouter des compteurs visibles en haut : total, à appeler, incomplets, chauds, convertis.
-- Afficher les signaux de qualité de donnée : téléphone manquant, contact manquant, SIREN manquant, historique absent.
-- Dans le panneau de droite :
-  - liste complète des contacts,
-  - historique récent,
-  - boutons rapides : appeler, email, LinkedIn, enrichir, ajouter log.
+Je passerai sur une formulation du type :
+“Je voulais identifier la personne qui pilote les sujets formation, prévention et santé-sécurité au travail chez vous : SST, DUERP, QVCT, CSE ou besoins sur mesure.”
 
-### Étape 4 — Simplifier l’intégration batch
-Faire de `/integration-prospects` un flux plus guidé et moins technique.
+### 4. Adapter les issues des nœuds
+Les boutons d’issue seront également élargis.
 
-À faire :
-- Ajouter des presets de batch :
-  - “Industrie 07/26”
-  - “Logistique vallée du Rhône”
-  - “Médico-social Ardèche/Drôme”
-  - “BTP local”
-  - “Recherche personnalisée”
-- Expliquer clairement le rôle du mot-clé : un mot-clé = une recherche ; plusieurs lignes = un lot.
-- Afficher un statut par résultat :
-  - nouveau,
-  - déjà en base,
-  - doublon probable,
-  - incomplet,
-  - enrichi.
-- Ajouter sélection multiple : tout sélectionner, sélectionner uniquement les nouveaux, exclure doublons.
-- Permettre “sauvegarder en brouillon” plus tôt, sans obliger à compléter tous les contacts.
-- Ajouter une page ou section “Batches précédents” basée sur `api_search_runs` / `integration_batches`.
+Exemples :
+- “Qualification SST” deviendra “Qualification prévention”.
+- “Sujet SST identifié” deviendra “Besoin prévention identifié”.
+- “Besoin urgent” pourra couvrir DUERP à mettre à jour, demande CSE, tension QVCT, renouvellement formation, audit ou accompagnement.
+- “Déjà couvert” gardera une relance future, mais sans présumer d’un prestataire SST uniquement.
 
-### Étape 5 — Mieux guider la configuration API
-Rendre la configuration compréhensible sans jargon technique.
+### 5. Mettre à jour les intitulés visibles dans l’app
+Je mettrai à jour les endroits où l’app affiche encore “PRM SST” ou “freelance SST” pour refléter une activité plus large :
+- titres des pages,
+- description de l’application,
+- en-tête du cockpit,
+- métadonnées des pages,
+- calendrier de RDV par défaut.
 
-À faire :
-- Ajouter un encart “Services connectés” dans l’intégration :
-  - Pappers : enrichissement légal / dirigeants,
-  - INSEE Sirene : données établissement,
-  - Annuaire Entreprises : fallback gratuit,
-  - Google Places : téléphone, site, horaires,
-  - Hunter.io : recherche email.
-- Pour chaque service : afficher “configuré / non configuré / fallback disponible”.
-- Quand une clé manque : afficher ce que l’app peut quand même faire.
-- Améliorer les messages d’erreur API : quota, clé absente, aucun résultat, service indisponible.
+Exemple : “PRM Santé-Sécurité” ou “PRM Prévention SST” selon le ton retenu dans l’app.
 
-### Étape 6 — Nettoyer et enrichir les données existantes
-Exploiter la base importée pour donner un aperçu plus réaliste.
+## Points techniques
 
-À faire :
-- Auditer les prospects importés : combien sans téléphone, sans contact, sans historique, sans prochaine action.
-- Ajouter si besoin une action de nettoyage : normalisation villes, catégories, statuts, offres, prochaines dates.
-- Marquer clairement les prospects issus d’Excel et ceux issus des recherches API.
-- Ajouter un filtre “import Excel” / “API batch”.
-- Optionnel : créer une vue “À compléter” pour traiter les fiches incomplètes avant session d’appel.
+Fichiers concernés :
+- `src/lib/prm.ts` : types d’offres, catégories, playbook nodes, scripts, priorisation, titre calendrier.
+- `src/routes/process.tsx` : titre/description de la page Process.
+- `src/routes/session-appels.tsx` : titres et descriptions de la session d’appels.
+- `src/routes/prospects.tsx`, `src/routes/integration-prospects.tsx`, `src/routes/journal.tsx`, `src/routes/stats.tsx`, `src/routes/__root.tsx`, `src/components/prm/AppLayout.tsx` : libellés visibles et valeurs par défaut encore trop centrées SST.
 
-### Étape 7 — Renforcer le tableau de bord stats
-Créer des indicateurs plus actionnables.
+Je ne prévois pas de migration de base de données pour cette correction immédiate, car les colonnes existantes stockent ces valeurs en texte. L’objectif est d’abord de rendre le process et l’interface cohérents avec ton positionnement réel.
 
-À faire :
-- Ajouter :
-  - appels aujourd’hui / semaine,
-  - prospects à appeler aujourd’hui,
-  - prospects en retard de relance,
-  - prospects sans téléphone,
-  - prospects sans contact,
-  - RDV obtenus sur 7/30 jours,
-  - pipeline par offre,
-  - pipeline par catégorie,
-  - taux NRP / échange / RDV.
-- Ajouter une section “Prochaines actions” avec les 10 relances les plus urgentes.
+## Résultat attendu
 
-## Priorité recommandée
-
-Je recommande de commencer par :
-
-1. Session d’appels : fiabilité des actions, contact sélectionnable, prochaine relance automatique.
-2. Base prospects : recherche globale, filtres “à appeler / à compléter”, signaux de qualité.
-3. Intégration batch : presets, déduplication visible, sauvegarde plus simple.
-4. Stats : indicateurs actionnables.
-5. Nettoyage de données : audit et normalisation des imports existants.
-
-## Détails techniques
-
-- Garder React + TypeScript + Tailwind + Lovable Cloud.
-- Ne pas ajouter d’auth maintenant, conformément au besoin mono-utilisateur, mais préparer le code pour pouvoir verrouiller plus tard.
-- Centraliser les règles métier dans `src/lib/prm.ts` ou dans des fonctions serveur dédiées : priorisation, prochaine étape, prochaine date, qualité de donnée.
-- Éviter les modifications manuelles des fichiers générés liés au backend.
-- Ajouter si nécessaire de petits champs de traçabilité, par exemple `last_contacted_at`, `data_quality_score`, ou `last_log_result`, mais uniquement si cela simplifie vraiment l’UI et les performances.
-
-## Résultat attendu après amélioration
-
-L’app devrait devenir moins “prototype fonctionnel” et plus “outil de travail quotidien” :
-- tu démarres une session et sais exactement qui appeler ;
-- chaque clic crée une trace fiable ;
-- les relances se planifient automatiquement ;
-- tu vois immédiatement les fiches à compléter ;
-- l’intégration batch devient un assistant de sourcing ;
-- les stats te disent quoi faire ensuite, pas seulement ce qui s’est passé.
+Après modification, l’app ne donnera plus l’impression d’être un outil uniquement pour vendre des formations SST. Elle deviendra un cockpit de prospection pour ton offre globale : formation, conseil et accompagnement en santé-sécurité au travail, avec la SST comme une porte d’entrée parmi d’autres.

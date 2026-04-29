@@ -19,14 +19,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex flex-col justify-between gap-2 md:flex-row md:items-end">
             <div>
               <p className="text-[11px] font-medium uppercase tracking-normal text-muted-foreground">
-                PRM freelance SST
+                PRM santé-sécurité freelance
               </p>
               <h1 className="text-[22px] font-medium leading-tight text-foreground">
                 Cockpit prospection Julie Baijot
               </h1>
             </div>
             <p className="max-w-xl text-sm text-muted-foreground">
-              Prospects, appels, relances et pipeline commercial dans un espace de travail desktop.
+              Prospects, appels, relances et pipeline formation/conseil dans un espace de travail desktop.
             </p>
           </div>
           <nav className="flex gap-2 overflow-x-auto rounded-[10px] border border-border bg-card p-1">
