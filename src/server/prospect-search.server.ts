@@ -245,3 +245,18 @@ export async function enrichCompanyServer(input: { name: string; city?: string }
     hours: Array.isArray(result.opening_hours?.weekday_text) ? result.opening_hours.weekday_text.join("\n") : "",
   };
 }
+
+export async function findEmailServer(input: { domain?: string; company?: string; firstName?: string; lastName?: string }) {
+  const key = process.env.HUNTER_API_KEY;
+  if (!key) return { status: "missing_key" as const, missingKey: "HUNTER_API_KEY" };
+  const params = new URLSearchParams({ api_key: key });
+  if (input.domain) params.set("domain", input.domain.replace(/^https?:\/\//, "").split("/")[0]);
+  if (input.company) params.set("company", input.company);
+  if (input.firstName) params.set("first_name", input.firstName);
+  if (input.lastName) params.set("last_name", input.lastName);
+  const res = await fetch(`https://api.hunter.io/v2/email-finder?${params.toString()}`);
+  if (!res.ok) throw new Error(`Hunter.io ${res.status}`);
+  const json = await res.json();
+  const email = json.data?.email || "";
+  return email ? { status: "found" as const, email, score: json.data?.score || null } : { status: "not_found" as const };
+}
