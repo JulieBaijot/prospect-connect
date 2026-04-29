@@ -243,7 +243,15 @@ export function nextStage(stage: CycleStage): CycleStage {
 }
 
 export function nextDateForStage(stage: CycleStage) {
-  const delays: Record<CycleStage, number> = { J1: 1, J2: 2, J4: 2, J6: 4, J10: 5, J15: 6, J21: 30 };
+  const delays: Record<CycleStage, number> = {
+    J1: 1,
+    J2: 2,
+    J4: 2,
+    J6: 4,
+    J10: 5,
+    J15: 6,
+    J21: 30,
+  };
   return addDaysIso(delays[stage] || 2);
 }
 
@@ -344,7 +352,9 @@ export function prioritizeSession(prospects: ProspectWithRelations[]) {
   return [...prospects]
     .filter((prospect) => !["Perdu", "Converti"].includes(prospect.status))
     .sort((a, b) => {
-      const byDue = Number(!isDueTodayOrLate(a.next_action_date)) - Number(!isDueTodayOrLate(b.next_action_date));
+      const byDue =
+        Number(!isDueTodayOrLate(a.next_action_date)) -
+        Number(!isDueTodayOrLate(b.next_action_date));
       if (byDue !== 0) return byDue;
       const byCallable = Number(!bestPhone(a)) - Number(!bestPhone(b));
       if (byCallable !== 0) return byCallable;

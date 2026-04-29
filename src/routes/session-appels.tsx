@@ -68,7 +68,8 @@ function SessionPage() {
   const [message, setMessage] = useState("");
 
   const current = session[index];
-  const contact = current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
+  const contact =
+    current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
   const progress = session.length ? Math.round((summary.done / session.length) * 100) : 0;
 
   useEffect(() => {
@@ -331,7 +332,10 @@ function SessionPage() {
                 {dataQualityIssues(current).length ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {dataQualityIssues(current).map((issue) => (
-                      <span key={issue} className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
+                      <span
+                        key={issue}
+                        className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground"
+                      >
                         {issue}
                       </span>
                     ))}

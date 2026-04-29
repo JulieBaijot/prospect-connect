@@ -85,7 +85,15 @@ function ProspectsPage() {
   const [selected, setSelected] = useState<ProspectWithRelations | null>(null);
   const [form, setForm] = useState(emptyProspect);
   const [contactForm, setContactForm] = useState(emptyContact);
-  const [filters, setFilters] = useState({ status: "", category: "", offer: "", city: "", q: "", view: "", source: "" });
+  const [filters, setFilters] = useState({
+    status: "",
+    category: "",
+    offer: "",
+    city: "",
+    q: "",
+    view: "",
+    source: "",
+  });
   const [placesStatus, setPlacesStatus] = useState("");
 
   useEffect(() => {
@@ -105,7 +113,13 @@ function ProspectsPage() {
           p.siren,
           p.main_phone,
           p.import_source,
-          ...p.contacts.flatMap((c) => [c.first_name, c.last_name, c.email, c.direct_phone, c.role_title]),
+          ...p.contacts.flatMap((c) => [
+            c.first_name,
+            c.last_name,
+            c.email,
+            c.direct_phone,
+            c.role_title,
+          ]),
         ]
           .filter(Boolean)
           .join(" ")
@@ -129,13 +143,16 @@ function ProspectsPage() {
     [prospects, filters],
   );
 
-  const counters = useMemo(() => ({
-    total: prospects.length,
-    due: prospects.filter((p) => isDueTodayOrLate(p.next_action_date)).length,
-    incomplete: prospects.filter((p) => dataQualityIssues(p).length > 0).length,
-    hot: prospects.filter((p) => p.status === "Chaud").length,
-    converted: prospects.filter((p) => p.status === "Converti").length,
-  }), [prospects]);
+  const counters = useMemo(
+    () => ({
+      total: prospects.length,
+      due: prospects.filter((p) => isDueTodayOrLate(p.next_action_date)).length,
+      incomplete: prospects.filter((p) => dataQualityIssues(p).length > 0).length,
+      hot: prospects.filter((p) => p.status === "Chaud").length,
+      converted: prospects.filter((p) => p.status === "Converti").length,
+    }),
+    [prospects],
+  );
 
   function openProspect(prospect: ProspectWithRelations) {
     setSelected(prospect);
@@ -366,7 +383,9 @@ function ProspectsPage() {
                     <td className="px-4 py-3">
                       <div>{formatEuro(p.estimated_value)}</div>
                       {dataQualityIssues(p).length ? (
-                        <div className="mt-1 text-xs text-muted-foreground">{dataQualityIssues(p).length} point(s) à compléter</div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {dataQualityIssues(p).length} point(s) à compléter
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -582,29 +601,65 @@ function ProspectsPage() {
                 <div>
                   <p className={labelClass}>Contacts enregistrés</p>
                   <div className="mt-2 grid gap-2">
-                    {selected.contacts.length ? selected.contacts.map((contact) => (
-                      <div key={contact.id} className="rounded-lg border border-border bg-card p-3 text-sm">
-                        <p className="font-medium">{contactName(contact)}</p>
-                        <p className="text-muted-foreground">{contact.role_title || "Rôle à qualifier"}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {contact.direct_phone || contact.main_phone ? <a href={`tel:${contact.direct_phone || contact.main_phone}`} className="underline">Appeler</a> : null}
-                          {contact.email ? <a href={`mailto:${contact.email}`} className="underline">Email</a> : null}
-                          {contact.linkedin_url ? <a href={contact.linkedin_url} target="_blank" rel="noreferrer" className="underline">LinkedIn</a> : null}
+                    {selected.contacts.length ? (
+                      selected.contacts.map((contact) => (
+                        <div
+                          key={contact.id}
+                          className="rounded-lg border border-border bg-card p-3 text-sm"
+                        >
+                          <p className="font-medium">{contactName(contact)}</p>
+                          <p className="text-muted-foreground">
+                            {contact.role_title || "Rôle à qualifier"}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {contact.direct_phone || contact.main_phone ? (
+                              <a
+                                href={`tel:${contact.direct_phone || contact.main_phone}`}
+                                className="underline"
+                              >
+                                Appeler
+                              </a>
+                            ) : null}
+                            {contact.email ? (
+                              <a href={`mailto:${contact.email}`} className="underline">
+                                Email
+                              </a>
+                            ) : null}
+                            {contact.linkedin_url ? (
+                              <a
+                                href={contact.linkedin_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                LinkedIn
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    )) : <p className="text-sm text-muted-foreground">Aucun contact enregistré.</p>}
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Aucun contact enregistré.</p>
+                    )}
                   </div>
                 </div>
                 <div>
                   <p className={labelClass}>Historique récent</p>
                   <div className="mt-2 grid gap-2">
                     {selected.prospection_logs.slice(0, 5).map((log) => (
-                      <div key={log.id} className="rounded-lg border border-border bg-card p-3 text-sm">
-                        <p className="font-medium">{formatDate(log.action_date)} · {log.result || log.action_type}</p>
+                      <div
+                        key={log.id}
+                        className="rounded-lg border border-border bg-card p-3 text-sm"
+                      >
+                        <p className="font-medium">
+                          {formatDate(log.action_date)} · {log.result || log.action_type}
+                        </p>
                         <p className="text-muted-foreground">{log.notes || log.objective || "—"}</p>
                       </div>
                     ))}
-                    {!selected.prospection_logs.length ? <p className="text-sm text-muted-foreground">Aucun historique.</p> : null}
+                    {!selected.prospection_logs.length ? (
+                      <p className="text-sm text-muted-foreground">Aucun historique.</p>
+                    ) : null}
                   </div>
                 </div>
               </div>

@@ -39,10 +39,17 @@ function StatsPage() {
   const stats = useMemo(() => {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const calls = logs.filter((l) => l.canal === "téléphone");
-    const callsToday = calls.filter((l) => new Date(l.action_date).toDateString() === new Date().toDateString()).length;
+    const callsToday = calls.filter(
+      (l) => new Date(l.action_date).toDateString() === new Date().toDateString(),
+    ).length;
     const callsWeek = calls.filter((l) => +new Date(l.action_date) >= weekAgo).length;
-    const rdvWeek = logs.filter((l) => l.result === "RDV" && +new Date(l.action_date) >= weekAgo).length;
-    const rdvMonth = logs.filter((l) => l.result === "RDV" && Date.now() - +new Date(l.action_date) <= 31 * 24 * 60 * 60 * 1000).length;
+    const rdvWeek = logs.filter(
+      (l) => l.result === "RDV" && +new Date(l.action_date) >= weekAgo,
+    ).length;
+    const rdvMonth = logs.filter(
+      (l) =>
+        l.result === "RDV" && Date.now() - +new Date(l.action_date) <= 31 * 24 * 60 * 60 * 1000,
+    ).length;
     const exchanges = logs.filter((l) => l.result === "Échange" || l.result === "RDV").length;
     const rdv = logs.filter((l) => l.result === "RDV").length;
     const nrp = logs.filter((l) => l.result === "NRP").length;
@@ -55,7 +62,9 @@ function StatsPage() {
       rdvWeek,
       rdvMonth,
       due: prospects.filter((p) => isDueTodayOrLate(p.next_action_date)).length,
-      late: prospects.filter((p) => p.next_action_date && p.next_action_date < new Date().toISOString().slice(0, 10)).length,
+      late: prospects.filter(
+        (p) => p.next_action_date && p.next_action_date < new Date().toISOString().slice(0, 10),
+      ).length,
       noPhone: prospects.filter((p) => !bestPhone(p)).length,
       noContact: prospects.filter((p) => !p.contacts.length).length,
       penetration: calls.length ? Math.round((exchanges / calls.length) * 100) : 0,
@@ -119,15 +128,23 @@ function StatsPage() {
           <div className="mt-3 grid gap-2">
             {prospects
               .filter((p) => p.next_action_date && !["Perdu", "Converti"].includes(p.status))
-              .sort((a, b) => +new Date(a.next_action_date || "2099-12-31") - +new Date(b.next_action_date || "2099-12-31"))
+              .sort(
+                (a, b) =>
+                  +new Date(a.next_action_date || "2099-12-31") -
+                  +new Date(b.next_action_date || "2099-12-31"),
+              )
               .slice(0, 10)
               .map((p) => (
                 <div key={p.id} className="rounded-lg border border-border bg-card p-3">
                   <div className="flex justify-between gap-3">
                     <p className="font-medium">{p.company_name}</p>
-                    <p className="text-sm text-muted-foreground">{formatDate(p.next_action_date)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(p.next_action_date)}
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{p.city || "Ville à compléter"} · {p.status} · {p.current_stage}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {p.city || "Ville à compléter"} · {p.status} · {p.current_stage}
+                  </p>
                 </div>
               ))}
           </div>
@@ -141,7 +158,9 @@ function StatsPage() {
               .map((p) => (
                 <div key={p.id} className="rounded-lg border border-border bg-card p-3">
                   <p className="font-medium">{p.company_name}</p>
-                  <p className="text-sm text-muted-foreground">{dataQualityIssues(p).join(" · ")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {dataQualityIssues(p).join(" · ")}
+                  </p>
                 </div>
               ))}
           </div>
