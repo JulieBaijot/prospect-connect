@@ -388,7 +388,9 @@ function ProspectsPage() {
         }
       />
       {batchStatus ? <p className="mb-4 rounded-lg bg-script p-3 text-sm">{batchStatus}</p> : null}
-      {deleteStatus ? <p className="mb-4 rounded-lg bg-script p-3 text-sm">{deleteStatus}</p> : null}
+      {deleteStatus ? (
+        <p className="mb-4 rounded-lg bg-script p-3 text-sm">{deleteStatus}</p>
+      ) : null}
       <div className="mb-4 grid gap-3 md:grid-cols-5">
         <MiniKpi label="Total" value={counters.total} />
         <MiniKpi label="À appeler" value={counters.due} />
