@@ -316,7 +316,8 @@ function ProspectsPage() {
       if (suggested && (!prospect.category || prospect.category === "C – Porte d'entrée")) {
         patch.category = suggested.category;
       }
-      if (!prospect.next_action_date) patch.next_action_date = new Date().toISOString().slice(0, 10);
+      if (!prospect.next_action_date)
+        patch.next_action_date = new Date().toISOString().slice(0, 10);
       if (!prospect.offer_target) patch.offer_target = "Formation SST";
       if (!prospect.status) patch.status = "Tiède";
       if (!prospect.main_phone || !prospect.website || !prospect.address) {
