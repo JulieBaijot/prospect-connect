@@ -577,6 +577,38 @@ function ProspectsPage() {
             {placesStatus ? (
               <p className="rounded-lg bg-script p-3 text-sm">{placesStatus}</p>
             ) : null}
+            {selected ? (
+              <div className="grid gap-3 border-t border-border pt-4">
+                <div>
+                  <p className={labelClass}>Contacts enregistrés</p>
+                  <div className="mt-2 grid gap-2">
+                    {selected.contacts.length ? selected.contacts.map((contact) => (
+                      <div key={contact.id} className="rounded-lg border border-border bg-card p-3 text-sm">
+                        <p className="font-medium">{contactName(contact)}</p>
+                        <p className="text-muted-foreground">{contact.role_title || "Rôle à qualifier"}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {contact.direct_phone || contact.main_phone ? <a href={`tel:${contact.direct_phone || contact.main_phone}`} className="underline">Appeler</a> : null}
+                          {contact.email ? <a href={`mailto:${contact.email}`} className="underline">Email</a> : null}
+                          {contact.linkedin_url ? <a href={contact.linkedin_url} target="_blank" rel="noreferrer" className="underline">LinkedIn</a> : null}
+                        </div>
+                      </div>
+                    )) : <p className="text-sm text-muted-foreground">Aucun contact enregistré.</p>}
+                  </div>
+                </div>
+                <div>
+                  <p className={labelClass}>Historique récent</p>
+                  <div className="mt-2 grid gap-2">
+                    {selected.prospection_logs.slice(0, 5).map((log) => (
+                      <div key={log.id} className="rounded-lg border border-border bg-card p-3 text-sm">
+                        <p className="font-medium">{formatDate(log.action_date)} · {log.result || log.action_type}</p>
+                        <p className="text-muted-foreground">{log.notes || log.objective || "—"}</p>
+                      </div>
+                    ))}
+                    {!selected.prospection_logs.length ? <p className="text-sm text-muted-foreground">Aucun historique.</p> : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </Card>
       </div>
