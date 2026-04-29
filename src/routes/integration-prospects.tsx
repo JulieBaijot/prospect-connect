@@ -299,6 +299,9 @@ function IntegrationPage() {
           naf_code: company.naf || "",
           source: company.source || source,
           sector: company.sector || "",
+          batch_keyword: company.keyword || "",
+          external_source_id: company.externalId || company.siren || "",
+          import_source: "api_batch",
         },
         first
           ? {
