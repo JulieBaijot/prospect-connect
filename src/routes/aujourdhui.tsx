@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { CalendarClock, PhoneCall, Search, UserRoundCheck } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import { Button, Card, CategoryBadge, PageTitle, StatusBadge, labelClass } from "@/components/prm/ui";
@@ -69,11 +70,12 @@ function TodayPage() {
         title="Aujourd'hui"
         subtitle="Rappels, rendez-vous, cycle d'appels et qualification/recherche à traiter en priorité."
         action={
-          <Button asChild={false}>
-            <Link to="/prospects" className="inline-flex items-center gap-2">
-              Base prospects
-            </Link>
-          </Button>
+          <Link
+            to="/prospects"
+            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-secondary px-4 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent"
+          >
+            Base prospects
+          </Link>
         }
       />
 
@@ -94,7 +96,7 @@ function TodayPage() {
   );
 }
 
-function Kpi({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
+function Kpi({ icon, label, value }: { icon: ReactNode; label: string; value: string | number }) {
   return (
     <Card className="p-4">
       <div className="flex items-center gap-2 text-muted-foreground">
