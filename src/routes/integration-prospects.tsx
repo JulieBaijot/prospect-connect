@@ -16,6 +16,7 @@ import {
   offerTargets,
   saveProspect,
   type Category,
+  type HeadcountRange,
   type OfferTarget,
   type SearchSource,
 } from "@/lib/prm";
@@ -119,6 +120,8 @@ function IntegrationPage() {
   }, [source]);
   useEffect(() => {
     if (step === 2) void enrichAll();
+    // L'enrichissement se déclenche uniquement à l'entrée de l'étape 2.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
   const selectedCompany = useMemo(
     () => companies.find((c) => c.id === activeCompany) || companies[0],
@@ -237,7 +240,7 @@ function IntegrationPage() {
         {
           company_name: company.name,
           city: company.city,
-          headcount_range: company.headcount as any,
+          headcount_range: (company.headcount || "20-49") as HeadcountRange,
           category: first?.category || company.category || "C – Porte d'entrée",
           offer_target: first?.offer || company.offer || "SST FI",
           estimated_value: first?.value || company.value || 0,
