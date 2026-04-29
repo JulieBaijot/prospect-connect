@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Check, ChevronLeft, ChevronRight, ExternalLink, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
@@ -20,6 +21,7 @@ import {
   type OfferTarget,
   type SearchSource,
 } from "@/lib/prm";
+import { enrichCompany, searchCompaniesBatch } from "@/server/prospect-search.functions";
 
 export const Route = createFileRoute("/integration-prospects")({
   head: () => ({
@@ -48,6 +50,9 @@ type Company = {
   address?: string;
   sector?: string;
   source?: SearchSource;
+  keyword?: string;
+  externalId?: string;
+  score?: number;
   representatives?: { name: string; role: string }[];
   enrichment: "En attente" | "En cours" | "Trouvé" | "Non trouvé";
   qualification: "À qualifier" | "Qualifié";
@@ -77,10 +82,12 @@ type ContactDraft = {
 
 type Filters = {
   q: string;
+  keywords: string;
   departments: string[];
   headcounts: string[];
   sector: string;
   legal: string;
+  limit: number;
 };
 
 type Step1Props = {
