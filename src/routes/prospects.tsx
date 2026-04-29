@@ -251,9 +251,34 @@ function ProspectsPage() {
           </Button>
         }
       />
+      <div className="mb-4 grid gap-3 md:grid-cols-5">
+        <MiniKpi label="Total" value={counters.total} />
+        <MiniKpi label="À appeler" value={counters.due} />
+        <MiniKpi label="À compléter" value={counters.incomplete} />
+        <MiniKpi label="Chauds" value={counters.hot} />
+        <MiniKpi label="Convertis" value={counters.converted} />
+      </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card className="overflow-hidden">
-          <div className="grid gap-3 border-b border-border p-4 md:grid-cols-4">
+          <div className="grid gap-3 border-b border-border p-4 md:grid-cols-4 xl:grid-cols-7">
+            <input
+              className={`${fieldClass} md:col-span-2`}
+              placeholder="Recherche entreprise, contact, email, téléphone…"
+              value={filters.q}
+              onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+            />
+            <select
+              className={fieldClass}
+              value={filters.view}
+              onChange={(e) => setFilters({ ...filters, view: e.target.value })}
+            >
+              <option value="">Toutes vues</option>
+              <option value="due">À appeler</option>
+              <option value="incomplete">À compléter</option>
+              <option value="no_phone">Sans téléphone</option>
+              <option value="no_contact">Sans contact</option>
+              <option value="no_next">Sans prochaine action</option>
+            </select>
             <select
               className={fieldClass}
               value={filters.status}
@@ -290,6 +315,15 @@ function ProspectsPage() {
               value={filters.city}
               onChange={(e) => setFilters({ ...filters, city: e.target.value })}
             />
+            <select
+              className={fieldClass}
+              value={filters.source}
+              onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+            >
+              <option value="">Toutes sources</option>
+              <option value="excel">Import Excel</option>
+              <option value="api_batch">Batch API</option>
+            </select>
           </div>
           <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-sm">
@@ -329,7 +363,12 @@ function ProspectsPage() {
                       <StatusBadge status={p.status} />
                     </td>
                     <td className="px-4 py-3">{formatDate(p.next_action_date)}</td>
-                    <td className="px-4 py-3">{formatEuro(p.estimated_value)}</td>
+                    <td className="px-4 py-3">
+                      <div>{formatEuro(p.estimated_value)}</div>
+                      {dataQualityIssues(p).length ? (
+                        <div className="mt-1 text-xs text-muted-foreground">{dataQualityIssues(p).length} point(s) à compléter</div>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>
