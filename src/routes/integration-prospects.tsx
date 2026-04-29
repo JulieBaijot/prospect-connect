@@ -424,7 +424,7 @@ function Step1(props: Step1Props) {
           <select
             className={`${fieldClass} mt-1 w-full`}
             value={props.source}
-            onChange={(e) => props.setSource(e.target.value)}
+            onChange={(e) => props.setSource(e.target.value as SearchSource)}
           >
             {Object.entries(sources).map(([k, v]) => (
               <option key={k} value={k}>
@@ -721,7 +721,9 @@ function ContactEditors({
               <select
                 className={fieldClass}
                 value={ct.offer}
-                onChange={(e) => updateContact(company, idx, { offer: e.target.value })}
+                onChange={(e) =>
+                  updateContact(company, idx, { offer: e.target.value as OfferTarget })
+                }
               >
                 {offerTargets.map((x) => (
                   <option key={x}>{x}</option>
@@ -730,7 +732,7 @@ function ContactEditors({
               <select
                 className={fieldClass}
                 value={ct.category}
-                onChange={(e) => updateContact(company, idx, { category: e.target.value })}
+                onChange={(e) => updateContact(company, idx, { category: e.target.value as Category })}
               >
                 {categories.map((x) => (
                   <option key={x}>{x}</option>
