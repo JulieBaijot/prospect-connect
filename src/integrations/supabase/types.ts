@@ -219,7 +219,9 @@ export type Database = {
       }
       prospects: {
         Row: {
+          additional_info: string | null
           address: string | null
+          average_rating: number | null
           batch_keyword: string | null
           category: string
           city: string | null
@@ -227,10 +229,16 @@ export type Database = {
           company_name: string
           created_at: string
           current_stage: string
+          decision_maker: string | null
+          employees_count: string | null
+          enriched_at: string | null
+          enrichment_sources: Json | null
           estimated_value: number
           external_source_id: string | null
+          google_maps_url: string | null
           google_place_id: string | null
           headcount_range: string | null
+          icebreakers: Json | null
           id: string
           import_batch_id: string | null
           import_source: string | null
@@ -240,15 +248,19 @@ export type Database = {
           next_action_date: string | null
           offer_target: string | null
           reception_hours: string | null
+          reviews_count: number | null
           sector: string | null
           siren: string | null
+          social_links: Json | null
           source: string | null
           status: string
           updated_at: string
           website: string | null
         }
         Insert: {
+          additional_info?: string | null
           address?: string | null
+          average_rating?: number | null
           batch_keyword?: string | null
           category?: string
           city?: string | null
@@ -256,10 +268,16 @@ export type Database = {
           company_name: string
           created_at?: string
           current_stage?: string
+          decision_maker?: string | null
+          employees_count?: string | null
+          enriched_at?: string | null
+          enrichment_sources?: Json | null
           estimated_value?: number
           external_source_id?: string | null
+          google_maps_url?: string | null
           google_place_id?: string | null
           headcount_range?: string | null
+          icebreakers?: Json | null
           id?: string
           import_batch_id?: string | null
           import_source?: string | null
@@ -269,15 +287,19 @@ export type Database = {
           next_action_date?: string | null
           offer_target?: string | null
           reception_hours?: string | null
+          reviews_count?: number | null
           sector?: string | null
           siren?: string | null
+          social_links?: Json | null
           source?: string | null
           status?: string
           updated_at?: string
           website?: string | null
         }
         Update: {
+          additional_info?: string | null
           address?: string | null
+          average_rating?: number | null
           batch_keyword?: string | null
           category?: string
           city?: string | null
@@ -285,10 +307,16 @@ export type Database = {
           company_name?: string
           created_at?: string
           current_stage?: string
+          decision_maker?: string | null
+          employees_count?: string | null
+          enriched_at?: string | null
+          enrichment_sources?: Json | null
           estimated_value?: number
           external_source_id?: string | null
+          google_maps_url?: string | null
           google_place_id?: string | null
           headcount_range?: string | null
+          icebreakers?: Json | null
           id?: string
           import_batch_id?: string | null
           import_source?: string | null
@@ -298,8 +326,10 @@ export type Database = {
           next_action_date?: string | null
           offer_target?: string | null
           reception_hours?: string | null
+          reviews_count?: number | null
           sector?: string | null
           siren?: string | null
+          social_links?: Json | null
           source?: string | null
           status?: string
           updated_at?: string
