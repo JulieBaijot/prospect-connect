@@ -19,6 +19,8 @@ const searchSchema = z.object({
 const enrichSchema = z.object({
   name: z.string().trim().min(1).max(180),
   city: z.string().trim().max(120).optional(),
+  activity: z.string().trim().max(180).optional(),
+  address: z.string().trim().max(255).optional(),
 });
 
 const emailSchema = z.object({
