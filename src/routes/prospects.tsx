@@ -367,14 +367,29 @@ function ProspectsPage() {
       if (!prospect.main_phone || !prospect.website || !prospect.address) {
         try {
           const place = await runEnrichment({
-            data: { name: prospect.company_name, city: prospect.city || "" },
+            data: {
+              name: prospect.company_name,
+              city: prospect.city || "",
+              activity: prospect.sector || undefined,
+              address: prospect.address || undefined,
+            },
           });
-          if (place.status === "found") {
+          if (place.status === "found" || place.status === "partial") {
             if (!prospect.main_phone && place.phone) patch.main_phone = place.phone;
             if (!prospect.website && place.website) patch.website = place.website;
             if (!prospect.address && place.address) patch.address = place.address;
             if (!prospect.reception_hours && place.hours) patch.reception_hours = place.hours;
             if (!prospect.google_place_id && place.placeId) patch.google_place_id = place.placeId;
+            if (!prospect.decision_maker && place.decision_maker) patch.decision_maker = place.decision_maker;
+            if (!prospect.employees_count && place.employees_count) patch.employees_count = place.employees_count;
+            if (!prospect.social_links && place.social_links) patch.social_links = place.social_links;
+            if ((!prospect.icebreakers || !prospect.icebreakers.length) && place.icebreakers) patch.icebreakers = place.icebreakers;
+            if (prospect.average_rating == null && place.average_rating != null) patch.average_rating = place.average_rating;
+            if (prospect.reviews_count == null && place.reviews_count != null) patch.reviews_count = place.reviews_count;
+            if (!prospect.google_maps_url && place.google_maps_url) patch.google_maps_url = place.google_maps_url;
+            if (!prospect.additional_info && place.additional_info) patch.additional_info = place.additional_info;
+            patch.enrichment_sources = place.sources;
+            (patch as Partial<Prospect> & { enriched_at?: string }).enriched_at = new Date().toISOString();
           }
         } catch {
           // Le batch continue même si un enrichissement échoue.
