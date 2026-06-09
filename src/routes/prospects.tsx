@@ -801,6 +801,31 @@ function ProspectsPage() {
             {placesStatus ? (
               <p className="rounded-lg bg-script p-3 text-sm">{placesStatus}</p>
             ) : null}
+            {selected && (selected.decision_maker || selected.average_rating != null || selected.icebreakers?.length || selected.social_links) ? (
+              <div className="rounded-lg border border-border bg-card p-3 text-sm">
+                <p className={labelClass}>Données enrichies</p>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {selected.decision_maker ? <span>👤 {selected.decision_maker}</span> : null}
+                  {selected.employees_count ? <span>👥 {selected.employees_count}</span> : null}
+                  {selected.average_rating != null ? <span>⭐ {selected.average_rating.toFixed(1)}{selected.reviews_count != null ? ` (${selected.reviews_count})` : ""}</span> : null}
+                  {selected.google_maps_url ? <a className="text-primary underline" href={selected.google_maps_url} target="_blank" rel="noreferrer">Maps</a> : null}
+                  {selected.social_links?.linkedin ? <a className="text-primary underline" href={selected.social_links.linkedin} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+                  {selected.social_links?.facebook ? <a className="text-primary underline" href={selected.social_links.facebook} target="_blank" rel="noreferrer">Facebook</a> : null}
+                  {selected.social_links?.instagram ? <a className="text-primary underline" href={selected.social_links.instagram} target="_blank" rel="noreferrer">Instagram</a> : null}
+                </div>
+                {selected.additional_info ? <p className="mt-2 text-muted-foreground">{selected.additional_info}</p> : null}
+                {selected.icebreakers?.length ? (
+                  <div className="mt-2 grid gap-2">
+                    {selected.icebreakers.map((item, i) => (
+                      <div key={i} className="rounded-md border border-border bg-background p-2 text-xs">
+                        <span className="font-medium">{item.title}</span>
+                        {item.url ? <> · <a className="text-primary underline" href={item.url} target="_blank" rel="noreferrer">Lien</a></> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             {selected ? (
               <div className="grid gap-3 border-t border-border pt-4">
                 <div>
