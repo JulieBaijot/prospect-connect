@@ -351,6 +351,21 @@ function SessionPage() {
                     ))}
                   </div>
                 ) : null}
+                {current.decision_maker || current.average_rating != null || current.icebreakers?.length ? (
+                  <div className="mt-4 rounded-md border border-border bg-card p-3 text-sm">
+                    <p className={labelClass}>Pour briser la glace</p>
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                      {current.decision_maker ? <span>👤 {current.decision_maker}</span> : null}
+                      {current.average_rating != null ? <span>⭐ {current.average_rating.toFixed(1)}{current.reviews_count != null ? ` (${current.reviews_count})` : ""}</span> : null}
+                    </div>
+                    {current.icebreakers?.slice(0, 3).map((item, i) => (
+                      <p key={i} className="mt-1 text-xs">
+                        • {item.title}
+                        {item.url ? <> · <a className="text-primary underline" href={item.url} target="_blank" rel="noreferrer">lien</a></> : null}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <div className="mt-5 rounded-r-md border-l-[3px] border-script-border bg-script p-4">
                 <p className={labelClass}>{activeNode?.label}</p>
