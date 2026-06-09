@@ -287,28 +287,56 @@ function ProspectsPage() {
   }
 
   async function enrichPlaces() {
-    setPlacesStatus("Recherche Google Places en cours…");
+    setPlacesStatus("Recherche Google Places + Perplexity en cours…");
     try {
-      const place = await runEnrichment({ data: { name: form.company_name, city: form.city } });
-      if (place.status === "missing_key") {
-        setPlacesStatus("Clé Google Places absente : remplissez les champs manuellement.");
-        return;
-      }
-      if (place.status !== "found") {
-        setPlacesStatus("Aucun établissement trouvé.");
+      const result = await runEnrichment({
+        data: {
+          name: form.company_name,
+          city: form.city,
+          activity: form.sector || undefined,
+          address: form.address || undefined,
+        },
+      });
+      if (result.status === "missing_key") {
+        setPlacesStatus("Aucune clé d'enrichissement configurée.");
         return;
       }
       setForm((prev) => ({
         ...prev,
-        address: place.address || prev.address,
-        main_phone: place.phone || prev.main_phone,
-        website: place.website || prev.website,
-        reception_hours: place.hours || prev.reception_hours,
-        google_place_id: place.placeId || prev.google_place_id,
+        address: prev.address || result.address || "",
+        main_phone: prev.main_phone || result.phone || "",
+        website: prev.website || result.website || "",
+        reception_hours: prev.reception_hours || result.hours || "",
+        google_place_id: prev.google_place_id || result.placeId || "",
       }));
-      setPlacesStatus("Établissement trouvé : vérifiez les champs puis sauvegardez.");
+      if (selected) {
+        const patch: Partial<Prospect> & { enriched_at?: string } = {
+          decision_maker: selected.decision_maker || result.decision_maker || null,
+          employees_count: selected.employees_count || result.employees_count || null,
+          additional_info: selected.additional_info || result.additional_info || null,
+          social_links: selected.social_links || result.social_links || null,
+          icebreakers:
+            selected.icebreakers && selected.icebreakers.length
+              ? selected.icebreakers
+              : result.icebreakers || null,
+          average_rating: selected.average_rating ?? result.average_rating ?? null,
+          reviews_count: selected.reviews_count ?? result.reviews_count ?? null,
+          google_maps_url: selected.google_maps_url || result.google_maps_url || null,
+          enrichment_sources: result.sources,
+          enriched_at: new Date().toISOString(),
+        };
+        await updateProspect(selected.id, patch);
+        await refresh();
+      }
+      const gp = result.sources.google_places;
+      const pp = result.sources.perplexity;
+      setPlacesStatus(
+        `Enrichissement ${result.status === "found" ? "complet" : result.status === "partial" ? "partiel" : "vide"}. ` +
+          `Google Places : ${gp.status}${gp.message ? ` (${gp.message})` : ""}. ` +
+          `Perplexity : ${pp.status}${pp.message ? ` (${pp.message})` : ""}.`,
+      );
     } catch {
-      setPlacesStatus("Erreur Google Places. Vérifiez la clé ou saisissez manuellement.");
+      setPlacesStatus("Erreur réseau pendant l'enrichissement.");
     }
   }
 
