@@ -82,6 +82,19 @@ export interface Prospect {
   external_source_id: string | null;
   import_source: string | null;
   import_batch_id: string | null;
+  decision_maker: string | null;
+  employees_count: string | null;
+  social_links: { facebook?: string; instagram?: string; linkedin?: string } | null;
+  icebreakers: Array<{ type?: string; title: string; source?: string; date?: string; url?: string }> | null;
+  additional_info: string | null;
+  average_rating: number | null;
+  reviews_count: number | null;
+  google_maps_url: string | null;
+  enrichment_sources: {
+    google_places?: { status: string; message?: string };
+    perplexity?: { status: string; message?: string };
+  } | null;
+  enriched_at: string | null;
   created_at: string;
   updated_at: string;
 }

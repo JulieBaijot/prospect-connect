@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, ChevronRight, Wand2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Star, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import { Button, Card, CategoryBadge, PageTitle, fieldClass, labelClass } from "@/components/prm/ui";
@@ -33,7 +33,43 @@ export const Route = createFileRoute("/qualification")({
   ),
 });
 
-const blankForm = {
+type SocialLinks = { facebook?: string; instagram?: string; linkedin?: string };
+type Icebreaker = {
+  type?: string;
+  title: string;
+  source?: string;
+  date?: string;
+  url?: string;
+};
+type EnrichmentSources = {
+  google_places?: { status: string; message?: string };
+  perplexity?: { status: string; message?: string };
+};
+
+type FormState = {
+  main_phone: string;
+  website: string;
+  address: string;
+  reception_hours: string;
+  google_place_id: string;
+  siren: string;
+  sector: string;
+  headcount_range: HeadcountRange;
+  offer_target: OfferTarget;
+  comments: string;
+  next_action_date: string;
+  decision_maker: string;
+  employees_count: string;
+  additional_info: string;
+  google_maps_url: string;
+  average_rating: number | null;
+  reviews_count: number | null;
+  social_links: SocialLinks | null;
+  icebreakers: Icebreaker[] | null;
+  enrichment_sources: EnrichmentSources | null;
+};
+
+const blankForm: FormState = {
   main_phone: "",
   website: "",
   address: "",
@@ -41,10 +77,19 @@ const blankForm = {
   google_place_id: "",
   siren: "",
   sector: "",
-  headcount_range: "20-49" as HeadcountRange,
-  offer_target: "Formation SST" as OfferTarget,
+  headcount_range: "20-49",
+  offer_target: "Formation SST",
   comments: "",
   next_action_date: "",
+  decision_maker: "",
+  employees_count: "",
+  additional_info: "",
+  google_maps_url: "",
+  average_rating: null,
+  reviews_count: null,
+  social_links: null,
+  icebreakers: null,
+  enrichment_sources: null,
 };
 
 function QualificationPage() {
@@ -56,7 +101,7 @@ function QualificationPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [form, setForm] = useState(blankForm);
+  const [form, setForm] = useState<FormState>(blankForm);
 
   const current = session[index];
   const issues = current ? dataQualityIssues(current) : [];
@@ -98,6 +143,15 @@ function QualificationPage() {
       offer_target: current.offer_target || "Formation SST",
       comments: current.comments || "",
       next_action_date: current.next_action_date || "",
+      decision_maker: current.decision_maker || "",
+      employees_count: current.employees_count || "",
+      additional_info: current.additional_info || "",
+      google_maps_url: current.google_maps_url || "",
+      average_rating: current.average_rating,
+      reviews_count: current.reviews_count,
+      social_links: current.social_links,
+      icebreakers: current.icebreakers,
+      enrichment_sources: current.enrichment_sources,
     });
     setMessage("");
   }, [current]);
@@ -129,28 +183,47 @@ function QualificationPage() {
   async function enrichCurrent() {
     if (!current || busy) return;
     setBusy(true);
-    setMessage("Recherche en cours…");
+    setMessage("Recherche en cours sur Google Places et Perplexity…");
     try {
-      const place = await runEnrichment({ data: { name: current.company_name, city: current.city || "" } });
-      if (place.status === "missing_key") {
-        setMessage("Clé Google Places manquante : l'enrichissement automatique est indisponible.");
-        return;
-      }
-      if (place.status !== "found") {
-        setMessage("Aucun établissement trouvé via Google Places.");
+      const result = await runEnrichment({
+        data: {
+          name: current.company_name,
+          city: current.city || "",
+          activity: current.sector || undefined,
+          address: current.address || undefined,
+        },
+      });
+      if (result.status === "missing_key") {
+        setMessage("Aucune clé d'enrichissement configurée.");
         return;
       }
       setForm((prev) => ({
         ...prev,
-        main_phone: place.phone || prev.main_phone,
-        website: place.website || prev.website,
-        address: place.address || prev.address,
-        reception_hours: place.hours || prev.reception_hours,
-        google_place_id: place.placeId || prev.google_place_id,
+        // Anti-écrasement : on ne remplit que les champs vides.
+        main_phone: prev.main_phone || result.phone || "",
+        website: prev.website || result.website || "",
+        address: prev.address || result.address || "",
+        reception_hours: prev.reception_hours || result.hours || "",
+        google_place_id: prev.google_place_id || result.placeId || "",
+        google_maps_url: prev.google_maps_url || result.google_maps_url || "",
+        average_rating: prev.average_rating ?? result.average_rating ?? null,
+        reviews_count: prev.reviews_count ?? result.reviews_count ?? null,
+        decision_maker: prev.decision_maker || result.decision_maker || "",
+        employees_count: prev.employees_count || result.employees_count || "",
+        additional_info: prev.additional_info || result.additional_info || "",
+        social_links: prev.social_links || result.social_links || null,
+        icebreakers: prev.icebreakers && prev.icebreakers.length ? prev.icebreakers : result.icebreakers || null,
+        enrichment_sources: result.sources,
       }));
-      setMessage("Informations Google Places ajoutées : vérifiez puis sauvegardez.");
+      if (result.status === "not_found") {
+        setMessage("Aucune information trouvée pour ce prospect.");
+      } else if (result.status === "partial") {
+        setMessage("Enrichissement partiel : une des deux sources a échoué (voir le détail ci-dessous).");
+      } else {
+        setMessage("Enrichissement réussi : vérifiez puis sauvegardez.");
+      }
     } catch {
-      setMessage("Google Places est indisponible ou le quota est atteint.");
+      setMessage("Erreur réseau pendant l'enrichissement.");
     } finally {
       setBusy(false);
     }
@@ -160,9 +233,30 @@ function QualificationPage() {
     if (!current || busy) return;
     setBusy(true);
     const patch: Partial<Prospect> = {
-      ...form,
+      main_phone: form.main_phone,
+      website: form.website,
+      address: form.address,
+      reception_hours: form.reception_hours,
+      google_place_id: form.google_place_id,
+      siren: form.siren,
+      sector: form.sector,
+      headcount_range: form.headcount_range,
+      offer_target: form.offer_target,
+      comments: form.comments,
       next_action_date: form.next_action_date || null,
+      decision_maker: form.decision_maker || null,
+      employees_count: form.employees_count || null,
+      additional_info: form.additional_info || null,
+      google_maps_url: form.google_maps_url || null,
+      average_rating: form.average_rating,
+      reviews_count: form.reviews_count,
+      social_links: form.social_links,
+      icebreakers: form.icebreakers,
+      enrichment_sources: form.enrichment_sources,
     };
+    if (form.enrichment_sources) {
+      (patch as Partial<Prospect> & { enriched_at?: string }).enriched_at = new Date().toISOString();
+    }
     if (autoCategory && current.category === "C – Porte d'entrée") patch.category = autoCategory.category;
     await updateProspect(current.id, patch);
     setDone((prev) => Math.min(prev + 1, session.length));
@@ -237,6 +331,8 @@ function QualificationPage() {
               </label>
               <Field label="Prochaine action" type="date" value={form.next_action_date} onChange={(value) => setForm((prev) => ({ ...prev, next_action_date: value }))} />
               <Field label="Adresse" value={form.address} onChange={(value) => setForm((prev) => ({ ...prev, address: value }))} />
+              <Field label="Décideur" value={form.decision_maker} onChange={(value) => setForm((prev) => ({ ...prev, decision_maker: value }))} />
+              <Field label="Effectif estimé" value={form.employees_count} onChange={(value) => setForm((prev) => ({ ...prev, employees_count: value }))} />
             </div>
             <label className="mt-3 grid gap-2 text-sm">
               <span className={labelClass}>Horaires accueil</span>
@@ -246,6 +342,9 @@ function QualificationPage() {
               <span className={labelClass}>Commentaires</span>
               <textarea className={`${fieldClass} min-h-24 py-2`} value={form.comments} onChange={(e) => setForm((prev) => ({ ...prev, comments: e.target.value }))} />
             </label>
+
+            <EnrichmentPanel form={form} />
+
             {message ? <p className="mt-4 rounded-lg bg-script p-3 text-sm">{message}</p> : null}
             <div className="mt-5 flex flex-wrap gap-2">
               <Button variant="neutral" onClick={enrichCurrent} disabled={busy}><Wand2 className="mr-2 h-4 w-4" />Enrichir</Button>
@@ -264,5 +363,98 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
       <span className={labelClass}>{label}</span>
       <input className={fieldClass} type={type} value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
+  );
+}
+
+function statusDotClass(status?: string) {
+  if (status === "ok") return "bg-action-meeting";
+  if (status === "error") return "bg-action-nrp";
+  return "bg-muted";
+}
+
+function EnrichmentPanel({ form }: { form: FormState }) {
+  const sources = form.enrichment_sources;
+  const hasEnriched =
+    sources ||
+    form.average_rating != null ||
+    form.icebreakers?.length ||
+    form.social_links ||
+    form.additional_info ||
+    form.google_maps_url;
+  if (!hasEnriched) return null;
+
+  return (
+    <div className="mt-5 rounded-lg border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">Données enrichies</p>
+        {sources ? (
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="inline-flex items-center gap-1">
+              <span className={`h-2 w-2 rounded-full ${statusDotClass(sources.google_places?.status)}`} />
+              Google Places{sources.google_places?.message ? ` — ${sources.google_places.message}` : ""}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className={`h-2 w-2 rounded-full ${statusDotClass(sources.perplexity?.status)}`} />
+              Perplexity{sources.perplexity?.message ? ` — ${sources.perplexity.message}` : ""}
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+        {form.average_rating != null ? (
+          <span className="inline-flex items-center gap-1">
+            <Star className="h-4 w-4 text-action-callback" />
+            {form.average_rating.toFixed(1)}
+            {form.reviews_count != null ? ` (${form.reviews_count} avis)` : ""}
+          </span>
+        ) : null}
+        {form.google_maps_url ? (
+          <a className="inline-flex items-center gap-1 text-primary underline" href={form.google_maps_url} target="_blank" rel="noreferrer">
+            Google Maps <ExternalLink className="h-3 w-3" />
+          </a>
+        ) : null}
+        {form.social_links?.linkedin ? (
+          <a className="text-primary underline" href={form.social_links.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>
+        ) : null}
+        {form.social_links?.facebook ? (
+          <a className="text-primary underline" href={form.social_links.facebook} target="_blank" rel="noreferrer">Facebook</a>
+        ) : null}
+        {form.social_links?.instagram ? (
+          <a className="text-primary underline" href={form.social_links.instagram} target="_blank" rel="noreferrer">Instagram</a>
+        ) : null}
+      </div>
+
+      {form.additional_info ? (
+        <p className="mt-3 text-sm text-muted-foreground">{form.additional_info}</p>
+      ) : null}
+
+      {form.icebreakers?.length ? (
+        <div className="mt-3 grid gap-2">
+          <p className={labelClass}>Icebreakers</p>
+          {form.icebreakers.map((item, i) => (
+            <div key={i} className="rounded-md border border-border bg-background p-3 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium">{item.title}</span>
+                {item.type ? (
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                    {item.type}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {[item.source, item.date].filter(Boolean).join(" · ")}
+                {item.url ? (
+                  <>
+                    {" · "}
+                    <a className="text-primary underline" href={item.url} target="_blank" rel="noreferrer">Lien</a>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

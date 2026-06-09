@@ -287,28 +287,56 @@ function ProspectsPage() {
   }
 
   async function enrichPlaces() {
-    setPlacesStatus("Recherche Google Places en cours…");
+    setPlacesStatus("Recherche Google Places + Perplexity en cours…");
     try {
-      const place = await runEnrichment({ data: { name: form.company_name, city: form.city } });
-      if (place.status === "missing_key") {
-        setPlacesStatus("Clé Google Places absente : remplissez les champs manuellement.");
-        return;
-      }
-      if (place.status !== "found") {
-        setPlacesStatus("Aucun établissement trouvé.");
+      const result = await runEnrichment({
+        data: {
+          name: form.company_name,
+          city: form.city,
+          activity: form.sector || undefined,
+          address: form.address || undefined,
+        },
+      });
+      if (result.status === "missing_key") {
+        setPlacesStatus("Aucune clé d'enrichissement configurée.");
         return;
       }
       setForm((prev) => ({
         ...prev,
-        address: place.address || prev.address,
-        main_phone: place.phone || prev.main_phone,
-        website: place.website || prev.website,
-        reception_hours: place.hours || prev.reception_hours,
-        google_place_id: place.placeId || prev.google_place_id,
+        address: prev.address || result.address || "",
+        main_phone: prev.main_phone || result.phone || "",
+        website: prev.website || result.website || "",
+        reception_hours: prev.reception_hours || result.hours || "",
+        google_place_id: prev.google_place_id || result.placeId || "",
       }));
-      setPlacesStatus("Établissement trouvé : vérifiez les champs puis sauvegardez.");
+      if (selected) {
+        const patch: Partial<Prospect> & { enriched_at?: string } = {
+          decision_maker: selected.decision_maker || result.decision_maker || null,
+          employees_count: selected.employees_count || result.employees_count || null,
+          additional_info: selected.additional_info || result.additional_info || null,
+          social_links: selected.social_links || result.social_links || null,
+          icebreakers:
+            selected.icebreakers && selected.icebreakers.length
+              ? selected.icebreakers
+              : result.icebreakers || null,
+          average_rating: selected.average_rating ?? result.average_rating ?? null,
+          reviews_count: selected.reviews_count ?? result.reviews_count ?? null,
+          google_maps_url: selected.google_maps_url || result.google_maps_url || null,
+          enrichment_sources: result.sources,
+          enriched_at: new Date().toISOString(),
+        };
+        await updateProspect(selected.id, patch);
+        await refresh();
+      }
+      const gp = result.sources.google_places;
+      const pp = result.sources.perplexity;
+      setPlacesStatus(
+        `Enrichissement ${result.status === "found" ? "complet" : result.status === "partial" ? "partiel" : "vide"}. ` +
+          `Google Places : ${gp.status}${gp.message ? ` (${gp.message})` : ""}. ` +
+          `Perplexity : ${pp.status}${pp.message ? ` (${pp.message})` : ""}.`,
+      );
     } catch {
-      setPlacesStatus("Erreur Google Places. Vérifiez la clé ou saisissez manuellement.");
+      setPlacesStatus("Erreur réseau pendant l'enrichissement.");
     }
   }
 
@@ -339,14 +367,29 @@ function ProspectsPage() {
       if (!prospect.main_phone || !prospect.website || !prospect.address) {
         try {
           const place = await runEnrichment({
-            data: { name: prospect.company_name, city: prospect.city || "" },
+            data: {
+              name: prospect.company_name,
+              city: prospect.city || "",
+              activity: prospect.sector || undefined,
+              address: prospect.address || undefined,
+            },
           });
-          if (place.status === "found") {
+          if (place.status === "found" || place.status === "partial") {
             if (!prospect.main_phone && place.phone) patch.main_phone = place.phone;
             if (!prospect.website && place.website) patch.website = place.website;
             if (!prospect.address && place.address) patch.address = place.address;
             if (!prospect.reception_hours && place.hours) patch.reception_hours = place.hours;
             if (!prospect.google_place_id && place.placeId) patch.google_place_id = place.placeId;
+            if (!prospect.decision_maker && place.decision_maker) patch.decision_maker = place.decision_maker;
+            if (!prospect.employees_count && place.employees_count) patch.employees_count = place.employees_count;
+            if (!prospect.social_links && place.social_links) patch.social_links = place.social_links;
+            if ((!prospect.icebreakers || !prospect.icebreakers.length) && place.icebreakers) patch.icebreakers = place.icebreakers;
+            if (prospect.average_rating == null && place.average_rating != null) patch.average_rating = place.average_rating;
+            if (prospect.reviews_count == null && place.reviews_count != null) patch.reviews_count = place.reviews_count;
+            if (!prospect.google_maps_url && place.google_maps_url) patch.google_maps_url = place.google_maps_url;
+            if (!prospect.additional_info && place.additional_info) patch.additional_info = place.additional_info;
+            patch.enrichment_sources = place.sources;
+            (patch as Partial<Prospect> & { enriched_at?: string }).enriched_at = new Date().toISOString();
           }
         } catch {
           // Le batch continue même si un enrichissement échoue.
@@ -757,6 +800,31 @@ function ProspectsPage() {
             </div>
             {placesStatus ? (
               <p className="rounded-lg bg-script p-3 text-sm">{placesStatus}</p>
+            ) : null}
+            {selected && (selected.decision_maker || selected.average_rating != null || selected.icebreakers?.length || selected.social_links) ? (
+              <div className="rounded-lg border border-border bg-card p-3 text-sm">
+                <p className={labelClass}>Données enrichies</p>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {selected.decision_maker ? <span>👤 {selected.decision_maker}</span> : null}
+                  {selected.employees_count ? <span>👥 {selected.employees_count}</span> : null}
+                  {selected.average_rating != null ? <span>⭐ {selected.average_rating.toFixed(1)}{selected.reviews_count != null ? ` (${selected.reviews_count})` : ""}</span> : null}
+                  {selected.google_maps_url ? <a className="text-primary underline" href={selected.google_maps_url} target="_blank" rel="noreferrer">Maps</a> : null}
+                  {selected.social_links?.linkedin ? <a className="text-primary underline" href={selected.social_links.linkedin} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+                  {selected.social_links?.facebook ? <a className="text-primary underline" href={selected.social_links.facebook} target="_blank" rel="noreferrer">Facebook</a> : null}
+                  {selected.social_links?.instagram ? <a className="text-primary underline" href={selected.social_links.instagram} target="_blank" rel="noreferrer">Instagram</a> : null}
+                </div>
+                {selected.additional_info ? <p className="mt-2 text-muted-foreground">{selected.additional_info}</p> : null}
+                {selected.icebreakers?.length ? (
+                  <div className="mt-2 grid gap-2">
+                    {selected.icebreakers.map((item, i) => (
+                      <div key={i} className="rounded-md border border-border bg-background p-2 text-xs">
+                        <span className="font-medium">{item.title}</span>
+                        {item.url ? <> · <a className="text-primary underline" href={item.url} target="_blank" rel="noreferrer">Lien</a></> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             ) : null}
             {selected ? (
               <div className="grid gap-3 border-t border-border pt-4">
