@@ -22,7 +22,7 @@ import {
   type OfferTarget,
   type SearchSource,
 } from "@/lib/prm";
-import { enrichCompany, findEmail, searchCompaniesBatch } from "@/server/prospect-search.functions";
+import { enrichCompany, findEmail, searchCompaniesBatch } from "@/lib/prospect-search.functions";
 
 export const Route = createFileRoute("/integration-prospects")({
   head: () => ({
