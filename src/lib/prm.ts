@@ -630,12 +630,15 @@ export function suggestProspectCategory(input: {
     headcountMin >= 20 &&
     headcountMin <= 199 &&
     ["industrie", "logistique", "agro", "btp"].some((item) => sector.includes(item)) &&
-    ["sst fi", "sst mac", "formation sst"].some((item) => offer.includes(item))
+    ["sst fi", "sst mac", "formation sst", "duerp"].some((item) => offer.includes(item))
   ) {
     return {
       category: "B – Socle prévention",
-      reasons: ["20–199 salariés", "secteur terrain", "offre SST"],
+      reasons: ["20–199 salariés", "secteur terrain", offer.includes("duerp") ? "offre DUERP" : "offre SST"],
     };
+  }
+  if (offer.includes("duerp")) {
+    return { category: "C – Porte d'entrée", reasons: ["DUERP : porte d'entrée réglementaire"] };
   }
   if (
     headcountMin < 20 ||
