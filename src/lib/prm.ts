@@ -68,6 +68,7 @@ export interface Prospect {
   status: ProspectStatus;
   next_action_date: string | null;
   main_phone: string | null;
+  main_email: string | null;
   website: string | null;
   address: string | null;
   reception_hours: string | null;
@@ -629,12 +630,15 @@ export function suggestProspectCategory(input: {
     headcountMin >= 20 &&
     headcountMin <= 199 &&
     ["industrie", "logistique", "agro", "btp"].some((item) => sector.includes(item)) &&
-    ["sst fi", "sst mac", "formation sst"].some((item) => offer.includes(item))
+    ["sst fi", "sst mac", "formation sst", "duerp"].some((item) => offer.includes(item))
   ) {
     return {
       category: "B – Socle prévention",
-      reasons: ["20–199 salariés", "secteur terrain", "offre SST"],
+      reasons: ["20–199 salariés", "secteur terrain", offer.includes("duerp") ? "offre DUERP" : "offre SST"],
     };
+  }
+  if (offer.includes("duerp")) {
+    return { category: "C – Porte d'entrée", reasons: ["DUERP : porte d'entrée réglementaire"] };
   }
   if (
     headcountMin < 20 ||
@@ -708,9 +712,9 @@ export function bestPhone(prospect: ProspectWithRelations) {
 export function dataQualityIssues(prospect: ProspectWithRelations) {
   return [
     !bestPhone(prospect) ? "Téléphone manquant" : "",
-    !prospect.contacts.length ? "Contact manquant" : "",
+    !prospect.contacts.length && !prospect.main_email ? "Contact manquant" : "",
     !prospect.next_action_date ? "Relance non planifiée" : "",
-    !prospect.siren ? "SIREN manquant" : "",
+    !prospect.siren ? "SIRET manquant" : "",
     !prospect.prospection_logs.length ? "Aucun historique" : "",
   ].filter(Boolean);
 }
