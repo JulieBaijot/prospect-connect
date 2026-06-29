@@ -38,7 +38,7 @@ import {
   type ProspectStatus,
   type ProspectWithRelations,
 } from "@/lib/prm";
-import { enrichCompany } from "@/server/prospect-search.functions";
+import { enrichCompany } from "@/lib/prospect-search.functions";
 
 export const Route = createFileRoute("/prospects")({
   head: () => ({
