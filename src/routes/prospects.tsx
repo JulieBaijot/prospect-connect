@@ -65,6 +65,7 @@ const emptyProspect = {
   status: "Tiède" as ProspectStatus,
   next_action_date: "",
   main_phone: "",
+  main_email: "",
   website: "",
   address: "",
   reception_hours: "",
@@ -203,6 +204,7 @@ function ProspectsPage() {
       headcount_range: prospect.headcount_range || "20-49",
       offer_target: prospect.offer_target || "Formation SST",
       main_phone: prospect.main_phone || "",
+      main_email: prospect.main_email || "",
       website: prospect.website || "",
       address: prospect.address || "",
       reception_hours: prospect.reception_hours || "",
@@ -752,6 +754,23 @@ function ProspectsPage() {
                   className={fieldClass}
                   value={contactForm.direct_phone}
                   onChange={(e) => setContactForm({ ...contactForm, direct_phone: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Email entreprise">
+                <input
+                  className={fieldClass}
+                  type="email"
+                  value={form.main_email}
+                  onChange={(e) => setForm({ ...form, main_email: e.target.value })}
+                />
+              </Field>
+              <Field label="SIRET">
+                <input
+                  className={fieldClass}
+                  value={form.siren}
+                  onChange={(e) => setForm({ ...form, siren: e.target.value })}
                 />
               </Field>
             </div>
