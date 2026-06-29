@@ -709,9 +709,9 @@ export function bestPhone(prospect: ProspectWithRelations) {
 export function dataQualityIssues(prospect: ProspectWithRelations) {
   return [
     !bestPhone(prospect) ? "Téléphone manquant" : "",
-    !prospect.contacts.length ? "Contact manquant" : "",
+    !prospect.contacts.length && !prospect.main_email ? "Contact manquant" : "",
     !prospect.next_action_date ? "Relance non planifiée" : "",
-    !prospect.siren ? "SIREN manquant" : "",
+    !prospect.siren ? "SIRET manquant" : "",
     !prospect.prospection_logs.length ? "Aucun historique" : "",
   ].filter(Boolean);
 }
