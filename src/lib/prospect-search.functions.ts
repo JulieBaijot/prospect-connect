@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { enrichCompanyServer, findEmailServer, searchCompaniesBatchServer } from "./prospect-search.server";
+import { enrichCompanyServer, findEmailServer, searchCompaniesBatchServer } from "@/server/prospect-search.server";
 
 const sourceSchema = z.enum(["pappers", "insee", "annuaire"]);
 
