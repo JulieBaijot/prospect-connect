@@ -68,6 +68,7 @@ export interface Prospect {
   status: ProspectStatus;
   next_action_date: string | null;
   main_phone: string | null;
+  main_email: string | null;
   website: string | null;
   address: string | null;
   reception_hours: string | null;
