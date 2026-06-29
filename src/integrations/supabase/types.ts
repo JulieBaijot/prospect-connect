@@ -243,6 +243,7 @@ export type Database = {
           import_batch_id: string | null
           import_source: string | null
           legal_status: string | null
+          main_email: string | null
           main_phone: string | null
           naf_code: string | null
           next_action_date: string | null
@@ -282,6 +283,7 @@ export type Database = {
           import_batch_id?: string | null
           import_source?: string | null
           legal_status?: string | null
+          main_email?: string | null
           main_phone?: string | null
           naf_code?: string | null
           next_action_date?: string | null
@@ -321,6 +323,7 @@ export type Database = {
           import_batch_id?: string | null
           import_source?: string | null
           legal_status?: string | null
+          main_email?: string | null
           main_phone?: string | null
           naf_code?: string | null
           next_action_date?: string | null
