@@ -1,0 +1,299 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://gkbcycahxanuvrcwpphm.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "prm-sante-securite-mcp",
+      "version": "0.1.0",
+      "title": "PRM Santé-Sécurité"
+    },
+    "tools": [
+      {
+        "name": "list_prospects",
+        "title": "Lister les prospects",
+        "description": "Liste les prospects du PRM, avec filtres optionnels par catégorie, statut, étape du cycle, secteur ou ville. Retourne au maximum 50 fiches (les plus récemment modifiées d'abord).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "description": "Filtre par catégorie (ex: 'A – Pilier', 'B – Socle prévention')"
+            },
+            "status": {
+              "type": "string",
+              "description": "Filtre par statut ('Chaud', 'Tiède', 'En attente', 'Perdu', 'Converti')"
+            },
+            "stage": {
+              "type": "string",
+              "description": "Filtre par étape du cycle (J1, J2, J4, J6, J10, J15, J21)"
+            },
+            "sector": {
+              "type": "string",
+              "description": "Filtre partiel sur le secteur"
+            },
+            "city": {
+              "type": "string",
+              "description": "Filtre partiel sur la ville"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Nombre max de résultats (défaut 20)"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_prospects",
+        "title": "Rechercher un prospect",
+        "description": "Recherche textuelle sur le nom d'entreprise, la ville, le secteur, l'adresse, le décideur ou les commentaires. Utilise ce tool quand tu ne connais pas l'ID exact du prospect.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Terme de recherche (mot ou expression)"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_prospect",
+        "title": "Détail d'un prospect",
+        "description": "Retourne la fiche complète d'un prospect (toutes les colonnes) ainsi que ses contacts et son historique de prospection (30 derniers événements).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prospect_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID UUID du prospect"
+            }
+          },
+          "required": [
+            "prospect_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "today_actions",
+        "title": "Actions du jour",
+        "description": "Retourne les prospects avec une prochaine action programmée à aujourd'hui ou en retard. Idéal pour préparer la session d'appels ou de qualification quotidienne.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_prospection_log",
+        "title": "Ajouter un événement de prospection",
+        "description": "Enregistre un événement (appel, email, RDV) dans l'historique d'un prospect. Met à jour éventuellement la date de prochaine action et le statut.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prospect_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "canal": {
+              "type": "string",
+              "enum": [
+                "email",
+                "téléphone",
+                "physique"
+              ]
+            },
+            "result": {
+              "type": "string",
+              "enum": [
+                "NRP",
+                "Pas dispo",
+                "Échange",
+                "RDV"
+              ]
+            },
+            "action_type": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "description": "Type d'action (ex: 'Appel J1', 'RDV pris', 'Relance mail')"
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "next_action_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Date de prochaine action (YYYY-MM-DD)"
+            },
+            "update_status": {
+              "type": "string",
+              "enum": [
+                "Chaud",
+                "Tiède",
+                "En attente",
+                "Perdu",
+                "Converti"
+              ]
+            }
+          },
+          "required": [
+            "prospect_id",
+            "canal",
+            "result",
+            "action_type"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_prospect",
+        "title": "Mettre à jour un prospect",
+        "description": "Met à jour un ou plusieurs champs d'un prospect existant. Ne fournir que les champs à modifier.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prospect_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "company_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "category": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "Chaud",
+                "Tiède",
+                "En attente",
+                "Perdu",
+                "Converti"
+              ]
+            },
+            "current_stage": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "city": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "sector": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "main_phone": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "main_email": {
+              "type": "string",
+              "maxLength": 180
+            },
+            "website": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "decision_maker": {
+              "type": "string",
+              "maxLength": 180
+            },
+            "comments": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "next_action_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "estimated_value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "offer_target": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "required": [
+            "prospect_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
