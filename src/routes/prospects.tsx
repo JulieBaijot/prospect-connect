@@ -637,9 +637,11 @@ function ProspectsPage() {
             </div>
           </div>
           <div className="mt-4 grid gap-3">
-            <Field label="Entreprise">
+            <Field label="Entreprise *">
               <input
+                ref={companyInputRef}
                 className={fieldClass}
+                placeholder="Nom de l'entreprise (obligatoire)"
                 value={form.company_name}
                 onChange={(e) => setForm({ ...form, company_name: e.target.value })}
               />
