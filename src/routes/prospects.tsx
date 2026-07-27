@@ -233,24 +233,48 @@ function ProspectsPage() {
     setSelected(null);
     setForm(emptyProspect);
     setContactForm(emptyContact);
+    setDeleteStatus("");
+    setPlacesStatus("Nouvelle fiche : renseignez au minimum le nom de l'entreprise puis Sauvegarder.");
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      companyInputRef.current?.focus();
+    });
   }
 
   async function save() {
-    await saveProspect(
-      {
-        ...(selected?.id ? { id: selected.id } : {}),
-        ...form,
-        estimated_value: Number(form.estimated_value),
-        next_action_date: form.next_action_date || null,
-      } as Partial<Prospect> & { company_name: string },
-      {
-        ...(selected?.contacts[0]?.id ? { id: selected.contacts[0].id } : {}),
-        ...contactForm,
-      } as Partial<Contact>,
-    );
-    await refresh();
-    setPlacesStatus("Prospect sauvegardé.");
-    setDeleteStatus("");
+    if (!form.company_name.trim()) {
+      setPlacesStatus("Le nom de l'entreprise est obligatoire.");
+      companyInputRef.current?.focus();
+      return;
+    }
+    try {
+      const saved = await saveProspect(
+        {
+          ...(selected?.id ? { id: selected.id } : {}),
+          ...form,
+          company_name: form.company_name.trim(),
+          estimated_value: Number(form.estimated_value) || 0,
+          next_action_date: form.next_action_date || null,
+        } as Partial<Prospect> & { company_name: string },
+        {
+          ...(selected?.contacts[0]?.id ? { id: selected.contacts[0].id } : {}),
+          ...contactForm,
+        } as Partial<Contact>,
+      );
+      const wasNew = !selected;
+      await refresh();
+      if (wasNew) {
+        setFilters({ status: "", category: "", offer: "", city: "", q: "", view: "", source: "" });
+      }
+      setPlacesStatus(
+        wasNew ? `${saved.company_name} ajouté à la base.` : "Prospect sauvegardé.",
+      );
+      setDeleteStatus("");
+    } catch (error) {
+      setPlacesStatus(
+        `Échec de l'enregistrement : ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   async function removeSelected() {
