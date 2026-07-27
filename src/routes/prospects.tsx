@@ -198,23 +198,17 @@ function ProspectsPage() {
 
   function openProspect(prospect: ProspectWithRelations) {
     setSelected(prospect);
+    const picked = Object.fromEntries(
+      Object.keys(emptyProspect).map((key) => [
+        key,
+        (prospect as Record<string, unknown>)[key] ?? emptyProspect[key as keyof typeof emptyProspect],
+      ]),
+    ) as typeof emptyProspect;
     setForm({
-      ...emptyProspect,
-      ...prospect,
+      ...picked,
       next_action_date: prospect.next_action_date || "",
-      city: prospect.city || "",
       headcount_range: prospect.headcount_range || "20-49",
       offer_target: prospect.offer_target || "Formation SST",
-      main_phone: prospect.main_phone || "",
-      main_email: prospect.main_email || "",
-      website: prospect.website || "",
-      address: prospect.address || "",
-      reception_hours: prospect.reception_hours || "",
-      comments: prospect.comments || "",
-      sector: prospect.sector || "",
-      siren: prospect.siren || "",
-      naf_code: prospect.naf_code || "",
-      google_place_id: prospect.google_place_id || "",
     });
     const contact = prospect.contacts[0];
     setContactForm({
