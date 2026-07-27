@@ -201,7 +201,7 @@ function ProspectsPage() {
     const picked = Object.fromEntries(
       Object.keys(emptyProspect).map((key) => [
         key,
-        (prospect as Record<string, unknown>)[key] ?? emptyProspect[key as keyof typeof emptyProspect],
+        (prospect as unknown as Record<string, unknown>)[key] ?? emptyProspect[key as keyof typeof emptyProspect],
       ]),
     ) as typeof emptyProspect;
     setForm({
