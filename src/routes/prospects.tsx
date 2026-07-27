@@ -617,7 +617,8 @@ function ProspectsPage() {
             ))}
           </div>
         </Card>
-        <Card className="p-4" ref={formRef}>
+        <div ref={formRef} className="scroll-mt-6">
+        <Card className="p-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-[16px] font-medium">
               {selected ? "Modifier le prospect" : "Ajouter un prospect"}
