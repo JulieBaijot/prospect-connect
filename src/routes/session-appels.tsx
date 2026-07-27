@@ -65,6 +65,10 @@ function SessionPage() {
   const [selectedOutcome, setSelectedOutcome] = useState<PlaybookOutcome | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [pickedIds, setPickedIds] = useState<string[]>([]);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [sessionSize, setSessionSize] = useState(3);
+
 
   const current = session[index];
   const contact =
@@ -95,13 +99,34 @@ function SessionPage() {
     setLoading(false);
   }
 
-  function startSession() {
-    const picked = prioritizeCallSession(prospects);
-    setSession(picked);
+  function launch(list: ProspectWithRelations[]) {
+    if (!list.length) return;
+    setSession(list);
     setIndex(0);
     setSummary({ nrp: 0, rdv: 0, exchanges: 0, done: 0 });
     setMode("idle");
   }
+
+  function startSession() {
+    launch(prioritizeCallSession(prospects, sessionSize));
+  }
+
+  function suggestPicks() {
+    const suggestions = prioritizeCallSession(prospects, sessionSize).map((p) => p.id);
+    setPickedIds(suggestions);
+  }
+
+  function togglePick(id: string) {
+    setPickedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  }
+
+  function startFromSelection() {
+    const map = new Map(prospects.map((p) => [p.id, p]));
+    launch(pickedIds.map((id) => map.get(id)).filter(Boolean) as ProspectWithRelations[]);
+  }
+
 
   function nextCard() {
     setMode("idle");
@@ -205,26 +230,99 @@ function SessionPage() {
     await saveOutcome(selectedOutcome, { meetingAt: meetingDate, customNotes: notes || selectedOutcome.note });
   }
 
+  const pickerList = prospects
+    .filter((p) => !["Perdu", "Converti"].includes(p.status))
+    .filter((p) =>
+      pickerQuery.trim()
+        ? `${p.company_name} ${p.city ?? ""} ${p.sector ?? ""}`
+            .toLowerCase()
+            .includes(pickerQuery.trim().toLowerCase())
+        : true,
+    )
+    .slice(0, 60);
+
   return (
     <>
       <PageTitle
         title="Session d'appels"
-        subtitle="Cockpit desktop pour traiter jusqu'à 20 prospects par priorité."
+        subtitle="Composez une session courte (3 prospects par défaut) manuellement ou laissez l'app suggérer."
         action={
           <Button onClick={startSession} disabled={loading || prospects.length === 0}>
-            Démarrer une session
+            Session suggérée ({sessionSize})
           </Button>
         }
       />
       {!session.length ? (
-        <Card className="p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            {loading
-              ? "Chargement des prospects…"
-              : "Démarrez une session pour charger les prospects prioritaires."}
-          </p>
+        <Card className="p-5">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Chargement des prospects…</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <p className={labelClass}>Taille de session</p>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={sessionSize}
+                    onChange={(e) =>
+                      setSessionSize(Math.min(20, Math.max(1, Number(e.target.value) || 1)))
+                    }
+                    className={`${fieldClass} mt-2 w-24`}
+                  />
+                </div>
+                <Button variant="neutral" onClick={suggestPicks}>
+                  Suggérer {sessionSize} prospects
+                </Button>
+                <Button onClick={startFromSelection} disabled={!pickedIds.length}>
+                  Démarrer avec {pickedIds.length} sélectionné(s)
+                </Button>
+                {pickedIds.length ? (
+                  <Button variant="neutral" onClick={() => setPickedIds([])}>
+                    Vider
+                  </Button>
+                ) : null}
+              </div>
+              <input
+                value={pickerQuery}
+                onChange={(e) => setPickerQuery(e.target.value)}
+                placeholder="Rechercher une entreprise, une ville, un secteur…"
+                className={`${fieldClass} mt-4 w-full`}
+              />
+              <div className="mt-3 grid max-h-[420px] gap-2 overflow-y-auto pr-1">
+                {pickerList.map((p) => {
+                  const checked = pickedIds.includes(p.id);
+                  return (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => togglePick(p.id)}
+                      className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-left transition-colors ${checked ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-accent"}`}
+                    >
+                      <div>
+                        <p className="font-medium">{p.company_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {p.city || "Ville à compléter"} ·{" "}
+                          {p.main_phone || p.contacts[0]?.direct_phone || "Téléphone à compléter"}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CategoryBadge category={p.category} />
+                        <StatusBadge status={p.status} />
+                      </div>
+                    </button>
+                  );
+                })}
+                {!pickerList.length ? (
+                  <p className="text-sm text-muted-foreground">Aucun prospect trouvé.</p>
+                ) : null}
+              </div>
+            </>
+          )}
         </Card>
       ) : index >= session.length ? (
+
         <Card className="p-8">
           <h3 className="text-[16px] font-medium">Résumé de session</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
@@ -233,9 +331,20 @@ function SessionPage() {
             <Kpi label="Échanges" value={summary.exchanges} />
             <Kpi label="RDV" value={summary.rdv} />
           </div>
-          <Button className="mt-5" onClick={startSession}>
-            Nouvelle session
-          </Button>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                setSession([]);
+                setPickedIds([]);
+              }}
+            >
+              Composer une nouvelle session
+            </Button>
+            <Button variant="neutral" onClick={startSession}>
+              Session suggérée ({sessionSize})
+            </Button>
+          </div>
+
         </Card>
       ) : current ? (
         <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
