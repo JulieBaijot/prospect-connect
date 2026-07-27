@@ -92,6 +92,8 @@ function ProspectsPage() {
   const [selected, setSelected] = useState<ProspectWithRelations | null>(null);
   const [form, setForm] = useState(emptyProspect);
   const [contactForm, setContactForm] = useState(emptyContact);
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const companyInputRef = useRef<HTMLInputElement | null>(null);
   const [filters, setFilters] = useState({
     status: "",
     category: "",
