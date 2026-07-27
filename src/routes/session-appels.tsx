@@ -65,6 +65,10 @@ function SessionPage() {
   const [selectedOutcome, setSelectedOutcome] = useState<PlaybookOutcome | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [pickedIds, setPickedIds] = useState<string[]>([]);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [sessionSize, setSessionSize] = useState(3);
+
 
   const current = session[index];
   const contact =
