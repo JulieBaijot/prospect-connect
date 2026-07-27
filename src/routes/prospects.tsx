@@ -942,6 +942,7 @@ function ProspectsPage() {
             ) : null}
           </div>
         </Card>
+        </div>
       </div>
     </>
   );
