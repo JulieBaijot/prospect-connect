@@ -99,13 +99,34 @@ function SessionPage() {
     setLoading(false);
   }
 
-  function startSession() {
-    const picked = prioritizeCallSession(prospects);
-    setSession(picked);
+  function launch(list: ProspectWithRelations[]) {
+    if (!list.length) return;
+    setSession(list);
     setIndex(0);
     setSummary({ nrp: 0, rdv: 0, exchanges: 0, done: 0 });
     setMode("idle");
   }
+
+  function startSession() {
+    launch(prioritizeCallSession(prospects, sessionSize));
+  }
+
+  function suggestPicks() {
+    const suggestions = prioritizeCallSession(prospects, sessionSize).map((p) => p.id);
+    setPickedIds(suggestions);
+  }
+
+  function togglePick(id: string) {
+    setPickedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  }
+
+  function startFromSelection() {
+    const map = new Map(prospects.map((p) => [p.id, p]));
+    launch(pickedIds.map((id) => map.get(id)).filter(Boolean) as ProspectWithRelations[]);
+  }
+
 
   function nextCard() {
     setMode("idle");
