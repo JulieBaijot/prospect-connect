@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ExternalLink, Plus, Save, Trash2, Wand2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import {
   Button,
@@ -92,6 +92,8 @@ function ProspectsPage() {
   const [selected, setSelected] = useState<ProspectWithRelations | null>(null);
   const [form, setForm] = useState(emptyProspect);
   const [contactForm, setContactForm] = useState(emptyContact);
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const companyInputRef = useRef<HTMLInputElement | null>(null);
   const [filters, setFilters] = useState({
     status: "",
     category: "",
@@ -196,23 +198,17 @@ function ProspectsPage() {
 
   function openProspect(prospect: ProspectWithRelations) {
     setSelected(prospect);
+    const picked = Object.fromEntries(
+      Object.keys(emptyProspect).map((key) => [
+        key,
+        (prospect as unknown as Record<string, unknown>)[key] ?? emptyProspect[key as keyof typeof emptyProspect],
+      ]),
+    ) as typeof emptyProspect;
     setForm({
-      ...emptyProspect,
-      ...prospect,
+      ...picked,
       next_action_date: prospect.next_action_date || "",
-      city: prospect.city || "",
       headcount_range: prospect.headcount_range || "20-49",
       offer_target: prospect.offer_target || "Formation SST",
-      main_phone: prospect.main_phone || "",
-      main_email: prospect.main_email || "",
-      website: prospect.website || "",
-      address: prospect.address || "",
-      reception_hours: prospect.reception_hours || "",
-      comments: prospect.comments || "",
-      sector: prospect.sector || "",
-      siren: prospect.siren || "",
-      naf_code: prospect.naf_code || "",
-      google_place_id: prospect.google_place_id || "",
     });
     const contact = prospect.contacts[0];
     setContactForm({
@@ -233,24 +229,48 @@ function ProspectsPage() {
     setSelected(null);
     setForm(emptyProspect);
     setContactForm(emptyContact);
+    setDeleteStatus("");
+    setPlacesStatus("Nouvelle fiche : renseignez au minimum le nom de l'entreprise puis Sauvegarder.");
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      companyInputRef.current?.focus();
+    });
   }
 
   async function save() {
-    await saveProspect(
-      {
-        ...(selected?.id ? { id: selected.id } : {}),
-        ...form,
-        estimated_value: Number(form.estimated_value),
-        next_action_date: form.next_action_date || null,
-      } as Partial<Prospect> & { company_name: string },
-      {
-        ...(selected?.contacts[0]?.id ? { id: selected.contacts[0].id } : {}),
-        ...contactForm,
-      } as Partial<Contact>,
-    );
-    await refresh();
-    setPlacesStatus("Prospect sauvegardé.");
-    setDeleteStatus("");
+    if (!form.company_name.trim()) {
+      setPlacesStatus("Le nom de l'entreprise est obligatoire.");
+      companyInputRef.current?.focus();
+      return;
+    }
+    try {
+      const saved = await saveProspect(
+        {
+          ...(selected?.id ? { id: selected.id } : {}),
+          ...form,
+          company_name: form.company_name.trim(),
+          estimated_value: Number(form.estimated_value) || 0,
+          next_action_date: form.next_action_date || null,
+        } as Partial<Prospect> & { company_name: string },
+        {
+          ...(selected?.contacts[0]?.id ? { id: selected.contacts[0].id } : {}),
+          ...contactForm,
+        } as Partial<Contact>,
+      );
+      const wasNew = !selected;
+      await refresh();
+      if (wasNew) {
+        setFilters({ status: "", category: "", offer: "", city: "", q: "", view: "", source: "" });
+      }
+      setPlacesStatus(
+        wasNew ? `${saved.company_name} ajouté à la base.` : "Prospect sauvegardé.",
+      );
+      setDeleteStatus("");
+    } catch (error) {
+      setPlacesStatus(
+        `Échec de l'enregistrement : ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   async function removeSelected() {
@@ -591,6 +611,7 @@ function ProspectsPage() {
             ))}
           </div>
         </Card>
+        <div ref={formRef} className="scroll-mt-6">
         <Card className="p-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-[16px] font-medium">
@@ -610,9 +631,11 @@ function ProspectsPage() {
             </div>
           </div>
           <div className="mt-4 grid gap-3">
-            <Field label="Entreprise">
+            <Field label="Entreprise *">
               <input
+                ref={companyInputRef}
                 className={fieldClass}
+                placeholder="Nom de l'entreprise (obligatoire)"
                 value={form.company_name}
                 onChange={(e) => setForm({ ...form, company_name: e.target.value })}
               />
@@ -915,6 +938,7 @@ function ProspectsPage() {
             ) : null}
           </div>
         </Card>
+        </div>
       </div>
     </>
   );
