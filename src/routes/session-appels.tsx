@@ -331,9 +331,20 @@ function SessionPage() {
             <Kpi label="Échanges" value={summary.exchanges} />
             <Kpi label="RDV" value={summary.rdv} />
           </div>
-          <Button className="mt-5" onClick={startSession}>
-            Nouvelle session
-          </Button>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                setSession([]);
+                setPickedIds([]);
+              }}
+            >
+              Composer une nouvelle session
+            </Button>
+            <Button variant="neutral" onClick={startSession}>
+              Session suggérée ({sessionSize})
+            </Button>
+          </div>
+
         </Card>
       ) : current ? (
         <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
