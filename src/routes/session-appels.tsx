@@ -799,3 +799,11 @@ function Panel({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1">
+      <span className={labelClass}>{label}</span>
+      {children}
+    </div>
+  );
+}
