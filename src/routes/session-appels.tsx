@@ -39,7 +39,19 @@ export const Route = createFileRoute("/session-appels")({
   component: SessionRoute,
 });
 
-type Mode = "idle" | "callback" | "exchange" | "meeting";
+type Mode = "idle" | "form" | "meeting";
+
+const LOST_OUTCOME: PlaybookOutcome = {
+  key: "lost",
+  label: "Perdu / pas de besoin",
+  result: "Échange",
+  actionType: "Prospect perdu",
+  nextStage: "J21",
+  delayDays: 0,
+  status: "Perdu",
+  note: "Pas de besoin identifié — coordonnées envoyées pour rester en contact.",
+  mode: "exchange",
+};
 
 function SessionRoute() {
   return (
@@ -63,12 +75,16 @@ function SessionPage() {
   const [videoLink, setVideoLink] = useState("");
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
   const [selectedOutcome, setSelectedOutcome] = useState<PlaybookOutcome | null>(null);
+  const [overrideStage, setOverrideStage] = useState<CycleStage | "">("");
+  const [overrideStatus, setOverrideStatus] = useState<ProspectStatus | "">("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [pickedIds, setPickedIds] = useState<string[]>([]);
   const [pickerQuery, setPickerQuery] = useState("");
   const [sessionSize, setSessionSize] = useState(3);
-
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Prospect>>({});
+  const [editSaving, setEditSaving] = useState(false);
 
   const current = session[index];
   const contact =
@@ -104,7 +120,7 @@ function SessionPage() {
     setSession(list);
     setIndex(0);
     setSummary({ nrp: 0, rdv: 0, exchanges: 0, done: 0 });
-    setMode("idle");
+    resetCardState();
   }
 
   function startSession() {
@@ -127,8 +143,7 @@ function SessionPage() {
     launch(pickedIds.map((id) => map.get(id)).filter(Boolean) as ProspectWithRelations[]);
   }
 
-
-  function nextCard() {
+  function resetCardState() {
     setMode("idle");
     setNotes("");
     setCallbackDate("");
@@ -137,18 +152,19 @@ function SessionPage() {
     setMessage("");
     setActiveContactId(null);
     setSelectedOutcome(null);
+    setOverrideStage("");
+    setOverrideStatus("");
+    setEditOpen(false);
+    setEditForm({});
+  }
+
+  function nextCard() {
+    resetCardState();
     setIndex((prev) => prev + 1);
   }
 
   function previousCard() {
-    setMode("idle");
-    setNotes("");
-    setCallbackDate("");
-    setMeetingDate("");
-    setVideoLink("");
-    setMessage("");
-    setActiveContactId(null);
-    setSelectedOutcome(null);
+    resetCardState();
     setIndex((prev) => Math.max(0, prev - 1));
   }
 
@@ -160,18 +176,53 @@ function SessionPage() {
   function selectOutcome(outcome: PlaybookOutcome) {
     setSelectedOutcome(outcome);
     setMessage("");
-    setNotes(outcome.note);
-    if (outcome.mode === "meeting") {
-      setMode("meeting");
-      return;
+    setNotes((prev) => prev || outcome.note);
+    setOverrideStage(outcome.nextStage);
+    setOverrideStatus(outcome.status || current?.status || "Tiède");
+    setCallbackDate(dateForOutcome(outcome));
+    setMode(outcome.mode === "meeting" ? "meeting" : "form");
+  }
+
+  function openQuickEdit() {
+    if (!current) return;
+    setEditForm({
+      company_name: current.company_name,
+      city: current.city,
+      sector: current.sector,
+      main_phone: current.main_phone,
+      main_email: current.main_email,
+      website: current.website,
+      decision_maker: current.decision_maker,
+      headcount_range: current.headcount_range,
+      offer_target: current.offer_target,
+      estimated_value: current.estimated_value,
+      category: current.category,
+      comments: current.comments,
+    });
+    setEditOpen(true);
+  }
+
+  function patchLocal(id: string, patch: Partial<Prospect>) {
+    setSession((prev) =>
+      prev.map((item) => (item.id === id ? ({ ...item, ...patch } as ProspectWithRelations) : item)),
+    );
+    setProspects((prev) =>
+      prev.map((item) => (item.id === id ? ({ ...item, ...patch } as ProspectWithRelations) : item)),
+    );
+  }
+
+  async function saveQuickEdit() {
+    if (!current) return;
+    setEditSaving(true);
+    try {
+      await updateProspect(current.id, editForm);
+      patchLocal(current.id, editForm);
+      setEditOpen(false);
+      setMessage("Fiche mise à jour.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Échec de la mise à jour.");
     }
-    const recommendedDate = dateForOutcome(outcome);
-    setCallbackDate(recommendedDate);
-    if (outcome.mode === "callback" || outcome.mode === "exchange") {
-      setMode(outcome.mode);
-      return;
-    }
-    void saveOutcome(outcome, { nextActionDate: recommendedDate });
+    setEditSaving(false);
   }
 
   async function saveOutcome(
@@ -181,6 +232,8 @@ function SessionPage() {
     if (!current || !outcome || busy) return;
     setBusy(true);
     setMessage("");
+    const stage = (overrideStage || outcome.nextStage) as CycleStage;
+    const status = (overrideStatus || outcome.status || current.status) as ProspectStatus;
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
@@ -196,9 +249,12 @@ function SessionPage() {
       video_link: options.meetingAt ? videoLink : undefined,
     });
     await updateProspect(current.id, {
-      current_stage: outcome.nextStage,
-      status: outcome.status || current.status,
-      next_action_date: (options.meetingAt || options.nextActionDate || dateForOutcome(outcome)).slice(0, 10),
+      current_stage: stage,
+      status,
+      next_action_date:
+        status === "Perdu"
+          ? null
+          : (options.meetingAt || options.nextActionDate || dateForOutcome(outcome)).slice(0, 10),
     });
     if (outcome.result === "NRP") setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
     if (outcome.result === "Échange") setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
@@ -207,17 +263,32 @@ function SessionPage() {
     markDoneAndNext();
   }
 
-  async function saveCallback() {
-    if (!callbackDate) return;
-    await saveOutcome(selectedOutcome, { nextActionDate: callbackDate, customNotes: notes });
-  }
-
-  async function saveExchange() {
-    if (!callbackDate) {
+  async function saveForm() {
+    if (!selectedOutcome) return;
+    const isLost = (overrideStatus || selectedOutcome.status) === "Perdu";
+    if (!isLost && !callbackDate) {
       setMessage("Choisissez une prochaine date d'action pour garder la relance sous contrôle.");
       return;
     }
-    await saveOutcome(selectedOutcome, { nextActionDate: callbackDate, customNotes: notes });
+    await saveOutcome(selectedOutcome, {
+      nextActionDate: callbackDate || undefined,
+      customNotes: notes,
+    });
+  }
+
+  function markLost() {
+    selectOutcome(LOST_OUTCOME);
+    setNotes(LOST_OUTCOME.note);
+    setCallbackDate("");
+  }
+
+  function mailtoCoordinates() {
+    const to = contact?.email || current?.main_email || "";
+    const subject = encodeURIComponent("Mes coordonnées — santé & sécurité au travail");
+    const body = encodeURIComponent(
+      `Bonjour${contact ? " " + contactName(contact) : ""},\n\nSuite à notre échange, je vous laisse mes coordonnées : n'hésitez pas à me solliciter dès qu'un besoin en formation ou conseil santé-sécurité au travail se présente (SST, DUERP, QVCT, SSCT/CSE, sur mesure).\n\nBien cordialement,`,
+    );
+    window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_blank", "noopener,noreferrer");
   }
 
   async function saveMeeting() {
@@ -229,6 +300,7 @@ function SessionPage() {
     );
     await saveOutcome(selectedOutcome, { meetingAt: meetingDate, customNotes: notes || selectedOutcome.note });
   }
+
 
   const pickerList = prospects
     .filter((p) => !["Perdu", "Converti"].includes(p.status))
