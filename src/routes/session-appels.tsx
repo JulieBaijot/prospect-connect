@@ -476,10 +476,75 @@ function SessionPage() {
                   <Button variant="neutral" onClick={nextCard} disabled={busy} className="px-3">
                     <ChevronRight className="h-4 w-4" />
                   </Button>
+                  <Button variant="neutral" onClick={() => (editOpen ? setEditOpen(false) : openQuickEdit())}>
+                    {editOpen ? "Fermer" : "Modifier la fiche"}
+                  </Button>
                   <CategoryBadge category={current.category} />
                   <StatusBadge status={current.status} />
                 </div>
               </div>
+              {editOpen ? (
+                <div className="mt-4 grid gap-3 rounded-lg border border-border bg-background p-4 md:grid-cols-2">
+                  <Field label="Entreprise">
+                    <input className={fieldClass} value={editForm.company_name ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, company_name: e.target.value }))} />
+                  </Field>
+                  <Field label="Ville">
+                    <input className={fieldClass} value={editForm.city ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))} />
+                  </Field>
+                  <Field label="Téléphone">
+                    <input className={fieldClass} value={editForm.main_phone ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, main_phone: e.target.value }))} />
+                  </Field>
+                  <Field label="Email">
+                    <input className={fieldClass} value={editForm.main_email ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, main_email: e.target.value }))} />
+                  </Field>
+                  <Field label="Site web">
+                    <input className={fieldClass} value={editForm.website ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, website: e.target.value }))} />
+                  </Field>
+                  <Field label="Décideur">
+                    <input className={fieldClass} value={editForm.decision_maker ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, decision_maker: e.target.value }))} />
+                  </Field>
+                  <Field label="Secteur">
+                    <input className={fieldClass} value={editForm.sector ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, sector: e.target.value }))} />
+                  </Field>
+                  <Field label="Effectif">
+                    <select className={fieldClass} value={editForm.headcount_range ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, headcount_range: e.target.value as Prospect["headcount_range"] }))}>
+                      <option value="">—</option>
+                      {headcountRanges.map((range) => (
+                        <option key={range} value={range}>{range}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Offre">
+                    <select className={fieldClass} value={editForm.offer_target ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, offer_target: e.target.value as Prospect["offer_target"] }))}>
+                      <option value="">—</option>
+                      {offerTargets.map((offer) => (
+                        <option key={offer} value={offer}>{offer}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Catégorie">
+                    <select className={fieldClass} value={editForm.category ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value as Prospect["category"] }))}>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Valeur estimée (€)">
+                    <input className={fieldClass} type="number" value={editForm.estimated_value ?? 0} onChange={(e) => setEditForm((f) => ({ ...f, estimated_value: Number(e.target.value) }))} />
+                  </Field>
+                  <div className="md:col-span-2">
+                    <Field label="Commentaires">
+                      <textarea className={`${fieldClass} min-h-20 py-2`} value={editForm.comments ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, comments: e.target.value }))} />
+                    </Field>
+                  </div>
+                  <div className="flex gap-2 md:col-span-2">
+                    <Button onClick={saveQuickEdit} disabled={editSaving}>
+                      {editSaving ? "Enregistrement…" : "Enregistrer la fiche"}
+                    </Button>
+                    <Button variant="neutral" onClick={() => setEditOpen(false)}>Annuler</Button>
+                  </div>
+                </div>
+              ) : null}
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <Info label="Offre" value={current.offer_target || "—"} />
                 <Info label="Valeur estimée" value={formatEuro(current.estimated_value)} />
