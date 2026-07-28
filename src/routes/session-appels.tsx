@@ -575,13 +575,27 @@ function SessionPage() {
                   {outcomeIndex + 1} · {outcome.label}
                 </Button>
               ))}
+              <Button variant="neutral" onClick={markLost} disabled={busy} className="justify-start text-left">
+                Perdu / pas de besoin
+              </Button>
               <Button variant="neutral" onClick={nextCard} disabled={busy}>
                 5 · Passer sans log
               </Button>
             </div>
+
+            <div className="mt-4 grid gap-2">
+              <label className={labelClass}>Notes d'appel (toujours disponibles)</label>
+              <textarea
+                className={`${fieldClass} min-h-24 py-2`}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Ce qui s'est dit, objections, contexte…"
+              />
+            </div>
+
             {selectedOutcome ? (
               <div className="mt-3 rounded-lg bg-muted p-3 text-sm">
-                <p className={labelClass}>Recommandation</p>
+                <p className={labelClass}>Recommandation par défaut</p>
                 <p className="mt-1">{selectedOutcome.note}</p>
                 <p className="mt-1 text-muted-foreground">
                   Suite : {selectedOutcome.nextStage} · {selectedOutcome.delayDays === 0 ? "immédiat" : `J+${selectedOutcome.delayDays}`}
@@ -589,37 +603,64 @@ function SessionPage() {
               </div>
             ) : null}
             {message ? <p className="mt-3 rounded-lg bg-script p-3 text-sm">{message}</p> : null}
-            {mode === "callback" ? (
+
+            {mode === "form" && selectedOutcome ? (
               <Panel>
-                <label className={labelClass}>Rappeler le</label>
-                <input
+                <label className={labelClass}>Prochaine étape (modifiable)</label>
+                <select
                   className={fieldClass}
-                  type="date"
-                  value={callbackDate}
-                  onChange={(e) => setCallbackDate(e.target.value)}
-                />
-                <Button onClick={saveCallback}>Enregistrer</Button>
+                  value={overrideStage || selectedOutcome.nextStage}
+                  onChange={(e) => setOverrideStage(e.target.value as CycleStage)}
+                >
+                  {stages.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {stage} · {playbookNodes[stage].label}
+                    </option>
+                  ))}
+                </select>
+                <label className={labelClass}>Statut</label>
+                <select
+                  className={fieldClass}
+                  value={overrideStatus || selectedOutcome.status || "Tiède"}
+                  onChange={(e) => setOverrideStatus(e.target.value as ProspectStatus)}
+                >
+                  {statuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+                {overrideStatus === "Perdu" ? (
+                  <Button variant="neutral" onClick={mailtoCoordinates}>
+                    Envoyer mes coordonnées par email
+                  </Button>
+                ) : (
+                  <>
+                    <label className={labelClass}>Prochaine action</label>
+                    <input
+                      className={fieldClass}
+                      type="date"
+                      value={callbackDate}
+                      onChange={(e) => setCallbackDate(e.target.value)}
+                    />
+                  </>
+                )}
+                <Button onClick={saveForm} disabled={busy}>
+                  Enregistrer l'appel
+                </Button>
+                <Button
+                  variant="neutral"
+                  onClick={() => {
+                    setSelectedOutcome(null);
+                    setMode("idle");
+                  }}
+                  disabled={busy}
+                >
+                  Annuler
+                </Button>
               </Panel>
             ) : null}
-            {mode === "exchange" ? (
-              <Panel>
-                <label className={labelClass}>Notes</label>
-                <textarea
-                  className={`${fieldClass} min-h-24 py-2`}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-                <Info label="Prochaine étape" value={selectedOutcome?.nextStage || "—"} />
-                <label className={labelClass}>Prochaine action</label>
-                <input
-                  className={fieldClass}
-                  type="date"
-                  value={callbackDate}
-                  onChange={(e) => setCallbackDate(e.target.value)}
-                />
-                <Button onClick={saveExchange}>Sauvegarder l'échange</Button>
-              </Panel>
-            ) : null}
+
             {mode === "meeting" ? (
               <Panel>
                 <label className={labelClass}>Date du RDV</label>
