@@ -6,14 +6,12 @@ import { AppLayout } from "@/components/prm/AppLayout";
 import {
   Button,
   Card,
-  CategoryBadge,
   PageTitle,
   StatusBadge,
   fieldClass,
   labelClass,
 } from "@/components/prm/ui";
 import {
-  categories,
   contactName,
   bestPhone,
   dataQualityIssues,
@@ -26,12 +24,10 @@ import {
   offerTargets,
   saveProspect,
   statuses,
-  stages,
-  suggestProspectCategory,
+  decisionLevels,
   updateProspect,
-  type Category,
   type Contact,
-  type CycleStage,
+  type DecisionLevel,
   type HeadcountRange,
   type OfferTarget,
   type Prospect,
@@ -58,12 +54,15 @@ const emptyProspect = {
   company_name: "",
   city: "",
   headcount_range: "20-49" as HeadcountRange,
-  category: "C – Porte d'entrée" as Category,
-  offer_target: "Formation SST" as OfferTarget,
+  offer_target: "SST" as OfferTarget,
   estimated_value: 0,
-  current_stage: "J1" as CycleStage,
-  status: "Tiède" as ProspectStatus,
+  status: "À qualifier" as ProspectStatus,
   next_action_date: "",
+  decision_level: "inconnu" as DecisionLevel,
+  group_name: "",
+  parking_trigger: "",
+  parking_date: "",
+  last_contacted_at: "",
   main_phone: "",
   main_email: "",
   website: "",
@@ -96,7 +95,6 @@ function ProspectsPage() {
   const companyInputRef = useRef<HTMLInputElement | null>(null);
   const [filters, setFilters] = useState({
     status: "",
-    category: "",
     offer: "",
     city: "",
     q: "",
@@ -140,7 +138,6 @@ function ProspectsPage() {
         return (
           (!filters.q || searchable.includes(q)) &&
           (!filters.status || p.status === filters.status) &&
-          (!filters.category || p.category === filters.category) &&
           (!filters.offer || p.offer_target === filters.offer) &&
           (!filters.city || (p.city || "").toLowerCase().includes(filters.city.toLowerCase())) &&
           (!filters.source || (p.import_source || p.source || "").includes(filters.source)) &&
@@ -160,7 +157,8 @@ function ProspectsPage() {
       total: prospects.length,
       due: prospects.filter((p) => isDueTodayOrLate(p.next_action_date)).length,
       incomplete: prospects.filter((p) => dataQualityIssues(p).length > 0).length,
-      hot: prospects.filter((p) => p.status === "Chaud").length,
+      hot: prospects.filter((p) => p.status === "En contact" || p.status === "En discussion")
+        .length,
       converted: prospects.filter((p) => p.status === "Converti").length,
     }),
     [prospects],
@@ -169,33 +167,6 @@ function ProspectsPage() {
     () => prospects.filter((p) => dataQualityIssues(p).length > 0),
     [prospects],
   );
-  const autoCategory = useMemo(
-    () =>
-      suggestProspectCategory({
-        headcount_range: form.headcount_range,
-        offer_target: form.offer_target,
-        sector: selected?.sector,
-        estimated_value: form.estimated_value,
-        comments: form.comments,
-        contactKnown: Boolean(
-          contactForm.first_name ||
-          contactForm.last_name ||
-          contactForm.role_title ||
-          contactForm.email ||
-          contactForm.direct_phone,
-        ),
-        history: selected?.prospection_logs,
-      }),
-    [
-      form.headcount_range,
-      form.offer_target,
-      form.estimated_value,
-      form.comments,
-      contactForm,
-      selected,
-    ],
-  );
-
   function openProspect(prospect: ProspectWithRelations) {
     setSelected(prospect);
     const picked = Object.fromEntries(
@@ -208,7 +179,12 @@ function ProspectsPage() {
       ...picked,
       next_action_date: prospect.next_action_date || "",
       headcount_range: prospect.headcount_range || "20-49",
-      offer_target: prospect.offer_target || "Formation SST",
+      offer_target: prospect.offer_target || "SST",
+      decision_level: prospect.decision_level || "inconnu",
+      group_name: prospect.group_name || "",
+      parking_trigger: prospect.parking_trigger || "",
+      parking_date: prospect.parking_date || "",
+      last_contacted_at: prospect.last_contacted_at || "",
     });
     const contact = prospect.contacts[0];
     setContactForm({
@@ -251,6 +227,10 @@ function ProspectsPage() {
           company_name: form.company_name.trim(),
           estimated_value: Number(form.estimated_value) || 0,
           next_action_date: form.next_action_date || null,
+          parking_date: form.parking_date || null,
+          last_contacted_at: form.last_contacted_at || null,
+          group_name: form.group_name || null,
+          parking_trigger: form.parking_trigger || null,
         } as Partial<Prospect> & { company_name: string },
         {
           ...(selected?.contacts[0]?.id ? { id: selected.contacts[0].id } : {}),
@@ -260,7 +240,7 @@ function ProspectsPage() {
       const wasNew = !selected;
       await refresh();
       if (wasNew) {
-        setFilters({ status: "", category: "", offer: "", city: "", q: "", view: "", source: "" });
+        setFilters({ status: "", offer: "", city: "", q: "", view: "", source: "" });
       }
       setPlacesStatus(
         wasNew ? `${saved.company_name} ajouté à la base.` : "Prospect sauvegardé.",
@@ -369,23 +349,11 @@ function ProspectsPage() {
     setBatchStatus(`Qualification de ${targets.length} prospect(s) incomplet(s)…`);
     let updated = 0;
     for (const prospect of targets) {
-      const suggested = suggestProspectCategory({
-        headcount_range: prospect.headcount_range,
-        offer_target: prospect.offer_target,
-        sector: prospect.sector,
-        estimated_value: prospect.estimated_value,
-        comments: prospect.comments,
-        contactKnown: prospect.contacts.length > 0,
-        history: prospect.prospection_logs,
-      });
       const patch: Partial<Prospect> = {};
-      if (suggested && (!prospect.category || prospect.category === "C – Porte d'entrée")) {
-        patch.category = suggested.category;
-      }
       if (!prospect.next_action_date)
         patch.next_action_date = new Date().toISOString().slice(0, 10);
-      if (!prospect.offer_target) patch.offer_target = "Formation SST";
-      if (!prospect.status) patch.status = "Tiède";
+      if (!prospect.offer_target) patch.offer_target = "SST";
+      if (!prospect.status) patch.status = "À qualifier";
       if (!prospect.main_phone || !prospect.website || !prospect.address) {
         try {
           const place = await runEnrichment({
@@ -496,16 +464,6 @@ function ProspectsPage() {
             </select>
             <select
               className={fieldClass}
-              value={filters.category}
-              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            >
-              <option value="">Toutes catégories</option>
-              {categories.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-            <select
-              className={fieldClass}
               value={filters.offer}
               onChange={(e) => setFilters({ ...filters, offer: e.target.value })}
             >
@@ -538,8 +496,7 @@ function ProspectsPage() {
                     "Entreprise",
                     "Contact",
                     "Ville",
-                    "Catégorie",
-                    "Étape",
+                    "Décision",
                     "Statut",
                     "Prochaine action",
                     "Valeur",
@@ -562,9 +519,12 @@ function ProspectsPage() {
                     <td className="px-4 py-3">{contactName(p.contacts[0])}</td>
                     <td className="px-4 py-3">{p.city || "—"}</td>
                     <td className="px-4 py-3">
-                      <CategoryBadge category={p.category} />
+                      {p.decision_level === "groupe"
+                        ? `Groupe${p.group_name ? ` · ${p.group_name}` : ""}`
+                        : p.decision_level === "site"
+                          ? "Site"
+                          : "—"}
                     </td>
-                    <td className="px-4 py-3">{p.current_stage}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={p.status} />
                     </td>
@@ -670,29 +630,6 @@ function ProspectsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Catégorie">
-                <select
-                  className={fieldClass}
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value as Category })}
-                >
-                  {categories.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                {autoCategory && autoCategory.category !== form.category ? (
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, category: autoCategory.category })}
-                    className="mt-1 inline-flex min-h-8 items-center gap-2 rounded-lg bg-secondary px-3 text-left text-xs text-secondary-foreground hover:bg-accent"
-                  >
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium uppercase text-primary-foreground">
-                      Auto
-                    </span>
-                    {autoCategory.category} · {autoCategory.reasons.join(", ")}
-                  </button>
-                ) : null}
-              </Field>
               <Field label="Statut">
                 <select
                   className={fieldClass}
@@ -719,25 +656,60 @@ function ProspectsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Étape">
-                <select
-                  className={fieldClass}
-                  value={form.current_stage}
-                  onChange={(e) =>
-                    setForm({ ...form, current_stage: e.target.value as CycleStage })
-                  }
-                >
-                  {stages.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </Field>
               <Field label="Valeur €">
                 <input
                   className={fieldClass}
                   type="number"
                   value={form.estimated_value}
                   onChange={(e) => setForm({ ...form, estimated_value: Number(e.target.value) })}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <Field label="Niveau de décision">
+                <select
+                  className={fieldClass}
+                  value={form.decision_level}
+                  onChange={(e) =>
+                    setForm({ ...form, decision_level: e.target.value as DecisionLevel })
+                  }
+                >
+                  {decisionLevels.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Groupe / maison mère">
+                <input
+                  className={fieldClass}
+                  value={form.group_name}
+                  onChange={(e) => setForm({ ...form, group_name: e.target.value })}
+                />
+              </Field>
+              <Field label="Dernier contact">
+                <input
+                  className={fieldClass}
+                  type="date"
+                  value={form.last_contacted_at}
+                  onChange={(e) => setForm({ ...form, last_contacted_at: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Motif de reprise (parking)">
+                <input
+                  className={fieldClass}
+                  placeholder="janvier 2027, notification du taux AT/MP"
+                  value={form.parking_trigger}
+                  onChange={(e) => setForm({ ...form, parking_trigger: e.target.value })}
+                />
+              </Field>
+              <Field label="Date de réveil">
+                <input
+                  className={fieldClass}
+                  type="date"
+                  value={form.parking_date}
+                  onChange={(e) => setForm({ ...form, parking_date: e.target.value })}
                 />
               </Field>
             </div>
