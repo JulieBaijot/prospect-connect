@@ -55,17 +55,8 @@ export const Route = createFileRoute("/session-appels")({
 
 type Mode = "idle" | "form" | "meeting";
 
-const LOST_OUTCOME: PlaybookOutcome = {
-  key: "lost",
-  label: "Perdu / pas de besoin",
-  result: "Échange",
-  actionType: "Prospect perdu",
-  nextStage: "J21",
-  delayDays: 0,
-  status: "Perdu",
-  note: "Pas de besoin identifié — coordonnées envoyées pour rester en contact.",
-  mode: "exchange",
-};
+const situationByKey = new Map(situationOptions.map((option) => [option.key, option]));
+
 
 function SessionRoute() {
   return (
