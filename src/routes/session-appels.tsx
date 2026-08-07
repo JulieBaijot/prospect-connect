@@ -162,6 +162,7 @@ function SessionPage() {
   function resetCardState() {
     setMode("idle");
     setNotes("");
+    setReachedManual(null);
     setCallbackDate("");
     setMeetingDate("");
     setVideoLink("");
