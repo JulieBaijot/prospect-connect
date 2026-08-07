@@ -14,6 +14,7 @@ import { Route as SessionAppelsRouteImport } from './routes/session-appels'
 import { Route as QualificationRouteImport } from './routes/qualification'
 import { Route as ProspectsRouteImport } from './routes/prospects'
 import { Route as ParkingRouteImport } from './routes/parking'
+import { Route as ModelesRouteImport } from './routes/modeles'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
@@ -50,6 +51,11 @@ const ProspectsRoute = ProspectsRouteImport.update({
 const ParkingRoute = ParkingRouteImport.update({
   id: '/parking',
   path: '/parking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModelesRoute = ModelesRouteImport.update({
+  id: '/modeles',
+  path: '/modeles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/modeles': typeof ModelesRoute
   '/parking': typeof ParkingRoute
   '/prospects': typeof ProspectsRoute
   '/qualification': typeof QualificationRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/modeles': typeof ModelesRoute
   '/parking': typeof ParkingRoute
   '/prospects': typeof ProspectsRoute
   '/qualification': typeof QualificationRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/modeles': typeof ModelesRoute
   '/parking': typeof ParkingRoute
   '/prospects': typeof ProspectsRoute
   '/qualification': typeof QualificationRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/mcp'
+    | '/modeles'
     | '/parking'
     | '/prospects'
     | '/qualification'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/mcp'
+    | '/modeles'
     | '/parking'
     | '/prospects'
     | '/qualification'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/mcp'
+    | '/modeles'
     | '/parking'
     | '/prospects'
     | '/qualification'
@@ -243,6 +255,7 @@ export interface RootRouteChildren {
   JournalRoute: typeof JournalRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  ModelesRoute: typeof ModelesRoute
   ParkingRoute: typeof ParkingRoute
   ProspectsRoute: typeof ProspectsRoute
   QualificationRoute: typeof QualificationRoute
@@ -289,6 +302,13 @@ declare module '@tanstack/react-router' {
       path: '/parking'
       fullPath: '/parking'
       preLoaderRoute: typeof ParkingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/modeles': {
+      id: '/modeles'
+      path: '/modeles'
+      fullPath: '/modeles'
+      preLoaderRoute: typeof ModelesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -387,6 +407,7 @@ const rootRouteChildren: RootRouteChildren = {
   JournalRoute: JournalRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  ModelesRoute: ModelesRoute,
   ParkingRoute: ParkingRoute,
   ProspectsRoute: ProspectsRoute,
   QualificationRoute: QualificationRoute,
