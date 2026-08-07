@@ -17,6 +17,7 @@ import {
   offerTargets,
   saveProspect,
   suggestProspectCategory,
+  targetValueOf,
   type Category,
   type HeadcountRange,
   type OfferTarget,
