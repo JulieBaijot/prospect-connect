@@ -29,7 +29,7 @@ export type ProspectStatus =
   | "Converti"
   | "Perdu";
 export type Canal = "email" | "téléphone" | "physique";
-export type LogResult = "NRP" | "Pas dispo" | "Échange" | "RDV";
+export type LogResult = "NRP" | "Pas dispo" | "Barrage" | "Échange" | "RDV";
 export type SearchSource = "pappers" | "insee" | "annuaire";
 
 export interface Prospect {
