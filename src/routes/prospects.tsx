@@ -451,7 +451,7 @@ function ProspectsPage() {
         <MiniKpi label="Chauds" value={counters.hot} />
         <MiniKpi label="Convertis" value={counters.converted} />
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-4">
         <Card className="overflow-hidden">
           <div className="grid gap-3 border-b border-border p-4 md:grid-cols-4 xl:grid-cols-7">
             <input
