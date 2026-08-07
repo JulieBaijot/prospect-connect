@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, CalendarClock, PhoneCall, Search, UserRoundCheck } from "lucide-react";
+import { ArrowRight, CalendarClock, Coins, PhoneCall, Search, UserRoundCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
