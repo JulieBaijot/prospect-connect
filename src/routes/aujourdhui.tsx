@@ -384,6 +384,8 @@ function CallCard({
   const [situation, setSituation] = useState<Situation | null>(null);
   const [etape, setEtape] = useState<Etape | null>(null);
   const [notes, setNotes] = useState("");
+  /** Surcharge manuelle de « quelqu'un a décroché » ; null = déduit du résultat. */
+  const [reachedManual, setReachedManual] = useState<boolean | null>(null);
   const [level, setLevel] = useState<DecisionLevel>(prospect.decision_level || "inconnu");
   const [promiseText, setPromiseText] = useState("");
   const [promiseDate, setPromiseDate] = useState("");
