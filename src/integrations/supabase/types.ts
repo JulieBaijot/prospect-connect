@@ -223,12 +223,11 @@ export type Database = {
           address: string | null
           average_rating: number | null
           batch_keyword: string | null
-          category: string
           city: string | null
           comments: string | null
           company_name: string
           created_at: string
-          current_stage: string
+          decision_level: string
           decision_maker: string | null
           employees_count: string | null
           enriched_at: string | null
@@ -237,17 +236,21 @@ export type Database = {
           external_source_id: string | null
           google_maps_url: string | null
           google_place_id: string | null
+          group_name: string | null
           headcount_range: string | null
           icebreakers: Json | null
           id: string
           import_batch_id: string | null
           import_source: string | null
+          last_contacted_at: string | null
           legal_status: string | null
           main_email: string | null
           main_phone: string | null
           naf_code: string | null
           next_action_date: string | null
           offer_target: string | null
+          parking_date: string | null
+          parking_trigger: string | null
           reception_hours: string | null
           reviews_count: number | null
           sector: string | null
@@ -263,12 +266,11 @@ export type Database = {
           address?: string | null
           average_rating?: number | null
           batch_keyword?: string | null
-          category?: string
           city?: string | null
           comments?: string | null
           company_name: string
           created_at?: string
-          current_stage?: string
+          decision_level?: string
           decision_maker?: string | null
           employees_count?: string | null
           enriched_at?: string | null
@@ -277,17 +279,21 @@ export type Database = {
           external_source_id?: string | null
           google_maps_url?: string | null
           google_place_id?: string | null
+          group_name?: string | null
           headcount_range?: string | null
           icebreakers?: Json | null
           id?: string
           import_batch_id?: string | null
           import_source?: string | null
+          last_contacted_at?: string | null
           legal_status?: string | null
           main_email?: string | null
           main_phone?: string | null
           naf_code?: string | null
           next_action_date?: string | null
           offer_target?: string | null
+          parking_date?: string | null
+          parking_trigger?: string | null
           reception_hours?: string | null
           reviews_count?: number | null
           sector?: string | null
@@ -303,12 +309,11 @@ export type Database = {
           address?: string | null
           average_rating?: number | null
           batch_keyword?: string | null
-          category?: string
           city?: string | null
           comments?: string | null
           company_name?: string
           created_at?: string
-          current_stage?: string
+          decision_level?: string
           decision_maker?: string | null
           employees_count?: string | null
           enriched_at?: string | null
@@ -317,17 +322,21 @@ export type Database = {
           external_source_id?: string | null
           google_maps_url?: string | null
           google_place_id?: string | null
+          group_name?: string | null
           headcount_range?: string | null
           icebreakers?: Json | null
           id?: string
           import_batch_id?: string | null
           import_source?: string | null
+          last_contacted_at?: string | null
           legal_status?: string | null
           main_email?: string | null
           main_phone?: string | null
           naf_code?: string | null
           next_action_date?: string | null
           offer_target?: string | null
+          parking_date?: string | null
+          parking_trigger?: string | null
           reception_hours?: string | null
           reviews_count?: number | null
           sector?: string | null
