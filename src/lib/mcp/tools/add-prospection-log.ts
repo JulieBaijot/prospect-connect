@@ -14,7 +14,7 @@ export default defineTool({
     action_type: z.string().min(1).max(80).describe("Type d'action (ex: 'Appel J1', 'RDV pris', 'Relance mail')"),
     notes: z.string().max(2000).optional(),
     next_action_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Date de prochaine action (YYYY-MM-DD)"),
-    update_status: z.enum(["Chaud", "Tiède", "En attente", "Perdu", "Converti"]).optional(),
+    update_status: z.enum(["À qualifier", "En contact", "En discussion", "Parké", "Converti", "Perdu"]).optional(),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   handler: async (input, ctx) => {
