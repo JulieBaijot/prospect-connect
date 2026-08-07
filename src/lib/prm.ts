@@ -29,7 +29,7 @@ export type ProspectStatus =
   | "Converti"
   | "Perdu";
 export type Canal = "email" | "téléphone" | "physique";
-export type LogResult = "NRP" | "Pas dispo" | "Échange" | "RDV";
+export type LogResult = "NRP" | "Pas dispo" | "Barrage" | "Échange" | "RDV";
 export type SearchSource = "pappers" | "insee" | "annuaire";
 
 export interface Prospect {
@@ -112,6 +112,8 @@ export interface ProspectionLog {
   stage: string | null;
   objective: string | null;
   result: LogResult | null;
+  /** Un humain a-t-il décroché ? Indépendant du résultat commercial. null = inconnu. */
+  reached: boolean | null;
   notes: string | null;
   /** Relance que je me fixe à moi-même. */
   next_action_date: string | null;
@@ -498,7 +500,7 @@ export interface SituationOption {
 
 export const situationOptions: SituationOption[] = [
   { key: "nrp", label: "NRP / personne au bout du fil", result: "NRP", actionType: "NRP" },
-  { key: "barrage", label: "Barrage accueil", result: "Pas dispo", actionType: "Barrage accueil" },
+  { key: "barrage", label: "Barrage accueil", result: "Barrage", actionType: "Barrage accueil" },
   { key: "email_envoye", label: "Email envoyé", result: "Pas dispo", actionType: "Email envoyé" },
   {
     key: "pas_le_bon_moment",
@@ -785,13 +787,38 @@ export async function saveProspect(
   return prospect as unknown as Prospect;
 }
 
+/** Déduit « quelqu'un a décroché » du résultat : NRP → false, tout autre résultat → true. */
+export function reachedFromResult(result?: LogResult | null): boolean | null {
+  if (!result) return null;
+  return result !== "NRP";
+}
+
 export async function addLog(
   payload: Partial<ProspectionLog> & { prospect_id: string; action_type: string },
 ) {
-  const { data, error } = await supabase.from("prospection_logs").insert(payload).select().single();
+  const body = {
+    ...payload,
+    // Renseigné automatiquement, mais surchargeable à la main par l'appelant.
+    reached:
+      payload.reached !== undefined
+        ? payload.reached
+        : (payload.canal ?? "téléphone") === "téléphone"
+          ? reachedFromResult(payload.result)
+          : null,
+  };
+  const { data, error } = await supabase.from("prospection_logs").insert(body).select().single();
   if (error) throw error;
   return data as unknown as ProspectionLog;
 }
+
+export async function setLogReached(logId: string, reached: boolean | null) {
+  const { error } = await supabase
+    .from("prospection_logs")
+    .update({ reached } as never)
+    .eq("id", logId);
+  if (error) throw error;
+}
+
 
 export async function setPromiseKept(logId: string, kept: boolean | null) {
   const { error } = await supabase

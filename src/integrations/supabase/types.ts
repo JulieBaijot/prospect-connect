@@ -195,6 +195,7 @@ export type Database = {
           promise_kept: boolean | null
           promise_text: string | null
           prospect_id: string
+          reached: boolean | null
           result: string | null
           stage: string | null
           template_used: string | null
@@ -216,6 +217,7 @@ export type Database = {
           promise_kept?: boolean | null
           promise_text?: string | null
           prospect_id: string
+          reached?: boolean | null
           result?: string | null
           stage?: string | null
           template_used?: string | null
@@ -237,6 +239,7 @@ export type Database = {
           promise_kept?: boolean | null
           promise_text?: string | null
           prospect_id?: string
+          reached?: boolean | null
           result?: string | null
           stage?: string | null
           template_used?: string | null

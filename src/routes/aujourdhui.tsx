@@ -30,6 +30,7 @@ import {
 } from "@/lib/email-templates";
 import {
   addLog,
+  reachedFromResult,
   bestPhone,
   brokenPromises,
   contactName,
@@ -384,6 +385,8 @@ function CallCard({
   const [situation, setSituation] = useState<Situation | null>(null);
   const [etape, setEtape] = useState<Etape | null>(null);
   const [notes, setNotes] = useState("");
+  /** Surcharge manuelle de « quelqu'un a décroché » ; null = déduit du résultat. */
+  const [reachedManual, setReachedManual] = useState<boolean | null>(null);
   const [level, setLevel] = useState<DecisionLevel>(prospect.decision_level || "inconnu");
   const [promiseText, setPromiseText] = useState("");
   const [promiseDate, setPromiseDate] = useState("");
@@ -419,6 +422,10 @@ function CallCard({
         stage: key,
         objective: proposal.action,
         result: option.result,
+        reached:
+          (proposal.canal || "téléphone") === "téléphone"
+            ? (reachedManual ?? reachedFromResult(option.result))
+            : null,
         notes: freeNotes || proposal.raison,
         next_action_date: nextDate,
         promise_text: promiseText || null,
@@ -589,6 +596,22 @@ function CallCard({
               placeholder="Ce qui s'est dit, en clair."
             />
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={
+                reachedManual ??
+                (situation
+                  ? reachedFromResult(
+                      situationOptions.find((o) => o.key === situation)?.result ?? null,
+                    ) === true
+                  : false)
+              }
+              onChange={(event) => setReachedManual(event.target.checked)}
+            />
+            Quelqu'un a décroché
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1">
               <label className={labelClass} htmlFor={`level-${prospect.id}`}>

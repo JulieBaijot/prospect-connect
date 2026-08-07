@@ -13,6 +13,7 @@ import {
 } from "@/components/prm/ui";
 import {
   addLog,
+  reachedFromResult,
   buildCalendarUrl,
   callScript,
   contactName,
@@ -84,6 +85,8 @@ function SessionPage() {
   const [motif, setMotif] = useState("");
   const [overrideAction, setOverrideAction] = useState("");
   const [overrideStatus, setOverrideStatus] = useState<ProspectStatus | "">("");
+  /** Surcharge manuelle de « quelqu'un a décroché » ; null = valeur déduite du résultat. */
+  const [reachedManual, setReachedManual] = useState<boolean | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -159,6 +162,7 @@ function SessionPage() {
   function resetCardState() {
     setMode("idle");
     setNotes("");
+    setReachedManual(null);
     setCallbackDate("");
     setMeetingDate("");
     setVideoLink("");
@@ -273,6 +277,8 @@ function SessionPage() {
       stage: option.key,
       objective: action,
       result: option.result,
+      reached:
+        canal === "téléphone" ? (reachedManual ?? reachedFromResult(option.result)) : null,
       notes: options.customNotes || notes || etape.raison,
       next_action_date: options.nextActionDate,
       meeting_date: options.meetingAt,
@@ -710,6 +716,22 @@ function SessionPage() {
                 placeholder="Ce qui s'est dit, objections, contexte…"
               />
             </div>
+
+            {canal === "téléphone" && (
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={
+                    reachedManual ??
+                    (selectedSituation ? reachedFromResult(selectedSituation.result) === true : false)
+                  }
+                  onChange={(e) => setReachedManual(e.target.checked)}
+                />
+                Quelqu'un a décroché (indépendant du résultat commercial)
+              </label>
+            )}
+
 
             {etape ? (
               <div className="mt-3 rounded-lg border border-primary/40 bg-muted p-3 text-sm">
