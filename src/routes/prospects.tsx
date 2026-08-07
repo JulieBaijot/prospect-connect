@@ -216,16 +216,17 @@ function ProspectsPage() {
   }
 
   function addNew() {
+    setPanelOpen(true);
     setSelected(null);
     setForm(emptyProspect);
     setContactForm(emptyContact);
     setDeleteStatus("");
     setPlacesStatus("Nouvelle fiche : renseignez au minimum le nom de l'entreprise puis Sauvegarder.");
     requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       companyInputRef.current?.focus();
     });
   }
+
 
   async function save() {
     if (!form.company_name.trim()) {
