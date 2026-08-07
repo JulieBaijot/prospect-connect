@@ -711,6 +711,22 @@ function SessionPage() {
               />
             </div>
 
+            {canal === "téléphone" && (
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={
+                    reachedManual ??
+                    (selectedSituation ? reachedFromResult(selectedSituation.result) === true : false)
+                  }
+                  onChange={(e) => setReachedManual(e.target.checked)}
+                />
+                Quelqu'un a décroché (indépendant du résultat commercial)
+              </label>
+            )}
+
+
             {etape ? (
               <div className="mt-3 rounded-lg border border-primary/40 bg-muted p-3 text-sm">
                 <p className={labelClass}>Proposition automatique (modifiable)</p>
