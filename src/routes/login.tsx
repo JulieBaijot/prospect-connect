@@ -28,7 +28,7 @@ function Login() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) void router.navigate({ to: target, replace: true });
+      if (data.session) void router.navigate({ href: target, replace: true });
     });
   }, [target]);
 
@@ -41,7 +41,7 @@ function Login() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
       if (error) return setError(error.message);
-      void router.navigate({ to: target, replace: true });
+      void router.navigate({ href: target, replace: true });
     } else {
       const emailRedirectTo = `${window.location.origin}/login?next=${encodeURIComponent(target)}`;
       const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } });
