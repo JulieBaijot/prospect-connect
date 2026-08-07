@@ -21,7 +21,6 @@ export type OfferTarget = "SST" | "DUERP" | "SSCT / CSE" | "QVCT / RPS" | "Sur m
 export type DecisionLevel = "site" | "groupe" | "inconnu";
 export type Segment = "Moins de 11" | "11 à 24" | "25 à 49" | "50 et plus";
 
-export type CycleStage = "J1" | "J2" | "J4" | "J6" | "J10" | "J15" | "J21";
 export type ProspectStatus =
   | "À qualifier"
   | "En contact"
@@ -32,27 +31,6 @@ export type ProspectStatus =
 export type Canal = "email" | "téléphone" | "physique";
 export type LogResult = "NRP" | "Pas dispo" | "Échange" | "RDV";
 export type SearchSource = "pappers" | "insee" | "annuaire";
-
-export interface PlaybookOutcome {
-  key: string;
-  label: string;
-  result: LogResult;
-  actionType: string;
-  nextStage: CycleStage;
-  delayDays: number;
-  status?: ProspectStatus;
-  note: string;
-  mode?: "callback" | "exchange" | "meeting";
-}
-
-export interface PlaybookNode {
-  key: CycleStage;
-  label: string;
-  objective: string;
-  script: string;
-  checklist: string[];
-  outcomes: PlaybookOutcome[];
-}
 
 export interface Prospect {
   id: string;
@@ -130,7 +108,8 @@ export interface ProspectionLog {
   action_date: string;
   action_type: string;
   canal: Canal;
-  stage: CycleStage | null;
+  /** Situation consignée (voir `Situation`). */
+  stage: string | null;
   objective: string | null;
   result: LogResult | null;
   notes: string | null;
