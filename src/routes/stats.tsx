@@ -125,7 +125,7 @@ function StatsPage() {
       />
 
       {stock < 30 && (
-        <div className="mt-4 rounded-[10px] border border-[var(--status-lost)] bg-[color-mix(in_srgb,var(--status-lost)_10%,transparent)] p-4">
+        <div className="mt-4 rounded-[10px] border border-destructive bg-destructive/10 p-4">
           <p className="text-sm font-medium text-foreground">
             Stock d'appel faible : {stock} prospects disponibles (seuil 30).
           </p>
