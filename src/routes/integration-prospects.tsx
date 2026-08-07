@@ -23,6 +23,7 @@ import {
   type OfferTarget,
   type SearchSource,
 } from "@/lib/prm";
+import { supabase } from "@/integrations/supabase/client";
 import { enrichCompany, findEmail, searchCompaniesBatch } from "@/lib/prospect-search.functions";
 
 export const Route = createFileRoute("/integration-prospects")({
