@@ -6,7 +6,9 @@ import {
   CalendarDays,
   Database,
   ListChecks,
+  PauseCircle,
   PhoneCall,
+
   Search,
   Wand2,
 } from "lucide-react";
