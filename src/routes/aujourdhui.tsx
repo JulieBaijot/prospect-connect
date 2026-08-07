@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowRight,
@@ -11,7 +11,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import { Button, Card, PageTitle, SegmentBadge, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
-import { emptyPlan, loadPlan, savePlan, todayPlan, tomorrowIso, type DayPlan } from "@/lib/day-plan";
+import { emptyPlan, savePlan, todayPlan, type DayPlan } from "@/lib/day-plan";
 import {
   addLog,
   bestPhone,
@@ -69,11 +69,12 @@ export const Route = createFileRoute("/aujourdhui")({
 type FullLog = ProspectionLog & { prospects: Prospect | null; contacts: Contact | null };
 
 function TodayPage() {
+  const navigate = useNavigate();
   const today = todayIsoDate();
   const [prospects, setProspects] = useState<ProspectWithRelations[]>([]);
   const [logs, setLogs] = useState<FullLog[]>([]);
   const [plan, setPlan] = useState<DayPlan>(() => emptyPlan(today));
-  const [screen, setScreen] = useState<"jour" | "bilan" | "demain">("jour");
+  const [screen, setScreen] = useState<"jour" | "bilan">("jour");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -126,15 +127,6 @@ function TodayPage() {
       calls: picks.slice(0, 3).map((p) => p.id),
       emails: picks.slice(3, 6).map((p) => p.id),
     });
-  }
-
-  if (screen === "demain") {
-    return (
-      <PrepareTomorrow
-        prospects={prospects}
-        onBack={() => setScreen("jour")}
-      />
-    );
   }
 
   return (
@@ -243,7 +235,7 @@ function TodayPage() {
             ))}
           </div>
         ) : (
-          <EmptyPlan onSuggest={suggestToday} onPrepare={() => setScreen("demain")} />
+          <EmptyPlan onSuggest={suggestToday} onPrepare={() => void navigate({ to: "/demain" })} />
         )}
       </section>
 
@@ -268,7 +260,7 @@ function TodayPage() {
             ))}
           </div>
         ) : (
-          <EmptyPlan onSuggest={suggestToday} onPrepare={() => setScreen("demain")} />
+          <EmptyPlan onSuggest={suggestToday} onPrepare={() => void navigate({ to: "/demain" })} />
         )}
       </section>
 
@@ -300,7 +292,7 @@ function TodayPage() {
                 <Button
                   onClick={() => {
                     updatePlan({ ...plan, closed: true });
-                    setScreen("demain");
+                    void navigate({ to: "/demain" });
                   }}
                 >
                   Préparer demain
@@ -784,144 +776,5 @@ function EmailCard({
         </Button>
       </div>
     </Card>
-  );
-}
-
-/* --------------------------- Préparation du lendemain --------------------------- */
-
-function PrepareTomorrow({
-  prospects,
-  onBack,
-}: {
-  prospects: ProspectWithRelations[];
-  onBack: () => void;
-}) {
-  const date = tomorrowIso();
-  const [plan, setPlan] = useState<DayPlan>(() => loadPlan(date));
-  const [search, setSearch] = useState("");
-  const [saved, setSaved] = useState(false);
-
-  const active = prospects.filter((p) => !["Perdu", "Converti"].includes(p.status));
-  const results = active
-    .filter((p) =>
-      search.trim()
-        ? `${p.company_name} ${p.city || ""} ${p.sector || ""}`
-            .toLowerCase()
-            .includes(search.trim().toLowerCase())
-        : true,
-    )
-    .slice(0, 30);
-
-  const value = [...plan.calls, ...plan.emails].reduce((sum, id) => {
-    const prospect = prospects.find((p) => p.id === id);
-    return sum + Number(prospect?.estimated_value || 0);
-  }, 0);
-
-  function toggle(list: "calls" | "emails", id: string) {
-    setSaved(false);
-    setPlan((prev) => {
-      const current = prev[list];
-      const other = list === "calls" ? "emails" : "calls";
-      if (current.includes(id)) return { ...prev, [list]: current.filter((item) => item !== id) };
-      if (current.length >= 3) return prev;
-      return {
-        ...prev,
-        [list]: [...current, id],
-        [other]: prev[other].filter((item) => item !== id),
-      };
-    });
-  }
-
-  function suggest() {
-    const picks = prioritizeCallSession(active, 6);
-    setSaved(false);
-    setPlan({
-      date,
-      calls: picks.slice(0, 3).map((p) => p.id),
-      emails: picks.slice(3, 6).map((p) => p.id),
-    });
-  }
-
-  return (
-    <>
-      <PageTitle
-        title="Préparer demain"
-        subtitle={`Liste du ${formatDate(date)} : 3 appels et 3 emails. Valeur cumulée : ${formatEuro(value)}.`}
-        action={
-          <Button variant="neutral" onClick={onBack}>
-            Retour à aujourd'hui
-          </Button>
-        }
-      />
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <input
-          className={`${fieldClass} min-w-56 flex-1`}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Rechercher une entreprise, une ville, un secteur…"
-        />
-        <Button variant="neutral" onClick={suggest}>
-          <Sparkles className="mr-2 h-4 w-4" />
-          Me suggérer 3 + 3
-        </Button>
-        <Button
-          onClick={() => {
-            savePlan(plan);
-            setSaved(true);
-          }}
-          disabled={!plan.calls.length && !plan.emails.length}
-        >
-          Enregistrer la liste
-        </Button>
-      </div>
-
-      {saved ? (
-        <p className="mb-4 rounded-lg border border-border bg-secondary p-3 text-sm">
-          Liste de demain enregistrée : {plan.calls.length} appel(s) et {plan.emails.length} email(s).
-        </p>
-      ) : null}
-
-      <Card className="divide-y divide-border">
-        {results.map((prospect) => (
-          <div key={prospect.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
-            <div>
-              <p className="text-sm font-medium">
-                {prospect.company_name}
-                {prospect.city ? (
-                  <span className="ml-2 font-normal text-muted-foreground">{prospect.city}</span>
-                ) : null}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <SegmentBadge headcount={prospect.headcount_range} segment={prospect.segment} />
-                <StatusBadge status={prospect.status} />
-                <span className="text-xs text-muted-foreground">
-                  {prospect.next_action_date
-                    ? `relance ${formatDate(prospect.next_action_date)}`
-                    : "aucune relance planifiée"}
-                </span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={plan.calls.includes(prospect.id) ? "primary" : "neutral"}
-                className="min-h-9 px-3"
-                onClick={() => toggle("calls", prospect.id)}
-              >
-                Appel
-              </Button>
-              <Button
-                variant={plan.emails.includes(prospect.id) ? "primary" : "neutral"}
-                className="min-h-9 px-3"
-                onClick={() => toggle("emails", prospect.id)}
-              >
-                Email
-              </Button>
-            </div>
-          </div>
-        ))}
-        {results.length ? null : <p className="p-3 text-sm text-muted-foreground">Aucun résultat.</p>}
-      </Card>
-    </>
   );
 }
