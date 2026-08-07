@@ -562,7 +562,7 @@ function ProspectsPage() {
               >
                 <div className="flex justify-between gap-2">
                   <span className="font-medium">{p.company_name}</span>
-                  <CategoryBadge category={p.category} />
+                  <StatusBadge status={p.status} />
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {contactName(p.contacts[0])} · {p.city}
