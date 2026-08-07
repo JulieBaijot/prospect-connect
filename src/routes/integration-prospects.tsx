@@ -23,6 +23,7 @@ import {
   type OfferTarget,
   type SearchSource,
 } from "@/lib/prm";
+import { supabase } from "@/integrations/supabase/client";
 import { enrichCompany, findEmail, searchCompaniesBatch } from "@/lib/prospect-search.functions";
 
 export const Route = createFileRoute("/integration-prospects")({
@@ -195,6 +196,9 @@ function IntegrationPage() {
   >([]);
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [activeCompany, setActiveCompany] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState("");
+  const [saveBusy, setSaveBusy] = useState(false);
+
 
   useEffect(() => {
     const saved = localStorage.getItem("prm-search-source") as SearchSource | null;
@@ -359,57 +363,90 @@ function IntegrationPage() {
       });
   }
 
+  /** Retourne l'id d'un prospect déjà en base (même SIREN, ou même nom + ville). */
+  async function findExistingProspect(company: Company) {
+    if (company.siren) {
+      const { data } = await supabase
+        .from("prospects")
+        .select("id")
+        .eq("siren", company.siren)
+        .limit(1);
+      if (data?.length) return data[0].id;
+    }
+    const { data } = await supabase
+      .from("prospects")
+      .select("id")
+      .ilike("company_name", company.name)
+      .limit(5);
+    return data?.length ? data[0].id : null;
+  }
+
   async function saveAll(continueAfter = false) {
+    if (!companies.length) {
+      setSaveStatus("Aucune entreprise sélectionnée.");
+      return;
+    }
+    setSaveBusy(true);
+    setSaveStatus("Ajout au PRM en cours…");
+    let saved = 0;
+    const errors: string[] = [];
     for (const company of companies) {
       const first = company.contacts[0];
-      const suggested = suggestProspectCategory({
-        headcount_range: company.headcount,
-        offer_target: first?.offer || company.offer || "SST",
-        sector: company.sector,
-        estimated_value: first?.value || company.value,
-        comments: [company.comments, first?.comments].filter(Boolean).join(" "),
-        contactKnown: Boolean(first),
-      });
-      await saveProspect(
-        {
-          company_name: company.name,
-          city: company.city,
-          headcount_range: (company.headcount || "20-49") as HeadcountRange,
-          offer_target: first?.offer || company.offer || "SST",
-          estimated_value:
-            first?.value || company.value || targetValueOf(company.headcount || "20-49"),
-          status: "À qualifier",
-          main_phone: company.phone || "",
-          website: company.website || "",
-          address: company.address || "",
-          reception_hours: company.hours || "",
-          comments: company.comments || "",
-          google_place_id: company.placeId || "",
-          siren: company.siren || "",
-          naf_code: company.naf || "",
-          source: company.source || source,
-          sector: company.sector || "",
-          batch_keyword: company.keyword || "",
-          external_source_id: company.externalId || company.siren || "",
-          import_source: "api_batch",
-        },
-        first
-          ? {
-              first_name: first.firstName,
-              last_name: first.lastName,
-              role_title: first.role,
-              direct_phone: first.phone,
-              email: first.email,
-              linkedin_url: first.linkedin,
-              maturity_level: first.maturity,
-              offer_target: first.offer,
-              estimated_value: first.value,
-              category: first.category,
-              comments: first.comments,
-            }
-          : undefined,
-      );
+      try {
+        const existing = await findExistingProspect(company);
+        await saveProspect(
+          {
+            ...(existing ? { id: existing } : {}),
+            company_name: company.name,
+            city: company.city,
+            headcount_range: (company.headcount || "20-49") as HeadcountRange,
+            offer_target: first?.offer || company.offer || "SST",
+            estimated_value:
+              first?.value || company.value || targetValueOf(company.headcount || "20-49"),
+            status: "À qualifier",
+            main_phone: company.phone || "",
+            website: company.website || "",
+            address: company.address || "",
+            reception_hours: company.hours || "",
+            comments: company.comments || "",
+            google_place_id: company.placeId || "",
+            siren: company.siren || "",
+            naf_code: company.naf || "",
+            source: company.source || source,
+            sector: company.sector || "",
+            batch_keyword: company.keyword || "",
+            external_source_id: company.externalId || company.siren || "",
+            import_source: "api_batch",
+          },
+          first
+            ? {
+                first_name: first.firstName,
+                last_name: first.lastName,
+                role_title: first.role,
+                direct_phone: first.phone,
+                email: first.email,
+                linkedin_url: first.linkedin,
+                maturity_level: first.maturity || null,
+                offer_target: first.offer || null,
+                estimated_value: first.value,
+                category: first.category || null,
+                comments: first.comments,
+              }
+            : undefined,
+        );
+        saved += 1;
+      } catch (error) {
+        errors.push(`${company.name} : ${(error as Error).message}`);
+      }
     }
+    setSaveBusy(false);
+    if (errors.length) {
+      setSaveStatus(
+        `${saved} prospect(s) ajouté(s), ${errors.length} en échec — ${errors.slice(0, 3).join(" · ")}`,
+      );
+      return;
+    }
+    setSaveStatus(`${saved} prospect(s) ajouté(s) à la base.`);
     if (continueAfter) {
       setStep(1);
       setResults([]);
@@ -418,6 +455,7 @@ function IntegrationPage() {
       navigate({ to: "/prospects" });
     }
   }
+
 
   return (
     <>
@@ -465,6 +503,19 @@ function IntegrationPage() {
               saveAll={saveAll}
             />
           )}
+          {saveStatus ? (
+            <p
+              className={`mt-3 rounded-md border px-3 py-2 text-sm ${
+                saveStatus.includes("échec")
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-border bg-muted text-muted-foreground"
+              }`}
+            >
+              {saveBusy ? "⏳ " : ""}
+              {saveStatus}
+            </p>
+          ) : null}
+
           {step < 4 ? (
             <div className="mt-5 flex justify-end">
               <Button
