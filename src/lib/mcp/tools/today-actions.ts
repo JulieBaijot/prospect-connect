@@ -15,7 +15,7 @@ export default defineTool({
     const { data, error } = await supabase
       .from("prospects")
       .select(
-        "id, company_name, city, category, status, current_stage, main_phone, decision_maker, next_action_date, comments",
+        "id, company_name, city, status, decision_level, main_phone, decision_maker, next_action_date, comments",
       )
       .not("next_action_date", "is", null)
       .lte("next_action_date", today)

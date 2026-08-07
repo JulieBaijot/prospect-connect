@@ -143,7 +143,7 @@ function StatsPage() {
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {p.city || "Ville à compléter"} · {p.status} · {p.current_stage}
+                    {p.city || "Ville à compléter"} · {p.status}
                   </p>
                 </div>
               ))}

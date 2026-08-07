@@ -5,7 +5,6 @@ import { AppLayout } from "@/components/prm/AppLayout";
 import {
   Button,
   Card,
-  CategoryBadge,
   PageTitle,
   StatusBadge,
   fieldClass,
@@ -21,9 +20,9 @@ import {
   formatEuro,
   headcountRanges,
   loadProspects,
+  currentStageOf,
   nodeForStage,
   offerTargets,
-  categories,
   playbookNodes,
   prioritizeCallSession,
   sessionReason,
@@ -98,7 +97,7 @@ function SessionPage() {
   const current = session[index];
   const contact =
     current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
-  const activeNode = current ? nodeForStage(current.current_stage) : null;
+  const activeNode = current ? nodeForStage(currentStageOf(current)) : null;
   const progress = session.length ? Math.round(((Math.min(index + 1, session.length)) / session.length) * 100) : 0;
 
   useEffect(() => {
@@ -205,7 +204,6 @@ function SessionPage() {
       headcount_range: current.headcount_range,
       offer_target: current.offer_target,
       estimated_value: current.estimated_value,
-      category: current.category,
       comments: current.comments,
     });
     setEditOpen(true);
@@ -248,7 +246,7 @@ function SessionPage() {
       contact_id: contact?.id,
       action_type: outcome.actionType,
       canal: "téléphone",
-      stage: current.current_stage,
+      stage,
       objective: activeNode?.objective,
       result: outcome.result,
       notes: options.customNotes || notes || outcome.note,
@@ -258,8 +256,8 @@ function SessionPage() {
       video_link: options.meetingAt ? videoLink : undefined,
     });
     await updateProspect(current.id, {
-      current_stage: stage,
       status,
+      last_contacted_at: new Date().toISOString().slice(0, 10),
       next_action_date:
         status === "Perdu"
           ? null
@@ -389,7 +387,6 @@ function SessionPage() {
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <CategoryBadge category={p.category} />
                         <StatusBadge status={p.status} />
                       </div>
                     </button>
@@ -458,7 +455,7 @@ function SessionPage() {
           </Card>
           <Card className="overflow-hidden">
             <div
-              className={`h-2 ${current.status === "Chaud" ? "bg-status-hot" : current.status === "Tiède" ? "bg-status-warm" : current.status === "Converti" ? "bg-status-won" : "bg-status-waiting"}`}
+              className={`h-2 ${current.status === "En contact" || current.status === "En discussion" ? "bg-status-hot" : current.status === "À qualifier" ? "bg-status-warm" : current.status === "Converti" ? "bg-status-won" : "bg-status-waiting"}`}
             />
             <div className="p-5">
               <div className="flex flex-col justify-between gap-3 md:flex-row">
@@ -479,7 +476,6 @@ function SessionPage() {
                   <Button variant="neutral" onClick={() => (editOpen ? setEditOpen(false) : openQuickEdit())}>
                     {editOpen ? "Fermer" : "Modifier la fiche"}
                   </Button>
-                  <CategoryBadge category={current.category} />
                   <StatusBadge status={current.status} />
                 </div>
               </div>
@@ -519,13 +515,6 @@ function SessionPage() {
                       <option value="">—</option>
                       {offerTargets.map((offer) => (
                         <option key={offer} value={offer}>{offer}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Catégorie">
-                    <select className={fieldClass} value={editForm.category ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value as Prospect["category"] }))}>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
                   </Field>

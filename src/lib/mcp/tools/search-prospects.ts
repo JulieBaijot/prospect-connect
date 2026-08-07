@@ -18,7 +18,7 @@ export default defineTool({
     const q = `%${query.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     const { data, error } = await supabase
       .from("prospects")
-      .select("id, company_name, city, sector, category, status, current_stage, main_phone, decision_maker, updated_at")
+      .select("id, company_name, city, sector, status, decision_level, main_phone, decision_maker, updated_at")
       .or(
         `company_name.ilike.${q},city.ilike.${q},sector.ilike.${q},address.ilike.${q},decision_maker.ilike.${q},comments.ilike.${q}`,
       )
