@@ -106,10 +106,14 @@ function TodayPage() {
   }
 
   const byId = useMemo(() => new Map(prospects.map((p) => [p.id, p])), [prospects]);
-  const callList = plan.calls.map((id) => byId.get(id)).filter(Boolean) as ProspectWithRelations[];
+  // Un prospect parké quitte les listes de travail jusqu'à sa date de réveil.
+  const callList = plan.calls
+    .map((id) => byId.get(id))
+    .filter((p): p is ProspectWithRelations => Boolean(p) && !isParked(p!));
   const emailList = plan.emails
     .map((id) => byId.get(id))
-    .filter(Boolean) as ProspectWithRelations[];
+    .filter((p): p is ProspectWithRelations => Boolean(p) && !isParked(p!));
+
 
   const todayLogs = useMemo(
     () => logs.filter((log) => (log.action_date || "").slice(0, 10) === today),
