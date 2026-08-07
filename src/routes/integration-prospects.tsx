@@ -1,1126 +1,471 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronLeft, ChevronRight, ExternalLink, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useRef, useState } from "react";
+import { ArrowLeft, FileUp, Upload } from "lucide-react";
 import { AppLayout } from "@/components/prm/AppLayout";
+import { Button, Card, PageTitle, fieldClass, labelClass } from "@/components/prm/ui";
 import {
-  Button,
-  Card,
-  CategoryBadge,
-  PageTitle,
-  fieldClass,
-  labelClass,
-} from "@/components/prm/ui";
-import {
-  categories,
   headcountRanges,
+  loadProspects,
   offerTargets,
   saveProspect,
-  suggestProspectCategory,
   targetValueOf,
-  type Category,
+  updateProspect,
+  type Contact,
   type HeadcountRange,
   type OfferTarget,
-  type SearchSource,
+  type Prospect,
+  type ProspectWithRelations,
 } from "@/lib/prm";
 import { supabase } from "@/integrations/supabase/client";
-import { enrichCompany, findEmail, searchCompaniesBatch } from "@/lib/prospect-search.functions";
 
 export const Route = createFileRoute("/integration-prospects")({
   head: () => ({
     meta: [
-      { title: "Intégration prospects — PRM Santé-Sécurité" },
+      { title: "Import CSV — PRM Santé-Sécurité" },
       {
         name: "description",
-        content: "Wizard de recherche, enrichissement, contacts et qualification.",
+        content: "Import CSV simple : dépôt du fichier, mappage des colonnes, aperçu, import.",
       },
+      { property: "og:title", content: "Import CSV — PRM Santé-Sécurité" },
+      {
+        property: "og:description",
+        content: "Importez vos prospects depuis un CSV avec détection des doublons.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: () => (
     <AppLayout>
-      <IntegrationPage />
+      <ImportCsvPage />
     </AppLayout>
   ),
 });
 
-type Company = {
-  id: string;
-  name: string;
-  city: string;
-  headcount?: string;
-  naf?: string;
-  siren?: string;
-  address?: string;
-  sector?: string;
-  source?: SearchSource;
-  keyword?: string;
-  externalId?: string;
-  score?: number;
-  representatives?: { name: string; role: string }[];
-  enrichment: "En attente" | "En cours" | "Trouvé" | "Non trouvé";
-  qualification: "À qualifier" | "Qualifié";
-  phone?: string;
-  website?: string;
-  placeId?: string;
-  hours?: string;
-  contacts: ContactDraft[];
-  category?: Category;
-  offer?: OfferTarget;
-  value?: number;
-  comments?: string;
-};
-type ContactDraft = {
-  firstName: string;
-  lastName: string;
-  role: string;
-  phone: string;
-  email: string;
-  linkedin: string;
-  maturity: string;
-  offer: OfferTarget;
-  category: Category;
-  value: number;
-  comments: string;
-};
+/** Champs importables : clé technique + libellé affiché dans le mappage. */
+const importFields = [
+  { key: "company_name", label: "Entreprise *" },
+  { key: "city", label: "Ville" },
+  { key: "headcount_range", label: "Tranche d'effectif" },
+  { key: "offer_target", label: "Offre visée" },
+  { key: "sector", label: "Secteur" },
+  { key: "main_phone", label: "Téléphone standard" },
+  { key: "main_email", label: "Email générique" },
+  { key: "website", label: "Site web" },
+  { key: "address", label: "Adresse" },
+  { key: "siren", label: "SIRET / SIREN" },
+  { key: "naf_code", label: "Code NAF" },
+  { key: "comments", label: "Commentaires" },
+  { key: "contact_first_name", label: "Contact — prénom" },
+  { key: "contact_last_name", label: "Contact — nom" },
+  { key: "contact_role_title", label: "Contact — fonction" },
+  { key: "contact_email", label: "Contact — email" },
+  { key: "contact_phone", label: "Contact — téléphone direct" },
+] as const;
 
-type Filters = {
-  q: string;
-  keywords: string;
-  departments: string[];
-  headcounts: string[];
-  sector: string;
-  legal: string;
-  limit: number;
-};
+type FieldKey = (typeof importFields)[number]["key"];
+type Mapping = Partial<Record<FieldKey, string>>;
+type Row = Record<string, string>;
 
-type Step1Props = {
-  filters: Filters;
-  setFilters: (filters: Filters) => void;
-  source: SearchSource;
-  setSource: (source: SearchSource) => void;
-  loading: boolean;
-  results: Company[];
-  quotaBanner: boolean;
-  batchRuns: Array<{
-    keyword: string;
-    source: SearchSource;
-    status: "terminé" | "erreur";
-    count: number;
-    error?: string;
-  }>;
-  missingKeys: string[];
-  searchCompanies: (source?: SearchSource) => void;
-  switchSource: (source: SearchSource) => void;
-  selectCompany: (company: Company) => void;
-  selected: Company[];
-};
+function splitLine(line: string, sep: string) {
+  const out: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      if (quoted && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else quoted = !quoted;
+    } else if (char === sep && !quoted) {
+      out.push(current);
+      current = "";
+    } else current += char;
+  }
+  out.push(current);
+  return out.map((value) => value.trim());
+}
 
-type UpdateContact = (company: Company, idx: number, patch: Partial<ContactDraft>) => void;
-type FindContactEmail = (company: Company, idx: number) => void;
-
-const defaultDepartments = ["07", "26", "38", "42", "69", "01", "73", "74"];
-const sectors = [
-  "Industrie manufacturière",
-  "Logistique & transport",
-  "Agroalimentaire",
-  "Chimie & pharmacie",
-  "Médico-social & santé",
-  "BTP",
-  "Services aux entreprises",
-];
-const sources = {
-  pappers: "Pappers API",
-  insee: "INSEE Sirene",
-  annuaire: "Annuaire Entreprises",
-} as const;
-const quotas = {
-  pappers: "Quota : 100 req/mois gratuites",
-  insee: "Gratuit, sans limite",
-  annuaire: "Gratuit, sans limite",
-} as const;
-const batchPresets = [
-  {
-    label: "Industrie 07/26",
-    keywords: "industrie annonay\nindustrie valence\nindustrie romans-sur-isère",
-    sector: "Industrie manufacturière",
-    departments: ["07", "26"],
-  },
-  {
-    label: "Logistique vallée du Rhône",
-    keywords: "logistique valence\ntransport annonay\nentrepôt drôme",
-    sector: "Logistique & transport",
-    departments: ["07", "26", "38"],
-  },
-  {
-    label: "Médico-social Ardèche/Drôme",
-    keywords: "ehpad ardèche\nmaison de retraite drôme\nétablissement médico-social",
-    sector: "Médico-social & santé",
-    departments: ["07", "26"],
-  },
-  {
-    label: "BTP local",
-    keywords: "btp annonay\ntravaux publics ardèche\nconstruction drôme",
-    sector: "BTP",
-    departments: ["07", "26"],
-  },
-];
-
-function IntegrationPage() {
-  const navigate = useNavigate();
-  const runBatchSearch = useServerFn(searchCompaniesBatch);
-  const runEnrichment = useServerFn(enrichCompany);
-  const runEmailFinder = useServerFn(findEmail);
-  const [step, setStep] = useState(1);
-  const [source, setSource] = useState<SearchSource>("annuaire");
-  const [filters, setFilters] = useState({
-    q: "",
-    keywords: "industrie annonay\nlogistique valence\nehpad ardèche",
-    departments: defaultDepartments,
-    headcounts: ["20-49", "50-99"],
-    sector: "Industrie manufacturière",
-    legal: "",
-    limit: 8,
+function parseCsv(text: string) {
+  const clean = text.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  const lines = clean.split("\n").filter((line) => line.trim().length > 0);
+  if (!lines.length) return { headers: [] as string[], rows: [] as Row[] };
+  const sep = [";", ",", "\t"]
+    .map((candidate) => ({ candidate, count: splitLine(lines[0], candidate).length }))
+    .sort((a, b) => b.count - a.count)[0].candidate;
+  const headers = splitLine(lines[0], sep).map((header, index) => header || `Colonne ${index + 1}`);
+  const rows = lines.slice(1).map((line) => {
+    const cells = splitLine(line, sep);
+    return Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]));
   });
-  const [results, setResults] = useState<Company[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [quotaBanner, setQuotaBanner] = useState(false);
-  const [batchRuns, setBatchRuns] = useState<
-    Array<{
-      keyword: string;
-      source: SearchSource;
-      status: "terminé" | "erreur";
-      count: number;
-      error?: string;
-    }>
-  >([]);
-  const [missingKeys, setMissingKeys] = useState<string[]>([]);
-  const [activeCompany, setActiveCompany] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState("");
-  const [saveBusy, setSaveBusy] = useState(false);
+  return { headers, rows };
+}
 
+/** Devine le mappage à partir des intitulés de colonnes du fichier. */
+function guessMapping(headers: string[]): Mapping {
+  const hints: Record<FieldKey, string[]> = {
+    company_name: ["entreprise", "société", "societe", "raison sociale", "company", "nom"],
+    city: ["ville", "commune", "city"],
+    headcount_range: ["effectif", "tranche", "salariés", "salaries", "headcount"],
+    offer_target: ["offre", "offer"],
+    sector: ["secteur", "activité", "activite", "sector"],
+    main_phone: ["téléphone", "telephone", "tel", "standard", "phone"],
+    main_email: ["email générique", "email generique", "mail entreprise"],
+    website: ["site", "web", "url"],
+    address: ["adresse", "address"],
+    siren: ["siret", "siren"],
+    naf_code: ["naf", "ape"],
+    comments: ["commentaire", "notes", "remarque"],
+    contact_first_name: ["prénom", "prenom", "first"],
+    contact_last_name: ["nom du contact", "nom contact", "last"],
+    contact_role_title: ["fonction", "poste", "titre", "role"],
+    contact_email: ["email", "mail", "courriel"],
+    contact_phone: ["portable", "direct", "mobile", "ligne directe"],
+  };
+  const mapping: Mapping = {};
+  const used = new Set<string>();
+  for (const field of importFields) {
+    const match = headers.find(
+      (header) =>
+        !used.has(header) &&
+        hints[field.key].some((hint) => header.toLowerCase().includes(hint)),
+    );
+    if (match) {
+      mapping[field.key] = match;
+      used.add(match);
+    }
+  }
+  return mapping;
+}
 
-  useEffect(() => {
-    const saved = localStorage.getItem("prm-search-source") as SearchSource | null;
-    if (saved) setSource(saved);
-  }, []);
-  useEffect(() => {
-    localStorage.setItem("prm-search-source", source);
-  }, [source]);
-  useEffect(() => {
-    if (step === 2) void enrichAll();
-    // L'enrichissement se déclenche uniquement à l'entrée de l'étape 2.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
-  const selectedCompany = useMemo(
-    () => companies.find((c) => c.id === activeCompany) || companies[0],
-    [companies, activeCompany],
-  );
+function normalize(value: string | null | undefined) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
 
-  async function searchCompanies(nextSource = source) {
-    setLoading(true);
-    setQuotaBanner(false);
-    setBatchRuns([]);
-    setMissingKeys([]);
+function matchHeadcount(value: string): HeadcountRange | "" {
+  const found = headcountRanges.find((range) => range === value.trim());
+  if (found) return found;
+  const digits = Number(value.replace(/[^0-9]/g, ""));
+  if (!digits) return "";
+  if (digits < 10) return "1-9";
+  if (digits < 20) return "10-19";
+  if (digits < 50) return "20-49";
+  if (digits < 100) return "50-99";
+  return "100-199";
+}
+
+function matchOffer(value: string): OfferTarget | "" {
+  const found = offerTargets.find((offer) => normalize(offer) === normalize(value));
+  return found || "";
+}
+
+interface MappedRow {
+  index: number;
+  values: Partial<Record<FieldKey, string>>;
+  duplicate: ProspectWithRelations | null;
+}
+
+function ImportCsvPage() {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [mapping, setMapping] = useState<Mapping>({});
+  const [existing, setExisting] = useState<ProspectWithRelations[]>([]);
+  const [completeDuplicates, setCompleteDuplicates] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+
+  async function handleFile(file: File) {
+    const text = await file.text();
+    const parsed = parseCsv(text);
+    setFileName(file.name);
+    setHeaders(parsed.headers);
+    setRows(parsed.rows);
+    setMapping(guessMapping(parsed.headers));
+    setStatus(`${parsed.rows.length} ligne(s) lue(s) dans ${file.name}.`);
     try {
-      const keywords = filters.keywords
-        .split("\n")
-        .map((keyword) => keyword.trim())
-        .filter(Boolean);
-      const response = await runBatchSearch({
-        data: {
-          source: nextSource,
-          filters: { ...filters, keywords, limit: Number(filters.limit) || 8 },
-        },
-      });
-      setBatchRuns(response.runs);
-      setMissingKeys(response.missingKeys);
-      setQuotaBanner(response.runs.some((run) => run.status === "erreur"));
-      setResults(
-        response.results.map((result) => ({
-          id: result.id,
-          name: result.name,
-          city: result.city,
-          headcount: result.headcount,
-          naf: result.naf,
-          siren: result.siren,
-          address: result.address,
-          sector: result.sector,
-          source: result.source,
-          keyword: result.keyword,
-          externalId: result.externalId,
-          score: result.score,
-          representatives: result.representatives || [],
-          enrichment: "En attente" as const,
-          qualification: "À qualifier" as const,
-          contacts: [],
-        })),
-      );
+      setExisting(await loadProspects());
     } catch (error) {
-      setBatchRuns([
-        {
-          keyword: "Batch",
-          source: nextSource,
-          status: "erreur",
-          count: 0,
-          error: error instanceof Error ? error.message : "Erreur API",
-        },
-      ]);
-      setQuotaBanner(true);
-    } finally {
-      setLoading(false);
+      setStatus(
+        `Fichier lu, mais base inaccessible : ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
-  function switchSource(next: SearchSource) {
-    setSource(next);
-    void searchCompanies(next);
-  }
-  function selectCompany(company: Company) {
-    setCompanies((prev) => (prev.some((x) => x.id === company.id) ? prev : [...prev, company]));
-    setActiveCompany(company.id);
-  }
-
-  async function enrichAll() {
-    setCompanies((prev) =>
-      prev.map((c) => ({
-        ...c,
-        enrichment: c.enrichment === "En attente" ? "En cours" : c.enrichment,
-      })),
-    );
-    await Promise.all(
-      companies.map(async (company) => {
-        if (company.enrichment !== "En attente") return;
-        try {
-          const place = await runEnrichment({ data: { name: company.name, city: company.city } });
-          updateCompany(
-            company.id,
-            place.status === "found"
-              ? {
-                  enrichment: "Trouvé",
-                  address: place.address,
-                  phone: place.phone,
-                  website: place.website,
-                  placeId: place.placeId,
-                  hours: place.hours,
-                }
-              : { enrichment: "Non trouvé" },
-          );
-        } catch {
-          updateCompany(company.id, { enrichment: "Non trouvé" });
+  const mapped = useMemo<MappedRow[]>(() => {
+    if (!mapping.company_name) return [];
+    return rows
+      .map((row, index) => {
+        const values: Partial<Record<FieldKey, string>> = {};
+        for (const field of importFields) {
+          const column = mapping[field.key];
+          if (column) values[field.key] = (row[column] || "").trim();
         }
-      }),
-    );
-  }
+        const name = normalize(values.company_name);
+        const city = normalize(values.city);
+        const duplicate =
+          existing.find(
+            (prospect) =>
+              normalize(prospect.company_name) === name &&
+              normalize(prospect.city) === city,
+          ) || null;
+        return { index, values, duplicate };
+      })
+      .filter((row) => Boolean(row.values.company_name));
+  }, [rows, mapping, existing]);
 
-  function updateCompany(id: string, patch: Partial<Company>) {
-    setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-  }
-  function addContact(company: Company, contact?: Partial<ContactDraft>) {
-    const suggested = suggestProspectCategory({
-      headcount_range: company.headcount,
-      offer_target: company.offer || "SST",
-      sector: company.sector,
-      estimated_value: company.value,
-      comments: company.comments,
-      contactKnown: Boolean(contact?.firstName || contact?.lastName || contact?.role),
-    });
-    const draft: ContactDraft = {
-      firstName: contact?.firstName || "",
-      lastName: contact?.lastName || "",
-      role: contact?.role || "",
-      phone: contact?.phone || "",
-      email: contact?.email || "",
-      linkedin: contact?.linkedin || "",
-      maturity: "Pas joint",
-      offer: company.offer || "SST",
-      category: company.category || suggested?.category || "C – Porte d'entrée",
-      value: company.value || 0,
-      comments: "",
-    };
-    updateCompany(company.id, { contacts: [...company.contacts, draft] });
-  }
-  function updateContact(company: Company, idx: number, patch: Partial<ContactDraft>) {
-    updateCompany(company.id, {
-      contacts: company.contacts.map((c, i) => (i === idx ? { ...c, ...patch } : c)),
-      qualification: "Qualifié",
-    });
-  }
-  async function findContactEmail(company: Company, idx: number) {
-    const contact = company.contacts[idx];
-    const response = await runEmailFinder({
-      data: {
-        domain: company.website,
-        company: company.name,
-        firstName: contact.firstName,
-        lastName: contact.lastName,
-      },
-    });
-    if (response.status === "found") updateContact(company, idx, { email: response.email });
-    if (response.status === "missing_key")
-      updateContact(company, idx, {
-        comments: "Hunter.io non configuré : recherche manuelle à faire.",
-      });
-  }
+  const duplicateCount = mapped.filter((row) => row.duplicate).length;
+  const newCount = mapped.length - duplicateCount;
 
-  /** Retourne l'id d'un prospect déjà en base (même SIREN, ou même nom + ville). */
-  async function findExistingProspect(company: Company) {
-    if (company.siren) {
-      const { data } = await supabase
-        .from("prospects")
-        .select("id")
-        .eq("siren", company.siren)
-        .limit(1);
-      if (data?.length) return data[0].id;
-    }
-    const { data } = await supabase
-      .from("prospects")
-      .select("id")
-      .ilike("company_name", company.name)
-      .limit(5);
-    return data?.length ? data[0].id : null;
-  }
+  async function runImport() {
+    if (!mapped.length || busy) return;
+    setBusy(true);
+    let created = 0;
+    let completed = 0;
+    let skipped = 0;
+    let failed = 0;
 
-  async function saveAll(continueAfter = false) {
-    if (!companies.length) {
-      setSaveStatus("Aucune entreprise sélectionnée.");
-      return;
-    }
-    setSaveBusy(true);
-    setSaveStatus("Ajout au PRM en cours…");
-    let saved = 0;
-    const errors: string[] = [];
-    for (const company of companies) {
-      const first = company.contacts[0];
+    for (const row of mapped) {
+      const values = row.values;
+      const headcount = matchHeadcount(values.headcount_range || "");
+      const offer = matchOffer(values.offer_target || "");
+      const contact: Partial<Contact> = {
+        first_name: values.contact_first_name || null,
+        last_name: values.contact_last_name || null,
+        role_title: values.contact_role_title || null,
+        email: values.contact_email || null,
+        direct_phone: values.contact_phone || null,
+      };
       try {
-        const existing = await findExistingProspect(company);
-        await saveProspect(
-          {
-            ...(existing ? { id: existing } : {}),
-            company_name: company.name,
-            city: company.city,
-            headcount_range: (company.headcount || "20-49") as HeadcountRange,
-            offer_target: first?.offer || company.offer || "SST",
-            estimated_value:
-              first?.value || company.value || targetValueOf(company.headcount || "20-49"),
-            status: "À qualifier",
-            main_phone: company.phone || "",
-            website: company.website || "",
-            address: company.address || "",
-            reception_hours: company.hours || "",
-            comments: company.comments || "",
-            google_place_id: company.placeId || "",
-            siren: company.siren || "",
-            naf_code: company.naf || "",
-            source: company.source || source,
-            sector: company.sector || "",
-            batch_keyword: company.keyword || "",
-            external_source_id: company.externalId || company.siren || "",
-            import_source: "api_batch",
-          },
-          first
-            ? {
-                first_name: first.firstName,
-                last_name: first.lastName,
-                role_title: first.role,
-                direct_phone: first.phone,
-                email: first.email,
-                linkedin_url: first.linkedin,
-                maturity_level: first.maturity || null,
-                offer_target: first.offer || null,
-                estimated_value: first.value,
-                category: first.category || null,
-                comments: first.comments,
-              }
-            : undefined,
-        );
-        saved += 1;
-      } catch (error) {
-        errors.push(`${company.name} : ${(error as Error).message}`);
+        if (row.duplicate) {
+          if (!completeDuplicates) {
+            skipped += 1;
+            continue;
+          }
+          const target = row.duplicate;
+          const patch: Partial<Prospect> = {};
+          const fill = (key: keyof Prospect, value: string | null) => {
+            if (value && !target[key]) (patch as Record<string, unknown>)[key] = value;
+          };
+          fill("city", values.city || null);
+          fill("sector", values.sector || null);
+          fill("main_phone", values.main_phone || null);
+          fill("main_email", values.main_email || null);
+          fill("website", values.website || null);
+          fill("address", values.address || null);
+          fill("siren", values.siren || null);
+          fill("naf_code", values.naf_code || null);
+          fill("comments", values.comments || null);
+          if (headcount && !target.headcount_range) patch.headcount_range = headcount;
+          if (offer && !target.offer_target) patch.offer_target = offer;
+          const hasContactData = Boolean(
+            contact.first_name || contact.last_name || contact.email || contact.direct_phone,
+          );
+          if (Object.keys(patch).length) await updateProspect(target.id, patch);
+          if (hasContactData && !target.contacts.length) {
+            const { error } = await supabase
+              .from("contacts")
+              .insert({ ...contact, prospect_id: target.id } as never);
+            if (error) throw error;
+          }
+          if (Object.keys(patch).length || (hasContactData && !target.contacts.length)) {
+            completed += 1;
+          } else skipped += 1;
+        } else {
+          await saveProspect(
+            {
+              company_name: values.company_name as string,
+              city: values.city || null,
+              sector: values.sector || null,
+              main_phone: values.main_phone || null,
+              main_email: values.main_email || null,
+              website: values.website || null,
+              address: values.address || null,
+              siren: values.siren || null,
+              naf_code: values.naf_code || null,
+              comments: values.comments || null,
+              headcount_range: headcount || "20-49",
+              offer_target: offer || "SST",
+              estimated_value: targetValueOf(headcount || "20-49"),
+              status: "À qualifier",
+              import_source: "csv",
+            } as Partial<Prospect> & { company_name: string },
+            contact,
+          );
+          created += 1;
+        }
+      } catch {
+        failed += 1;
       }
     }
-    setSaveBusy(false);
-    if (errors.length) {
-      setSaveStatus(
-        `${saved} prospect(s) ajouté(s), ${errors.length} en échec — ${errors.slice(0, 3).join(" · ")}`,
-      );
-      return;
-    }
-    setSaveStatus(`${saved} prospect(s) ajouté(s) à la base.`);
-    if (continueAfter) {
-      setStep(1);
-      setResults([]);
-      setCompanies([]);
-    } else {
-      navigate({ to: "/prospects" });
-    }
-  }
 
+    setExisting(await loadProspects());
+    setBusy(false);
+    setStatus(
+      `Import terminé : ${created} fiche(s) créée(s), ${completed} doublon(s) complété(s), ${skipped} ignoré(s)${failed ? `, ${failed} en erreur` : ""}.`,
+    );
+  }
 
   return (
     <>
       <PageTitle
-        title="Intégration prospects"
-        subtitle="Recherche, enrichissement, contacts et qualification finale."
+        title="Import CSV"
+        subtitle="Déposez un fichier, mappez les colonnes, vérifiez l'aperçu, importez."
+        action={
+          <Link
+            to="/prospects"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Retour aux prospects
+          </Link>
+        }
       />
-      <Stepper step={step} setStep={setStep} />
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
-        <Card className="p-4">
-          {step === 1 && (
-            <Step1
-              filters={filters}
-              setFilters={setFilters}
-              source={source}
-              setSource={setSource}
-              loading={loading}
-              results={results}
-              quotaBanner={quotaBanner}
-              batchRuns={batchRuns}
-              missingKeys={missingKeys}
-              searchCompanies={searchCompanies}
-              switchSource={switchSource}
-              selectCompany={selectCompany}
-              selected={companies}
-            />
-          )}
-          {step === 2 && (
-            <Step2 companies={companies} updateCompany={updateCompany} enrichAll={enrichAll} />
-          )}
-          {step === 3 && (
-            <Step3
-              companies={companies}
-              addContact={addContact}
-              updateContact={updateContact}
-              findContactEmail={findContactEmail}
-            />
-          )}
-          {step === 4 && (
-            <Step4
-              companies={companies}
-              updateContact={updateContact}
-              findContactEmail={findContactEmail}
-              updateCompany={updateCompany}
-              saveAll={saveAll}
-            />
-          )}
-          {saveStatus ? (
-            <p
-              className={`mt-3 rounded-md border px-3 py-2 text-sm ${
-                saveStatus.includes("échec")
-                  ? "border-destructive/40 bg-destructive/10 text-destructive"
-                  : "border-border bg-muted text-muted-foreground"
-              }`}
-            >
-              {saveBusy ? "⏳ " : ""}
-              {saveStatus}
-            </p>
-          ) : null}
 
-          {step < 4 ? (
-            <div className="mt-5 flex justify-end">
-              <Button
-                onClick={() => setStep(step + 1)}
-                disabled={step === 1 && companies.length === 0}
-              >
-                Passer à l'étape {step + 1} <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          ) : null}
+      {status ? <p className="mb-4 rounded-lg bg-script p-3 text-sm">{status}</p> : null}
+
+      <div className="grid gap-4">
+        <Card className="p-4">
+          <h3 className="text-[16px] font-medium">1. Fichier</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            CSV séparé par point-virgule, virgule ou tabulation. La première ligne doit contenir les
+            intitulés de colonnes.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void handleFile(file);
+              }}
+            />
+            <Button variant="neutral" onClick={() => inputRef.current?.click()}>
+              <FileUp className="mr-2 h-4 w-4" />
+              Choisir un fichier CSV
+            </Button>
+            {fileName ? (
+              <span className="text-sm text-muted-foreground">
+                {fileName} · {rows.length} ligne(s)
+              </span>
+            ) : null}
+          </div>
         </Card>
-        <Summary companies={companies} active={selectedCompany?.id} setActive={setActiveCompany} />
+
+        {headers.length ? (
+          <Card className="p-4">
+            <h3 className="text-[16px] font-medium">2. Mappage des colonnes</h3>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              {importFields.map((field) => (
+                <label key={field.key} className="grid gap-1">
+                  <span className={labelClass}>{field.label}</span>
+                  <select
+                    className={fieldClass}
+                    value={mapping[field.key] || ""}
+                    onChange={(event) =>
+                      setMapping((prev) => ({
+                        ...prev,
+                        [field.key]: event.target.value || undefined,
+                      }))
+                    }
+                  >
+                    <option value="">— ignorer —</option>
+                    {headers.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+            {!mapping.company_name ? (
+              <p role="alert" className="mt-3 text-sm text-destructive">
+                La colonne « Entreprise » est obligatoire pour continuer.
+              </p>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {mapped.length ? (
+          <Card className="overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
+              <div>
+                <h3 className="text-[16px] font-medium">3. Aperçu</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {newCount} nouvelle(s) fiche(s) · {duplicateCount} doublon(s) détecté(s) sur
+                  entreprise + ville.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={completeDuplicates}
+                    onChange={(event) => setCompleteDuplicates(event.target.checked)}
+                  />
+                  Compléter les champs vides des doublons
+                </label>
+                <Button onClick={runImport} disabled={busy}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {busy ? "Import en cours…" : `Importer ${mapped.length} ligne(s)`}
+                </Button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-secondary text-xs uppercase text-muted-foreground">
+                  <tr>
+                    {["Entreprise", "Ville", "Téléphone", "Contact", "Traitement"].map((head) => (
+                      <th key={head} className="px-4 py-3">
+                        {head}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {mapped.slice(0, 30).map((row) => (
+                    <tr key={row.index} className="border-t border-border">
+                      <td className="px-4 py-3 font-medium">{row.values.company_name}</td>
+                      <td className="px-4 py-3">{row.values.city || "—"}</td>
+                      <td className="px-4 py-3">{row.values.main_phone || "—"}</td>
+                      <td className="px-4 py-3">
+                        {[row.values.contact_first_name, row.values.contact_last_name]
+                          .filter(Boolean)
+                          .join(" ") || "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.duplicate ? (
+                          <span className="text-action-callback-foreground">
+                            {completeDuplicates
+                              ? "Doublon → compléter la fiche existante"
+                              : "Doublon → ignorer"}
+                          </span>
+                        ) : (
+                          "Création"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {mapped.length > 30 ? (
+              <p className="border-t border-border p-4 text-sm text-muted-foreground">
+                Aperçu limité aux 30 premières lignes ; l'import traite les {mapped.length} lignes.
+              </p>
+            ) : null}
+          </Card>
+        ) : null}
       </div>
     </>
-  );
-}
-
-function Stepper({ step, setStep }: { step: number; setStep: (s: number) => void }) {
-  return (
-    <div className="flex items-center gap-2 overflow-x-auto">
-      {["Recherche entreprise", "Enrichissement", "Recherche contact", "Qualification finale"].map(
-        (label, i) => {
-          const n = i + 1;
-          const state =
-            n < step
-              ? "bg-status-won text-primary-foreground"
-              : n === step
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-muted-foreground";
-          return (
-            <button
-              key={label}
-              onClick={() => n <= step && setStep(n)}
-              className="flex shrink-0 items-center gap-2"
-            >
-              <span
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${state}`}
-              >
-                {n < step ? <Check className="h-4 w-4" /> : n}
-              </span>
-              <span className="text-sm font-medium">{label}</span>
-              {n < 4 ? <span className="h-px w-8 bg-border" /> : null}
-            </button>
-          );
-        },
-      )}
-    </div>
-  );
-}
-function Step1(props: Step1Props) {
-  const keywordCount = props.filters.keywords
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean).length;
-  return (
-    <div className="grid gap-4">
-      <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
-        Un mot-clé lance une recherche. Plusieurs lignes créent un batch complet, avec un suivi par
-        mot-clé.
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {batchPresets.map((preset) => (
-          <Button
-            key={preset.label}
-            variant="neutral"
-            onClick={() =>
-              props.setFilters({
-                ...props.filters,
-                keywords: preset.keywords,
-                sector: preset.sector,
-                departments: preset.departments,
-              })
-            }
-          >
-            {preset.label}
-          </Button>
-        ))}
-      </div>
-      <div className="grid gap-2 rounded-lg border border-border bg-card p-3 text-sm md:grid-cols-5">
-        <ServiceStatus
-          label="Pappers"
-          ok={!props.missingKeys.some((key) => key.includes("PAPPERS"))}
-          fallback="fallback Annuaire"
-        />
-        <ServiceStatus
-          label="INSEE Sirene"
-          ok={!props.missingKeys.some((key) => key.includes("SIRENE"))}
-          fallback="fallback Annuaire"
-        />
-        <ServiceStatus label="Annuaire" ok fallback="gratuit" />
-        <ServiceStatus
-          label="Google Places"
-          ok={!props.missingKeys.some((key) => key.includes("GOOGLE"))}
-          fallback="saisie manuelle"
-        />
-        <ServiceStatus
-          label="Hunter.io"
-          ok={!props.missingKeys.some((key) => key.includes("HUNTER"))}
-          fallback="recherche manuelle"
-        />
-      </div>
-      <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
-        <textarea
-          className={`${fieldClass} min-h-28 py-2`}
-          placeholder={"Mots-clés batch, un par ligne\nindustrie annonay\nlogistique valence"}
-          value={props.filters.keywords}
-          onChange={(e) =>
-            props.setFilters({
-              ...props.filters,
-              keywords: e.target.value,
-              q: e.target.value.split("\n")[0] || "",
-            })
-          }
-        />
-        <select
-          className={fieldClass}
-          value={props.filters.sector}
-          onChange={(e) => props.setFilters({ ...props.filters, sector: e.target.value })}
-        >
-          {sectors.map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
-        <input
-          className={fieldClass}
-          placeholder="Statut juridique"
-          value={props.filters.legal}
-          onChange={(e) => props.setFilters({ ...props.filters, legal: e.target.value })}
-        />
-      </div>
-      <div className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
-        <div>
-          <label className={labelClass}>Source de recherche</label>
-          <select
-            className={`${fieldClass} mt-1 w-full`}
-            value={props.source}
-            onChange={(e) => props.setSource(e.target.value as SearchSource)}
-          >
-            {Object.entries(sources).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {quotas[props.source as SearchSource]}
-          </p>
-        </div>
-        <div>
-          <label className={labelClass}>Résultats par mot-clé</label>
-          <input
-            className={`${fieldClass} mt-1 w-full`}
-            type="number"
-            min={1}
-            max={25}
-            value={props.filters.limit}
-            onChange={(e) => props.setFilters({ ...props.filters, limit: Number(e.target.value) })}
-          />
-          <p className="mt-1 text-xs text-muted-foreground">{keywordCount} mot(s)-clé(s)</p>
-        </div>
-        <Button onClick={() => props.searchCompanies()} disabled={props.loading}>
-          <Search className="mr-2 h-4 w-4" />
-          {props.loading ? "Batch en cours…" : "Lancer le batch"}
-        </Button>
-      </div>
-      {props.quotaBanner ? (
-        <div className="rounded-lg bg-script p-3 text-sm">
-          Certaines recherches n'ont pas abouti — basculer vers une autre source ?{" "}
-          <button className="ml-3 underline" onClick={() => props.switchSource("insee")}>
-            INSEE Sirene
-          </button>
-          <button className="ml-3 underline" onClick={() => props.switchSource("annuaire")}>
-            Annuaire Entreprises
-          </button>
-        </div>
-      ) : null}
-      {props.missingKeys.length ? (
-        <div className="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">
-          API à configurer : {props.missingKeys.join(", ")}. Les sources gratuites ou la saisie
-          manuelle restent utilisables.
-        </div>
-      ) : null}
-      {props.batchRuns.length ? (
-        <div className="grid gap-2 md:grid-cols-3">
-          {props.batchRuns.map((run) => (
-            <div
-              key={`${run.keyword}-${run.source}`}
-              className="rounded-lg border border-border bg-card p-3 text-sm"
-            >
-              <p className="font-medium">{run.keyword}</p>
-              <p className="text-muted-foreground">
-                {sources[run.source]} · {run.count} résultat(s)
-              </p>
-              {run.error ? <p className="text-xs text-muted-foreground">{run.error}</p> : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-secondary text-xs uppercase text-muted-foreground">
-            <tr>
-              {["Mot-clé", "Source", "Nom", "Ville", "Effectifs", "NAF", "SIREN", "Score", ""].map(
-                (h) => (
-                  <th key={h} className="px-3 py-2">
-                    {h}
-                  </th>
-                ),
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {props.results.map((r: Company) => (
-              <tr key={r.id} className="border-t border-border">
-                <td className="px-3 py-2">{r.keyword || "—"}</td>
-                <td className="px-3 py-2">{r.source ? sources[r.source] : "—"}</td>
-                <td className="px-3 py-2">{r.name}</td>
-                <td className="px-3 py-2">{r.city}</td>
-                <td className="px-3 py-2">{r.headcount}</td>
-                <td className="px-3 py-2">{r.naf}</td>
-                <td className="px-3 py-2">{r.siren}</td>
-                <td className="px-3 py-2">{r.score || "—"}</td>
-
-                <td className="px-3 py-2">
-                  <Button variant="neutral" onClick={() => props.selectCompany(r)}>
-                    Sélectionner
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        {props.selected.length} entreprise(s) en staging.
-      </p>
-    </div>
-  );
-}
-function Step2({
-  companies,
-  updateCompany,
-  enrichAll,
-}: {
-  companies: Company[];
-  updateCompany: (id: string, p: Partial<Company>) => void;
-  enrichAll: () => void;
-}) {
-  return (
-    <div className="grid gap-3">
-      <div className="flex justify-end">
-        <Button variant="neutral" onClick={enrichAll}>
-          Relancer l'enrichissement
-        </Button>
-      </div>
-      {companies.map((c) => (
-        <Card key={c.id} className="p-4">
-          <div className="flex justify-between">
-            <h3 className="font-medium">{c.name}</h3>
-            <span className="text-sm text-muted-foreground">{c.enrichment}</span>
-          </div>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <input
-              className={fieldClass}
-              placeholder="Numéro accueil"
-              value={c.phone || ""}
-              onChange={(e) => updateCompany(c.id, { phone: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Site web"
-              value={c.website || ""}
-              onChange={(e) => updateCompany(c.id, { website: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Adresse complète"
-              value={c.address || ""}
-              onChange={(e) => updateCompany(c.id, { address: e.target.value })}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Google Place ID"
-              value={c.placeId || ""}
-              onChange={(e) => updateCompany(c.id, { placeId: e.target.value })}
-            />
-          </div>
-          <textarea
-            className={`${fieldClass} mt-3 min-h-20 w-full py-2`}
-            placeholder="Horaires"
-            value={c.hours || ""}
-            onChange={(e) => updateCompany(c.id, { hours: e.target.value })}
-          />
-        </Card>
-      ))}
-    </div>
-  );
-}
-function Step3({
-  companies,
-  addContact,
-  updateContact,
-  findContactEmail,
-}: {
-  companies: Company[];
-  addContact: (company: Company, contact?: Partial<ContactDraft>) => void;
-  updateContact: UpdateContact;
-  findContactEmail: FindContactEmail;
-}) {
-  return (
-    <div className="grid gap-3">
-      {companies.map((c: Company) => (
-        <Card key={c.id} className="p-4">
-          <h3 className="font-medium">{c.name}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {c.sector?.includes("Médico")
-              ? "Cibles prioritaires : Direction, Responsable formation, Infirmier(e) coordinateur(trice), Référent prévention"
-              : c.sector?.includes("Transport")
-                ? "Cibles prioritaires : Responsable QSE/HSE, DRH, Gérant, Référent sécurité"
-                : "Cibles prioritaires : Responsable HSE/QSE, Responsable RH, Dirigeant, CSE"}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              variant="neutral"
-              onClick={() => window.open(`${c.website || ""}/contact`, "_blank")}
-            >
-              Site web → Page équipe
-            </Button>
-            <Button
-              variant="neutral"
-              onClick={() =>
-                window.open(
-                  `https://www.google.com/search?q=${encodeURIComponent(`"${c.name}" "responsable RH" OR "responsable sécurité" OR "QHSE" OR "responsable HSE" OR "DRH" site:linkedin.com`)}`,
-                  "_blank",
-                )
-              }
-            >
-              Google : RH/HSE/Prévention
-            </Button>
-            <Button
-              variant="neutral"
-              onClick={() => window.open("https://hunter.io/search", "_blank")}
-            >
-              Hunter.io : trouver email
-            </Button>
-            <Button onClick={() => addContact(c)}>Ajouter contact manuellement</Button>
-          </div>
-          {c.representatives?.map((r) => (
-            <Button
-              key={r.name}
-              className="mt-2"
-              variant="info"
-              onClick={() =>
-                addContact(c, {
-                  firstName: r.name.split(" ")[0],
-                  lastName: r.name.split(" ").slice(1).join(" "),
-                  role: r.role,
-                })
-              }
-            >
-              Ajouter {r.name}
-            </Button>
-          ))}
-          <ContactEditors
-            company={c}
-            updateContact={updateContact}
-            findContactEmail={findContactEmail}
-          />
-        </Card>
-      ))}
-    </div>
-  );
-}
-function Step4({
-  companies,
-  updateContact,
-  findContactEmail,
-  updateCompany,
-  saveAll,
-}: {
-  companies: Company[];
-  updateContact: UpdateContact;
-  findContactEmail: FindContactEmail;
-  updateCompany: (id: string, patch: Partial<Company>) => void;
-  saveAll: (continueAfter?: boolean) => void;
-}) {
-  return (
-    <div className="grid gap-3">
-      {companies.map((c: Company) => (
-        <Card key={c.id} className="p-4">
-          <div className="flex justify-between gap-2">
-            <h3 className="font-medium">{c.name}</h3>
-            <CategoryBadge
-              category={c.contacts[0]?.category || c.category || "C – Porte d'entrée"}
-            />
-          </div>
-          <ContactEditors
-            company={c}
-            updateContact={updateContact}
-            findContactEmail={findContactEmail}
-            qualification
-          />
-          <textarea
-            className={`${fieldClass} mt-3 min-h-20 w-full py-2`}
-            placeholder="Commentaires entreprise"
-            value={c.comments || ""}
-            onChange={(e) => updateCompany(c.id, { comments: e.target.value })}
-          />
-        </Card>
-      ))}
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="neutral" onClick={() => saveAll(true)}>
-          Sauvegarder et continuer
-        </Button>
-        <Button onClick={() => saveAll(false)}>Ajouter au PRM</Button>
-      </div>
-    </div>
-  );
-}
-function ContactEditors({
-  company,
-  updateContact,
-  findContactEmail,
-  qualification = false,
-}: {
-  company: Company;
-  updateContact: UpdateContact;
-  findContactEmail: FindContactEmail;
-  qualification?: boolean;
-}) {
-  return (
-    <div className="mt-3 grid gap-3">
-      {company.contacts.map((ct: ContactDraft, idx: number) => {
-        const autoCategory = suggestProspectCategory({
-          headcount_range: company.headcount,
-          offer_target: ct.offer,
-          sector: company.sector,
-          estimated_value: ct.value,
-          comments: [company.comments, ct.comments].filter(Boolean).join(" "),
-          contactKnown: Boolean(ct.firstName || ct.lastName || ct.role || ct.email || ct.phone),
-        });
-        return (
-          <div key={idx} className="rounded-lg border border-border bg-background p-3">
-            <div className="grid gap-2 md:grid-cols-3">
-              <input
-                className={fieldClass}
-                placeholder="Prénom"
-                value={ct.firstName}
-                onChange={(e) => updateContact(company, idx, { firstName: e.target.value })}
-              />
-              <input
-                className={fieldClass}
-                placeholder="Nom"
-                value={ct.lastName}
-                onChange={(e) => updateContact(company, idx, { lastName: e.target.value })}
-              />
-              <input
-                className={fieldClass}
-                placeholder="Rôle/Titre"
-                value={ct.role}
-                onChange={(e) => updateContact(company, idx, { role: e.target.value })}
-              />
-              <input
-                className={fieldClass}
-                placeholder="Téléphone direct"
-                value={ct.phone}
-                onChange={(e) => updateContact(company, idx, { phone: e.target.value })}
-              />
-              <input
-                className={fieldClass}
-                placeholder="Email"
-                value={ct.email}
-                onChange={(e) => updateContact(company, idx, { email: e.target.value })}
-              />
-              <input
-                className={fieldClass}
-                placeholder="LinkedIn URL"
-                value={ct.linkedin}
-                onChange={(e) => updateContact(company, idx, { linkedin: e.target.value })}
-              />
-            </div>
-            {qualification ? (
-              <div className="mt-2 grid gap-2 md:grid-cols-4">
-                <select
-                  className={fieldClass}
-                  value={ct.maturity}
-                  onChange={(e) => updateContact(company, idx, { maturity: e.target.value })}
-                >
-                  {[
-                    "Pas joint",
-                    "Intérêt",
-                    "RDV",
-                    "Devis",
-                    "Décision",
-                    "Pas de sujet",
-                    "Intérêt à relancer",
-                  ].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <select
-                  className={fieldClass}
-                  value={ct.offer}
-                  onChange={(e) =>
-                    updateContact(company, idx, { offer: e.target.value as OfferTarget })
-                  }
-                >
-                  {offerTargets.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <select
-                  className={fieldClass}
-                  value={ct.category}
-                  onChange={(e) =>
-                    updateContact(company, idx, { category: e.target.value as Category })
-                  }
-                >
-                  {categories.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <input
-                  className={fieldClass}
-                  type="number"
-                  value={ct.value}
-                  onChange={(e) => updateContact(company, idx, { value: Number(e.target.value) })}
-                />
-                {autoCategory && autoCategory.category !== ct.category ? (
-                  <button
-                    type="button"
-                    onClick={() => updateContact(company, idx, { category: autoCategory.category })}
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs text-secondary-foreground hover:bg-accent md:col-span-4"
-                  >
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium uppercase text-primary-foreground">
-                      Auto
-                    </span>
-                    {autoCategory.category} · {autoCategory.reasons.join(", ")}
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-            <div className="mt-2 flex gap-2">
-              <Button
-                variant="neutral"
-                onClick={() =>
-                  window.open(
-                    `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${ct.firstName} ${ct.lastName} ${company.name}`)}`,
-                    "_blank",
-                  )
-                }
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Rechercher sur LinkedIn
-              </Button>
-              <Button variant="neutral" onClick={() => findContactEmail(company, idx)}>
-                Trouver email Hunter.io
-              </Button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-function Summary({
-  companies,
-  active,
-  setActive,
-}: {
-  companies: Company[];
-  active?: string;
-  setActive: (id: string) => void;
-}) {
-  return (
-    <Card className="p-4">
-      <h3 className="text-[16px] font-medium">Résumé session</h3>
-      <div className="mt-3 grid gap-2">
-        {companies.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setActive(c.id)}
-            className={`rounded-lg border border-border p-3 text-left ${active === c.id ? "bg-script" : "bg-card"}`}
-          >
-            <p className="font-medium">{c.name}</p>
-            <p className="text-sm text-muted-foreground">
-              {c.city} · {c.contacts.length} contact(s)
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Enrichissement : {c.enrichment} · {c.qualification}
-            </p>
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function ServiceStatus({ label, ok, fallback }: { label: string; ok: boolean; fallback: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <p className="font-medium">{label}</p>
-      <p className="text-xs text-muted-foreground">
-        {ok ? "Configuré ou disponible" : "Non configuré"} · {fallback}
-      </p>
-    </div>
   );
 }

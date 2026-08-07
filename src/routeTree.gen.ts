@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SessionAppelsRouteImport } from './routes/session-appels'
-import { Route as QualificationRouteImport } from './routes/qualification'
 import { Route as ProspectsRouteImport } from './routes/prospects'
 import { Route as ParkingRouteImport } from './routes/parking'
 import { Route as ModelesRouteImport } from './routes/modeles'
@@ -36,11 +35,6 @@ const StatsRoute = StatsRouteImport.update({
 const SessionAppelsRoute = SessionAppelsRouteImport.update({
   id: '/session-appels',
   path: '/session-appels',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QualificationRoute = QualificationRouteImport.update({
-  id: '/qualification',
-  path: '/qualification',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProspectsRoute = ProspectsRouteImport.update({
@@ -134,7 +128,6 @@ export interface FileRoutesByFullPath {
   '/modeles': typeof ModelesRoute
   '/parking': typeof ParkingRoute
   '/prospects': typeof ProspectsRoute
-  '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -154,7 +147,6 @@ export interface FileRoutesByTo {
   '/modeles': typeof ModelesRoute
   '/parking': typeof ParkingRoute
   '/prospects': typeof ProspectsRoute
-  '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -175,7 +167,6 @@ export interface FileRoutesById {
   '/modeles': typeof ModelesRoute
   '/parking': typeof ParkingRoute
   '/prospects': typeof ProspectsRoute
-  '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
   '/stats': typeof StatsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -197,7 +188,6 @@ export interface FileRouteTypes {
     | '/modeles'
     | '/parking'
     | '/prospects'
-    | '/qualification'
     | '/session-appels'
     | '/stats'
     | '/.mcp/list-tools'
@@ -217,7 +207,6 @@ export interface FileRouteTypes {
     | '/modeles'
     | '/parking'
     | '/prospects'
-    | '/qualification'
     | '/session-appels'
     | '/stats'
     | '/.mcp/list-tools'
@@ -237,7 +226,6 @@ export interface FileRouteTypes {
     | '/modeles'
     | '/parking'
     | '/prospects'
-    | '/qualification'
     | '/session-appels'
     | '/stats'
     | '/.mcp/list-tools'
@@ -258,7 +246,6 @@ export interface RootRouteChildren {
   ModelesRoute: typeof ModelesRoute
   ParkingRoute: typeof ParkingRoute
   ProspectsRoute: typeof ProspectsRoute
-  QualificationRoute: typeof QualificationRoute
   SessionAppelsRoute: typeof SessionAppelsRoute
   StatsRoute: typeof StatsRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -281,13 +268,6 @@ declare module '@tanstack/react-router' {
       path: '/session-appels'
       fullPath: '/session-appels'
       preLoaderRoute: typeof SessionAppelsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/qualification': {
-      id: '/qualification'
-      path: '/qualification'
-      fullPath: '/qualification'
-      preLoaderRoute: typeof QualificationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prospects': {
@@ -410,7 +390,6 @@ const rootRouteChildren: RootRouteChildren = {
   ModelesRoute: ModelesRoute,
   ParkingRoute: ParkingRoute,
   ProspectsRoute: ProspectsRoute,
-  QualificationRoute: QualificationRoute,
   SessionAppelsRoute: SessionAppelsRoute,
   StatsRoute: StatsRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
