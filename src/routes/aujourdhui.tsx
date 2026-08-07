@@ -1,11 +1,12 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, CalendarClock, Coins, PhoneCall, Search, UserRoundCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, Coins, PhoneCall, Search, UserRoundCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import { Card, PageTitle, SegmentBadge, StatusBadge, labelClass } from "@/components/prm/ui";
 import {
   bestPhone,
+  brokenPromises,
   contactName,
   formatDate,
   formatEuro,
@@ -14,12 +15,14 @@ import {
   loadProspects,
   prioritizeCallSession,
   prioritizeQualificationSession,
+  setPromiseKept,
   shortDateTime,
   todayIsoDate,
   type ProspectionLog,
   type Prospect,
   type ProspectWithRelations,
 } from "@/lib/prm";
+
 
 export const Route = createFileRoute("/aujourdhui")({
   head: () => ({
@@ -60,9 +63,26 @@ function TodayPage() {
     const callReminders = callCycle.filter((p) => isDueTodayOrLate(p.next_action_date)).length;
     const qualificationCycle = prioritizeQualificationSession(active, 20);
     const dayValue = callCycle.reduce((sum, p) => sum + Number(p.estimated_value || 0), 0);
+    const promises = brokenPromises(logs);
 
-    return { reminders, meetings, callCycle, callReminders, qualificationCycle, dayValue };
+    return {
+      reminders,
+      meetings,
+      callCycle,
+      callReminders,
+      qualificationCycle,
+      dayValue,
+      promises,
+    };
   }, [logs, prospects, today]);
+
+  async function keepPromise(logId: string) {
+    await setPromiseKept(logId, true);
+    setLogs((prev) =>
+      prev.map((log) => (log.id === logId ? { ...log, promise_kept: true } : log)),
+    );
+  }
+
 
   return (
     <>
@@ -78,6 +98,59 @@ function TodayPage() {
           </Link>
         }
       />
+
+      {dashboard.promises.length ? (
+        <div className="mb-4 rounded-xl border-2 border-destructive bg-destructive/10 p-4">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <h2 className="text-[16px] font-semibold">
+              Promesses non tenues ({dashboard.promises.length})
+            </h2>
+          </div>
+          <p className="mt-1 text-sm text-destructive/90">
+            Engagements pris auprès du prospect et arrivés à échéance — à traiter avant tout le reste.
+          </p>
+          <div className="mt-3 grid gap-2">
+            {dashboard.promises.map((log) => (
+              <div
+                key={log.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/40 bg-card p-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">
+                    {log.prospects?.company_name || "Prospect"}
+                    <span className="ml-2 font-normal text-destructive">
+                      promis pour le {formatDate(log.promise_date)}
+                    </span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    « {log.promise_text || log.action_type} »
+                    {log.template_used ? ` · modèle : ${log.template_used}` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {log.prospects?.id ? (
+                    <Link
+                      to="/prospects"
+                      className="inline-flex min-h-9 items-center rounded-lg bg-secondary px-3 text-sm font-medium text-secondary-foreground hover:bg-accent"
+                    >
+                      Ouvrir
+                    </Link>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => keepPromise(log.id)}
+                    className="inline-flex min-h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    Promesse tenue
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
 
       <div className="grid gap-3 md:grid-cols-5">
         <Kpi

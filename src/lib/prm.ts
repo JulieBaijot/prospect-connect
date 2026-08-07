@@ -134,12 +134,21 @@ export interface ProspectionLog {
   objective: string | null;
   result: LogResult | null;
   notes: string | null;
+  /** Relance que je me fixe à moi-même. */
   next_action_date: string | null;
   meeting_date: string | null;
   meeting_duration_minutes: number | null;
   video_link: string | null;
+  /** Engagement pris auprès du prospect, en clair. */
+  promise_text: string | null;
+  /** Date promise au prospect — distincte de next_action_date. */
+  promise_date: string | null;
+  promise_kept: boolean | null;
+  /** Modèle d'email utilisé (canal email). */
+  template_used: string | null;
   created_at: string;
 }
+
 
 export interface ProspectWithRelations extends Prospect {
   contacts: Contact[];
@@ -697,6 +706,47 @@ export function suggestProspectCategory(input: {
   return null;
 }
 
+/** Modèles d'email disponibles, tracés dans `template_used`. */
+export const emailTemplates = [
+  "Prise de contact — DUERP",
+  "Prise de contact — SST",
+  "Prise de contact — SSCT / CSE",
+  "Prise de contact — QVCT / RPS",
+  "Relance après appel",
+  "Envoi de coordonnées",
+  "Proposition de créneau RDV",
+  "Devis / proposition",
+];
+
+/** Un email consigné ne peut pas proposer un rappel le jour même : minimum J+1. */
+export function minCallbackDate(canal: Canal | string | null | undefined) {
+  return canal === "email" ? addDaysIso(1).slice(0, 10) : todayIsoDate();
+}
+
+export function enforceCallbackRule(canal: Canal | string | null | undefined, date: string) {
+  const min = minCallbackDate(canal);
+  if (!date) return min;
+  return date < min ? min : date;
+}
+
+/** Promesse faite au prospect et non tenue (date passée ou du jour, non cochée). */
+export function isPromiseBroken(log: {
+  promise_date?: string | null;
+  promise_kept?: boolean | null;
+}) {
+  if (!log.promise_date || log.promise_kept === true) return false;
+  return log.promise_date <= todayIsoDate();
+}
+
+export function brokenPromises<T extends { promise_date?: string | null; promise_kept?: boolean | null }>(
+  logs: T[],
+) {
+  return logs
+    .filter(isPromiseBroken)
+    .sort((a, b) => (a.promise_date || "").localeCompare(b.promise_date || ""));
+}
+
+
 export function statusBandClass(status: ProspectStatus | null | undefined) {
   if (status === "En contact" || status === "En discussion") return "bg-status-hot";
   if (status === "À qualifier") return "bg-status-warm";
@@ -890,6 +940,15 @@ export async function addLog(
   if (error) throw error;
   return data as unknown as ProspectionLog;
 }
+
+export async function setPromiseKept(logId: string, kept: boolean | null) {
+  const { error } = await supabase
+    .from("prospection_logs")
+    .update({ promise_kept: kept } as never)
+    .eq("id", logId);
+  if (error) throw error;
+}
+
 
 export async function updateProspect(id: string, payload: Partial<Prospect>) {
   const { error } = await supabase

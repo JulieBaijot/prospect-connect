@@ -17,11 +17,14 @@ import {
   contactName,
   dataQualityIssues,
   dateForOutcome,
+  emailTemplates,
+  enforceCallbackRule,
   formatDate,
   formatEuro,
   headcountRanges,
   loadProspects,
   currentStageOf,
+  minCallbackDate,
   nodeForStage,
   offerTargets,
   playbookNodes,
@@ -31,12 +34,14 @@ import {
   stages,
   statuses,
   updateProspect,
+  type Canal,
   type CycleStage,
   type PlaybookOutcome,
   type Prospect,
   type ProspectStatus,
   type ProspectWithRelations,
 } from "@/lib/prm";
+
 
 export const Route = createFileRoute("/session-appels")({
   head: () => ({
@@ -88,6 +93,11 @@ function SessionPage() {
   const [overrideStatus, setOverrideStatus] = useState<ProspectStatus | "">("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [canal, setCanal] = useState<Canal>("téléphone");
+  const [templateUsed, setTemplateUsed] = useState("");
+  const [promiseText, setPromiseText] = useState("");
+  const [promiseDate, setPromiseDate] = useState("");
+
   const [pickedIds, setPickedIds] = useState<string[]>([]);
   const [pickerQuery, setPickerQuery] = useState("");
   const [sessionSize, setSessionSize] = useState(3);
@@ -159,6 +169,10 @@ function SessionPage() {
     setMeetingDate("");
     setVideoLink("");
     setMessage("");
+    setCanal("téléphone");
+    setTemplateUsed("");
+    setPromiseText("");
+    setPromiseDate("");
     setActiveContactId(null);
     setSelectedOutcome(null);
     setOverrideStage("");
@@ -166,6 +180,7 @@ function SessionPage() {
     setEditOpen(false);
     setEditForm({});
   }
+
 
   function nextCard() {
     resetCardState();
@@ -246,7 +261,7 @@ function SessionPage() {
       prospect_id: current.id,
       contact_id: contact?.id,
       action_type: outcome.actionType,
-      canal: "téléphone",
+      canal,
       stage,
       objective: activeNode?.objective,
       result: outcome.result,
@@ -255,6 +270,10 @@ function SessionPage() {
       meeting_date: options.meetingAt,
       meeting_duration_minutes: options.meetingAt ? duration : undefined,
       video_link: options.meetingAt ? videoLink : undefined,
+      promise_text: promiseText || null,
+      promise_date: promiseText ? promiseDate || null : null,
+      promise_kept: null,
+      template_used: canal === "email" ? templateUsed || null : null,
     });
     await updateProspect(current.id, {
       status,
@@ -278,11 +297,21 @@ function SessionPage() {
       setMessage("Choisissez une prochaine date d'action pour garder la relance sous contrôle.");
       return;
     }
+    if (promiseText && !promiseDate) {
+      setMessage("Indiquez la date promise au prospect (ou effacez la promesse).");
+      return;
+    }
+    if (!isLost && canal === "email" && callbackDate < minCallbackDate("email")) {
+      setMessage("Email consigné : la relance ne peut pas être le jour même — au plus tôt demain.");
+      setCallbackDate(minCallbackDate("email"));
+      return;
+    }
     await saveOutcome(selectedOutcome, {
       nextActionDate: callbackDate || undefined,
       customNotes: notes,
     });
   }
+
 
   function markLost() {
     selectOutcome(LOST_OUTCOME);
@@ -699,21 +728,81 @@ function SessionPage() {
                     </option>
                   ))}
                 </select>
+                <label className={labelClass}>Canal consigné</label>
+                <select
+                  className={fieldClass}
+                  value={canal}
+                  onChange={(e) => {
+                    const value = e.target.value as Canal;
+                    setCanal(value);
+                    setCallbackDate((prev) => enforceCallbackRule(value, prev));
+                  }}
+                >
+                  <option value="téléphone">Téléphone</option>
+                  <option value="email">Email</option>
+                  <option value="physique">Physique</option>
+                </select>
+                {canal === "email" ? (
+                  <>
+                    <label className={labelClass}>Modèle d'email utilisé</label>
+                    <select
+                      className={fieldClass}
+                      value={templateUsed}
+                      onChange={(e) => setTemplateUsed(e.target.value)}
+                    >
+                      <option value="">— Aucun / autre</option>
+                      {emailTemplates.map((template) => (
+                        <option key={template} value={template}>
+                          {template}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : null}
+
+                <label className={labelClass}>Promesse faite au prospect (facultatif)</label>
+                <input
+                  className={fieldClass}
+                  value={promiseText}
+                  onChange={(e) => setPromiseText(e.target.value)}
+                  placeholder="ex. je vous rappelle vendredi"
+                />
+                {promiseText ? (
+                  <>
+                    <label className={labelClass}>Date promise (engagement pris)</label>
+                    <input
+                      className={fieldClass}
+                      type="date"
+                      value={promiseDate}
+                      onChange={(e) => setPromiseDate(e.target.value)}
+                    />
+                  </>
+                ) : null}
+
                 {overrideStatus === "Perdu" ? (
                   <Button variant="neutral" onClick={mailtoCoordinates}>
                     Envoyer mes coordonnées par email
                   </Button>
                 ) : (
                   <>
-                    <label className={labelClass}>Prochaine action</label>
+                    <label className={labelClass}>
+                      Prochaine action (relance que je me fixe)
+                    </label>
                     <input
                       className={fieldClass}
                       type="date"
+                      min={minCallbackDate(canal)}
                       value={callbackDate}
                       onChange={(e) => setCallbackDate(e.target.value)}
                     />
+                    {canal === "email" ? (
+                      <p className="text-xs text-muted-foreground">
+                        Email consigné : relance au plus tôt le {formatDate(minCallbackDate("email"))}.
+                      </p>
+                    ) : null}
                   </>
                 )}
+
                 <Button onClick={saveForm} disabled={busy}>
                   Enregistrer l'appel
                 </Button>

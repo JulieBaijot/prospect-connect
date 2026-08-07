@@ -161,9 +161,13 @@ export type Database = {
           next_action_date: string | null
           notes: string | null
           objective: string | null
+          promise_date: string | null
+          promise_kept: boolean | null
+          promise_text: string | null
           prospect_id: string
           result: string | null
           stage: string | null
+          template_used: string | null
           video_link: string | null
         }
         Insert: {
@@ -178,9 +182,13 @@ export type Database = {
           next_action_date?: string | null
           notes?: string | null
           objective?: string | null
+          promise_date?: string | null
+          promise_kept?: boolean | null
+          promise_text?: string | null
           prospect_id: string
           result?: string | null
           stage?: string | null
+          template_used?: string | null
           video_link?: string | null
         }
         Update: {
@@ -195,9 +203,13 @@ export type Database = {
           next_action_date?: string | null
           notes?: string | null
           objective?: string | null
+          promise_date?: string | null
+          promise_kept?: boolean | null
+          promise_text?: string | null
           prospect_id?: string
           result?: string | null
           stage?: string | null
+          template_used?: string | null
           video_link?: string | null
         }
         Relationships: [
