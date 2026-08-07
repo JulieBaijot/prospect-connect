@@ -6,7 +6,9 @@ import {
   CalendarDays,
   Database,
   ListChecks,
+  PauseCircle,
   PhoneCall,
+
   Search,
   Wand2,
 } from "lucide-react";
@@ -25,7 +27,9 @@ const navItems = [
   { to: "/demain", label: "Préparer demain", icon: CalendarClock },
   { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
   { to: "/qualification", label: "Qualification", icon: Wand2 },
+  { to: "/parking", label: "Parking", icon: PauseCircle },
   { to: "/prospects", label: "Base prospects", icon: Database },
+
   { to: "/integration-prospects", label: "Intégration prospects", icon: Search },
   { to: "/journal", label: "Journal de prospection", icon: ListChecks },
   { to: "/stats", label: "Stats", icon: BarChart3 },

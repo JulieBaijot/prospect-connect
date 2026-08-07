@@ -422,6 +422,40 @@ export function isDueTodayOrLate(value: string | null | undefined) {
   return Boolean(value && value <= todayIsoDate());
 }
 
+/** Un prospect est « en sommeil » tant que sa date de réveil n'est pas atteinte. */
+export function isParked(
+  prospect: { status: string | null; parking_date?: string | null },
+  today = todayIsoDate(),
+) {
+  if (prospect.status !== "Parké") return false;
+  if (!prospect.parking_date) return true;
+  return prospect.parking_date > today;
+}
+
+/** Le parking est arrivé à échéance : le prospect doit réapparaître. */
+export function isParkingDue(
+  prospect: { status: string | null; parking_date?: string | null },
+  today = todayIsoDate(),
+) {
+  return (
+    prospect.status === "Parké" && Boolean(prospect.parking_date) && prospect.parking_date! <= today
+  );
+}
+
+/** Parque un prospect : motif de reprise et date de réveil obligatoires. */
+export async function parkProspect(id: string, motif: string, wakeDate: string) {
+  if (!motif.trim()) throw new Error("Le motif de reprise est obligatoire.");
+  if (!wakeDate) throw new Error("La date de réveil est obligatoire.");
+  await updateProspect(id, {
+    status: "Parké",
+    parking_trigger: motif.trim(),
+    parking_date: wakeDate,
+    next_action_date: wakeDate,
+  });
+}
+
+
+
 export function bestPhone(prospect: ProspectWithRelations) {
   const contactPhone = prospect.contacts.find((c) => c.direct_phone || c.main_phone);
   return contactPhone?.direct_phone || contactPhone?.main_phone || prospect.main_phone || "";
@@ -799,7 +833,7 @@ export function prioritizeSession(prospects: ProspectWithRelations[]) {
     Perdu: 5,
   };
   return [...prospects]
-    .filter((prospect) => !["Perdu", "Converti"].includes(prospect.status))
+    .filter((prospect) => !["Perdu", "Converti"].includes(prospect.status) && !isParked(prospect))
     .sort((a, b) => {
       const byDue =
         Number(!isDueTodayOrLate(a.next_action_date)) -
@@ -826,8 +860,11 @@ export function prioritizeQualificationSession(prospects: ProspectWithRelations[
   return [...prospects]
     .filter(
       (prospect) =>
-        !["Perdu", "Converti"].includes(prospect.status) && dataQualityIssues(prospect).length > 0,
+        !["Perdu", "Converti"].includes(prospect.status) &&
+        !isParked(prospect) &&
+        dataQualityIssues(prospect).length > 0,
     )
+
     .sort((a, b) => {
       const byDue =
         Number(!isDueTodayOrLate(a.next_action_date)) -
