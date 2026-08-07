@@ -860,8 +860,11 @@ export function prioritizeQualificationSession(prospects: ProspectWithRelations[
   return [...prospects]
     .filter(
       (prospect) =>
-        !["Perdu", "Converti"].includes(prospect.status) && dataQualityIssues(prospect).length > 0,
+        !["Perdu", "Converti"].includes(prospect.status) &&
+        !isParked(prospect) &&
+        dataQualityIssues(prospect).length > 0,
     )
+
     .sort((a, b) => {
       const byDue =
         Number(!isDueTodayOrLate(a.next_action_date)) -
