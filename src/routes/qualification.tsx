@@ -294,6 +294,12 @@ function QualificationPage() {
       siren: form.siren,
       sector: form.sector,
       headcount_range: form.headcount_range,
+      // valeur dérivée du segment, sauf ajustement manuel déjà présent sur la fiche
+      estimated_value:
+        Number(current.estimated_value || 0) === 0 ||
+        Number(current.estimated_value) === targetValueOf(current.headcount_range)
+          ? targetValueOf(form.headcount_range)
+          : Number(current.estimated_value),
       offer_target: form.offer_target,
       comments: form.comments,
       next_action_date: form.next_action_date || null,
