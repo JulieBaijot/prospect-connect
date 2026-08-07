@@ -57,7 +57,7 @@ const emptyProspect = {
   city: "",
   headcount_range: "20-49" as HeadcountRange,
   offer_target: "SST" as OfferTarget,
-  estimated_value: 0,
+  estimated_value: targetValueOf("20-49"),
   status: "À qualifier" as ProspectStatus,
   next_action_date: "",
   decision_level: "inconnu" as DecisionLevel,
