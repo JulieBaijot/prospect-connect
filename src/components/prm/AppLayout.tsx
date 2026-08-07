@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
+  CalendarClock,
   CalendarDays,
   Database,
   ListChecks,
@@ -21,6 +22,7 @@ function protectedReturnPath(pathname: string) {
 
 const navItems = [
   { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
+  { to: "/demain", label: "Préparer demain", icon: CalendarClock },
   { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
   { to: "/qualification", label: "Qualification", icon: Wand2 },
   { to: "/prospects", label: "Base prospects", icon: Database },

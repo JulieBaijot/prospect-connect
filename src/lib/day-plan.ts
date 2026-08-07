@@ -26,7 +26,7 @@ export function loadPlan(date: string): DayPlan {
     const parsed = JSON.parse(raw) as DayPlan;
     return {
       date,
-      calls: Array.isArray(parsed.calls) ? parsed.calls.slice(0, 3) : [],
+      calls: Array.isArray(parsed.calls) ? parsed.calls.slice(0, 6) : [],
       emails: Array.isArray(parsed.emails) ? parsed.emails.slice(0, 3) : [],
       closed: Boolean(parsed.closed),
     };

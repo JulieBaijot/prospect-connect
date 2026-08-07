@@ -17,6 +17,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
+import { Route as DemainRouteImport } from './routes/demain'
 import { Route as AujourdhuiRouteImport } from './routes/aujourdhui'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -64,6 +65,11 @@ const IntegrationProspectsRoute = IntegrationProspectsRouteImport.update({
   path: '/integration-prospects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemainRoute = DemainRouteImport.update({
+  id: '/demain',
+  path: '/demain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AujourdhuiRoute = AujourdhuiRouteImport.update({
   id: '/aujourdhui',
   path: '/aujourdhui',
@@ -101,6 +107,7 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
+  '/demain': typeof DemainRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
+  '/demain': typeof DemainRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
+  '/demain': typeof DemainRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aujourdhui'
+    | '/demain'
     | '/integration-prospects'
     | '/journal'
     | '/login'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aujourdhui'
+    | '/demain'
     | '/integration-prospects'
     | '/journal'
     | '/login'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/aujourdhui'
+    | '/demain'
     | '/integration-prospects'
     | '/journal'
     | '/login'
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AujourdhuiRoute: typeof AujourdhuiRoute
+  DemainRoute: typeof DemainRoute
   IntegrationProspectsRoute: typeof IntegrationProspectsRoute
   JournalRoute: typeof JournalRoute
   LoginRoute: typeof LoginRoute
@@ -273,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationProspectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demain': {
+      id: '/demain'
+      path: '/demain'
+      fullPath: '/demain'
+      preLoaderRoute: typeof DemainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/aujourdhui': {
       id: '/aujourdhui'
       path: '/aujourdhui'
@@ -321,6 +341,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AujourdhuiRoute: AujourdhuiRoute,
+  DemainRoute: DemainRoute,
   IntegrationProspectsRoute: IntegrationProspectsRoute,
   JournalRoute: JournalRoute,
   LoginRoute: LoginRoute,
