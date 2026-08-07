@@ -18,6 +18,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
+import { Route as GroupesRouteImport } from './routes/groupes'
 import { Route as DemainRouteImport } from './routes/demain'
 import { Route as AujourdhuiRouteImport } from './routes/aujourdhui'
 import { Route as IndexRouteImport } from './routes/index'
@@ -71,6 +72,11 @@ const IntegrationProspectsRoute = IntegrationProspectsRouteImport.update({
   path: '/integration-prospects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GroupesRoute = GroupesRouteImport.update({
+  id: '/groupes',
+  path: '/groupes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemainRoute = DemainRouteImport.update({
   id: '/demain',
   path: '/demain',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
   '/demain': typeof DemainRoute
+  '/groupes': typeof GroupesRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
   '/demain': typeof DemainRoute
+  '/groupes': typeof GroupesRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
   '/demain': typeof DemainRoute
+  '/groupes': typeof GroupesRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/'
     | '/aujourdhui'
     | '/demain'
+    | '/groupes'
     | '/integration-prospects'
     | '/journal'
     | '/login'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/'
     | '/aujourdhui'
     | '/demain'
+    | '/groupes'
     | '/integration-prospects'
     | '/journal'
     | '/login'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/'
     | '/aujourdhui'
     | '/demain'
+    | '/groupes'
     | '/integration-prospects'
     | '/journal'
     | '/login'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AujourdhuiRoute: typeof AujourdhuiRoute
   DemainRoute: typeof DemainRoute
+  GroupesRoute: typeof GroupesRoute
   IntegrationProspectsRoute: typeof IntegrationProspectsRoute
   JournalRoute: typeof JournalRoute
   LoginRoute: typeof LoginRoute
@@ -306,6 +319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationProspectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/groupes': {
+      id: '/groupes'
+      path: '/groupes'
+      fullPath: '/groupes'
+      preLoaderRoute: typeof GroupesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demain': {
       id: '/demain'
       path: '/demain'
@@ -362,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AujourdhuiRoute: AujourdhuiRoute,
   DemainRoute: DemainRoute,
+  GroupesRoute: GroupesRoute,
   IntegrationProspectsRoute: IntegrationProspectsRoute,
   JournalRoute: JournalRoute,
   LoginRoute: LoginRoute,
