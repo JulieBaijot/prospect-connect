@@ -589,6 +589,22 @@ function CallCard({
               placeholder="Ce qui s'est dit, en clair."
             />
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={
+                reachedManual ??
+                (situation
+                  ? reachedFromResult(
+                      situationOptions.find((o) => o.key === situation)?.result ?? null,
+                    ) === true
+                  : false)
+              }
+              onChange={(event) => setReachedManual(event.target.checked)}
+            />
+            Quelqu'un a décroché
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1">
               <label className={labelClass} htmlFor={`level-${prospect.id}`}>
