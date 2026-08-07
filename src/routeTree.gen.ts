@@ -13,7 +13,6 @@ import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SessionAppelsRouteImport } from './routes/session-appels'
 import { Route as QualificationRouteImport } from './routes/qualification'
 import { Route as ProspectsRouteImport } from './routes/prospects'
-import { Route as ProcessRouteImport } from './routes/process'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
@@ -43,11 +42,6 @@ const QualificationRoute = QualificationRouteImport.update({
 const ProspectsRoute = ProspectsRouteImport.update({
   id: '/prospects',
   path: '/prospects',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProcessRoute = ProcessRouteImport.update({
-  id: '/process',
-  path: '/process',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -111,7 +105,6 @@ export interface FileRoutesByFullPath {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
-  '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
   '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
@@ -128,7 +121,6 @@ export interface FileRoutesByTo {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
-  '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
   '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
@@ -146,7 +138,6 @@ export interface FileRoutesById {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
-  '/process': typeof ProcessRoute
   '/prospects': typeof ProspectsRoute
   '/qualification': typeof QualificationRoute
   '/session-appels': typeof SessionAppelsRoute
@@ -165,7 +156,6 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/mcp'
-    | '/process'
     | '/prospects'
     | '/qualification'
     | '/session-appels'
@@ -182,7 +172,6 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/mcp'
-    | '/process'
     | '/prospects'
     | '/qualification'
     | '/session-appels'
@@ -199,7 +188,6 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/mcp'
-    | '/process'
     | '/prospects'
     | '/qualification'
     | '/session-appels'
@@ -217,7 +205,6 @@ export interface RootRouteChildren {
   JournalRoute: typeof JournalRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
-  ProcessRoute: typeof ProcessRoute
   ProspectsRoute: typeof ProspectsRoute
   QualificationRoute: typeof QualificationRoute
   SessionAppelsRoute: typeof SessionAppelsRoute
@@ -256,13 +243,6 @@ declare module '@tanstack/react-router' {
       path: '/prospects'
       fullPath: '/prospects'
       preLoaderRoute: typeof ProspectsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/process': {
-      id: '/process'
-      path: '/process'
-      fullPath: '/process'
-      preLoaderRoute: typeof ProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -345,7 +325,6 @@ const rootRouteChildren: RootRouteChildren = {
   JournalRoute: JournalRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
-  ProcessRoute: ProcessRoute,
   ProspectsRoute: ProspectsRoute,
   QualificationRoute: QualificationRoute,
   SessionAppelsRoute: SessionAppelsRoute,

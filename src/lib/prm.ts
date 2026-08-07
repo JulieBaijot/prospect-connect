@@ -21,7 +21,6 @@ export type OfferTarget = "SST" | "DUERP" | "SSCT / CSE" | "QVCT / RPS" | "Sur m
 export type DecisionLevel = "site" | "groupe" | "inconnu";
 export type Segment = "Moins de 11" | "11 à 24" | "25 à 49" | "50 et plus";
 
-export type CycleStage = "J1" | "J2" | "J4" | "J6" | "J10" | "J15" | "J21";
 export type ProspectStatus =
   | "À qualifier"
   | "En contact"
@@ -32,27 +31,6 @@ export type ProspectStatus =
 export type Canal = "email" | "téléphone" | "physique";
 export type LogResult = "NRP" | "Pas dispo" | "Échange" | "RDV";
 export type SearchSource = "pappers" | "insee" | "annuaire";
-
-export interface PlaybookOutcome {
-  key: string;
-  label: string;
-  result: LogResult;
-  actionType: string;
-  nextStage: CycleStage;
-  delayDays: number;
-  status?: ProspectStatus;
-  note: string;
-  mode?: "callback" | "exchange" | "meeting";
-}
-
-export interface PlaybookNode {
-  key: CycleStage;
-  label: string;
-  objective: string;
-  script: string;
-  checklist: string[];
-  outcomes: PlaybookOutcome[];
-}
 
 export interface Prospect {
   id: string;
@@ -130,7 +108,8 @@ export interface ProspectionLog {
   action_date: string;
   action_type: string;
   canal: Canal;
-  stage: CycleStage | null;
+  /** Situation consignée (voir `Situation`). */
+  stage: string | null;
   objective: string | null;
   result: LogResult | null;
   notes: string | null;
@@ -215,7 +194,7 @@ export function defaultOfferOf(headcount: HeadcountRange | string | null | undef
   return segment ? segmentRules[segment].defaultOffer : null;
 }
 
-export const stages: CycleStage[] = ["J1", "J2", "J4", "J6", "J10", "J15", "J21"];
+
 export const statuses: ProspectStatus[] = [
   "À qualifier",
   "En contact",
@@ -225,376 +204,19 @@ export const statuses: ProspectStatus[] = [
   "Perdu",
 ];
 
-export const playbookNodes: Record<CycleStage, PlaybookNode> = {
-  J1: {
-    key: "J1",
-    label: "J1 – Premier contact",
-    objective:
-      "Identifier le bon interlocuteur et ouvrir une discussion santé-sécurité au travail.",
-    script:
-      "Bonjour, je m'appelle Julie Baijot. J'accompagne les entreprises sur leurs sujets formation, prévention et santé-sécurité au travail : SST, DUERP, QVCT, CSE ou besoins sur mesure. Qui pilote ces sujets chez vous ?",
-    checklist: [
-      "Identifier RH / direction / HSE / CSE",
-      "Valider l'effectif approximatif",
-      "Repérer la porte d'entrée : formation, DUERP, QVCT, SSCT ou conseil",
-    ],
-    outcomes: [
-      {
-        key: "nrp",
-        label: "NRP / standard muet",
-        result: "NRP",
-        actionType: "NRP",
-        nextStage: "J2",
-        delayDays: 1,
-        status: "À qualifier",
-        note: "Pas de réponse. Relance douce au prochain créneau.",
-      },
-      {
-        key: "barrage",
-        label: "Barrage accueil",
-        result: "Pas dispo",
-        actionType: "Barrage accueil",
-        nextStage: "J2",
-        delayDays: 2,
-        status: "À qualifier",
-        note: "Accueil filtrant. Revenir avec une accroche courte sur formation, DUERP ou obligations prévention.",
-        mode: "callback",
-      },
-      {
-        key: "interet",
-        label: "Sujet prévention ouvert",
-        result: "Échange",
-        actionType: "Échange qualifiant",
-        nextStage: "J4",
-        delayDays: 2,
-        status: "En contact",
-        note: "Ouverture identifiée. Prochaine étape : qualifier le besoin exact, le décideur et l'échéance.",
-        mode: "exchange",
-      },
-      {
-        key: "rdv",
-        label: "RDV diagnostic",
-        result: "RDV",
-        actionType: "RDV diagnostic obtenu",
-        nextStage: "J10",
-        delayDays: 0,
-        status: "En contact",
-        note: "Rendez-vous obtenu pour cadrer les besoins formation, conseil ou accompagnement.",
-        mode: "meeting",
-      },
-    ],
-  },
-  J2: {
-    key: "J2",
-    label: "J2 – Relance douce",
-    objective: "Rebondir sans pression et comprendre qui pilote les sujets prévention.",
-    script:
-      "Je me permets de vous recontacter suite à mon précédent message. Est-ce que les sujets formation sécurité, DUERP, QVCT ou CSE sont gérés en interne, par la direction/RH, ou avec un intervenant externe ?",
-    checklist: [
-      "Identifier le décideur",
-      "Repérer prestataire ou organisation actuelle",
-      "Noter fenêtre budgétaire ou réglementaire",
-    ],
-    outcomes: [
-      {
-        key: "nrp",
-        label: "Toujours NRP",
-        result: "NRP",
-        actionType: "NRP",
-        nextStage: "J4",
-        delayDays: 2,
-        status: "À qualifier",
-        note: "Deuxième tentative sans réponse. Relance avec angle de qualification prévention.",
-      },
-      {
-        key: "pas-moment",
-        label: "Pas le bon moment",
-        result: "Pas dispo",
-        actionType: "Pas le bon moment",
-        nextStage: "J6",
-        delayDays: 4,
-        status: "Parké",
-        note: "Moment peu favorable. Programmer un rappel contextualisé sur la prochaine échéance utile.",
-        mode: "callback",
-      },
-      {
-        key: "qualification",
-        label: "Qualification prévention",
-        result: "Échange",
-        actionType: "Qualification prévention",
-        nextStage: "J4",
-        delayDays: 2,
-        status: "En contact",
-        note: "Informations obtenues. Approfondir le sujet prioritaire : SST, DUERP, QVCT, SSCT, audit ou sur mesure.",
-        mode: "exchange",
-      },
-      {
-        key: "rdv",
-        label: "RDV diagnostic",
-        result: "RDV",
-        actionType: "RDV diagnostic obtenu",
-        nextStage: "J10",
-        delayDays: 0,
-        status: "En contact",
-        note: "Rendez-vous planifié pour diagnostiquer le besoin global santé-sécurité.",
-        mode: "meeting",
-      },
-    ],
-  },
-  J4: {
-    key: "J4",
-    label: "J4 – Qualification besoin",
-    objective: "Identifier la porte d'entrée commerciale et le niveau d'urgence.",
-    script:
-      "Pour voir comment je peux vous être utile : votre priorité actuelle concerne plutôt la formation SST, le DUERP, la QVCT/RPS, le CSE-SSCT, ou un besoin spécifique de conseil ou formation sur mesure ?",
-    checklist: [
-      "Sujet prioritaire",
-      "Échéance réglementaire ou opérationnelle",
-      "Décideur et budget",
-      "Contraintes site / équipes",
-    ],
-    outcomes: [
-      {
-        key: "besoin-urgent",
-        label: "Besoin prioritaire",
-        result: "Échange",
-        actionType: "Besoin prioritaire identifié",
-        nextStage: "J10",
-        delayDays: 1,
-        status: "En contact",
-        note: "Besoin concret identifié : DUERP à mettre à jour, formation à planifier, sujet QVCT/RPS, demande CSE ou accompagnement sur mesure.",
-        mode: "exchange",
-      },
-      {
-        key: "besoin-futur",
-        label: "Besoin futur",
-        result: "Échange",
-        actionType: "Besoin futur identifié",
-        nextStage: "J6",
-        delayDays: 7,
-        status: "À qualifier",
-        note: "Fenêtre future. Relance avec un contenu utile lié au sujet détecté et une proposition de cadrage.",
-        mode: "exchange",
-      },
-      {
-        key: "deja-couvert",
-        label: "Déjà couvert",
-        result: "Pas dispo",
-        actionType: "Déjà couvert",
-        nextStage: "J21",
-        delayDays: 30,
-        status: "Parké",
-        note: "Organisation ou intervenant déjà en place. Revenir sur une fenêtre trimestrielle avec un angle complémentaire.",
-        mode: "callback",
-      },
-      {
-        key: "rdv",
-        label: "RDV diagnostic",
-        result: "RDV",
-        actionType: "RDV diagnostic obtenu",
-        nextStage: "J10",
-        delayDays: 0,
-        status: "En contact",
-        note: "Rendez-vous obtenu suite à qualification du besoin prévention.",
-        mode: "meeting",
-      },
-    ],
-  },
-  J6: {
-    key: "J6",
-    label: "J6 – Apport de valeur",
-    objective:
-      "Rendre le sujet concret avec un angle utile : obligation, échéance ou irritant terrain.",
-    script:
-      "Je peux vous envoyer un mémo très court selon votre sujet : DUERP, renouvellement SST, rôle du CSE en SSCT, QVCT/RPS ou plan d'actions prévention. Quel angle serait le plus utile pour vous ?",
-    checklist: [
-      "Choisir l'angle utile",
-      "Envoyer mémo ou ressource",
-      "Proposer deux créneaux de cadrage",
-    ],
-    outcomes: [
-      {
-        key: "contenu-envoye",
-        label: "Contenu envoyé",
-        result: "Échange",
-        actionType: "Contenu prévention envoyé",
-        nextStage: "J10",
-        delayDays: 4,
-        status: "À qualifier",
-        note: "Contenu envoyé. Relancer avec une demande de rendez-vous court pour cadrer l'action possible.",
-        mode: "exchange",
-      },
-      {
-        key: "nrp",
-        label: "NRP après contenu",
-        result: "NRP",
-        actionType: "NRP",
-        nextStage: "J10",
-        delayDays: 4,
-        status: "À qualifier",
-        note: "Pas de réponse après contenu. Relance demande RDV avec angle prévention global.",
-      },
-      {
-        key: "hors-cible",
-        label: "Hors cible",
-        result: "Pas dispo",
-        actionType: "Hors cible",
-        nextStage: "J21",
-        delayDays: 30,
-        status: "Perdu",
-        note: "Besoin non pertinent à court terme ou structure hors cible.",
-        mode: "callback",
-      },
-    ],
-  },
-  J10: {
-    key: "J10",
-    label: "J10 – Demande RDV",
-    objective: "Obtenir un créneau court pour diagnostiquer besoin, contexte et suite possible.",
-    script:
-      "Est-ce qu'on bloque 20 à 30 minutes pour faire le point sur vos besoins santé-sécurité au travail et voir si une formation, un accompagnement ou un conseil sur mesure serait pertinent ?",
-    checklist: [
-      "Proposer deux créneaux",
-      "Confirmer les personnes à inviter",
-      "Préparer questions diagnostic",
-    ],
-    outcomes: [
-      {
-        key: "rdv",
-        label: "RDV accepté",
-        result: "RDV",
-        actionType: "RDV diagnostic obtenu",
-        nextStage: "J15",
-        delayDays: 0,
-        status: "En contact",
-        note: "Rendez-vous accepté. Préparer diagnostic, hypothèses d'offre et questions de cadrage.",
-        mode: "meeting",
-      },
-      {
-        key: "hesitation",
-        label: "Hésitation / à confirmer",
-        result: "Échange",
-        actionType: "RDV à confirmer",
-        nextStage: "J15",
-        delayDays: 5,
-        status: "En contact",
-        note: "Intérêt présent mais créneau non confirmé. Relancer avec une proposition précise et l'angle de valeur détecté.",
-        mode: "exchange",
-      },
-      {
-        key: "refus",
-        label: "Refus poli",
-        result: "Pas dispo",
-        actionType: "Refus poli",
-        nextStage: "J21",
-        delayDays: 30,
-        status: "Parké",
-        note: "Refus sans fermeture définitive. Revenir plus tard avec un angle opportunité ou échéance réglementaire.",
-        mode: "callback",
-      },
-    ],
-  },
-  J15: {
-    key: "J15",
-    label: "J15 – Proposition",
-    objective: "Transformer l'échange en devis, plan d'action ou prochaine décision datée.",
-    script:
-      "Pour avancer concrètement, je peux vous envoyer une proposition cadrée : formation, accompagnement DUERP/QVCT/SSCT, diagnostic ou format sur mesure. Quels éléments doivent absolument apparaître pour que ce soit utile ?",
-    checklist: [
-      "Valider périmètre",
-      "Valider livrables",
-      "Identifier validation interne",
-      "Envoyer proposition",
-    ],
-    outcomes: [
-      {
-        key: "devis",
-        label: "Proposition à envoyer",
-        result: "Échange",
-        actionType: "Proposition à envoyer",
-        nextStage: "J21",
-        delayDays: 6,
-        status: "En contact",
-        note: "Proposition attendue. Relance décision à programmer avec prochaines étapes claires.",
-        mode: "exchange",
-      },
-      {
-        key: "gagne",
-        label: "Accord obtenu",
-        result: "RDV",
-        actionType: "Accord obtenu",
-        nextStage: "J21",
-        delayDays: 0,
-        status: "Converti",
-        note: "Opportunité convertie. Passer en suivi client et planifier la mise en œuvre.",
-        mode: "meeting",
-      },
-      {
-        key: "silence",
-        label: "Silence décision",
-        result: "NRP",
-        actionType: "Silence après proposition",
-        nextStage: "J21",
-        delayDays: 6,
-        status: "Parké",
-        note: "Décision en attente. Dernier contact avant relance longue ou archivage.",
-      },
-    ],
-  },
-  J21: {
-    key: "J21",
-    label: "J21 – Reprise / archivage",
-    objective: "Clore proprement ou obtenir une fenêtre de reprise sur les sujets prévention.",
-    script:
-      "Je tente un dernier message avant de vous laisser tranquille : soit ce n'est pas le bon moment, soit le sujet n'est plus prioritaire. Souhaitez-vous que je vous recontacte plus tard sur vos sujets formation, DUERP, QVCT, CSE ou prévention ?",
-    checklist: ["Rester léger", "Demander fenêtre de reprise", "Archiver proprement"],
-    outcomes: [
-      {
-        key: "reprise",
-        label: "Reprise plus tard",
-        result: "Pas dispo",
-        actionType: "Reprise ultérieure",
-        nextStage: "J1",
-        delayDays: 90,
-        status: "Parké",
-        note: "Relance trimestrielle programmée sur une fenêtre réglementaire, budgétaire ou formation.",
-        mode: "callback",
-      },
-      {
-        key: "relance-chaude",
-        label: "Réponse tardive positive",
-        result: "Échange",
-        actionType: "Réponse tardive positive",
-        nextStage: "J10",
-        delayDays: 1,
-        status: "En contact",
-        note: "Réactivation positive. Repartir sur un diagnostic court.",
-        mode: "exchange",
-      },
-      {
-        key: "archiver",
-        label: "Archiver",
-        result: "Pas dispo",
-        actionType: "Archivage commercial",
-        nextStage: "J21",
-        delayDays: 90,
-        status: "Parké",
-        note: "Aucune ouverture. Archivage avec relance longue si la cible reste pertinente.",
-      },
-    ],
-  },
+/** Script d'ouverture unique — plus de cycle numéroté. */
+export const callScript = {
+  label: "Ouverture d'appel",
+  objective:
+    "Identifier le bon interlocuteur et ouvrir une discussion santé-sécurité au travail.",
+  text: "Bonjour, je m'appelle Julie Baijot. J'accompagne les entreprises sur leurs sujets formation, prévention et santé-sécurité au travail : SST, DUERP, QVCT, CSE ou besoins sur mesure. Qui pilote ces sujets chez vous ?",
+  checklist: [
+    "Identifier RH / direction / HSE / CSE",
+    "Valider l'effectif approximatif",
+    "Repérer la porte d'entrée : formation, DUERP, QVCT, SSCT ou conseil",
+  ],
 };
-export const stageScripts: Record<CycleStage, { label: string; text: string; objective: string }> =
-  Object.fromEntries(
-    stages.map((stage) => [
-      stage,
-      {
-        label: playbookNodes[stage].label,
-        objective: playbookNodes[stage].objective,
-        text: playbookNodes[stage].script,
-      },
-    ]),
-  ) as Record<CycleStage, { label: string; text: string; objective: string }>;
+
 
 export function categoryClass(category: Category | null | undefined) {
   if (category === "A – Pilier") return "bg-category-a text-category-a-foreground";
@@ -815,41 +437,237 @@ export function dataQualityIssues(prospect: ProspectWithRelations) {
   ].filter(Boolean);
 }
 
-export function nextStage(stage: CycleStage): CycleStage {
-  const index = stages.indexOf(stage);
-  return stages[Math.min(index + 1, stages.length - 1)] || "J2";
+/** Décale une date ISO d'un nombre de jours. */
+export function shiftIso(value: string, days: number) {
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
-export function nextDateForStage(stage: CycleStage) {
-  const delays: Record<CycleStage, number> = {
-    J1: 1,
-    J2: 2,
-    J4: 2,
-    J6: 4,
-    J10: 5,
-    J15: 6,
-    J21: 30,
-  };
-  return addDaysIso(delays[stage] || 2);
+/** Situations possibles à l'issue d'un contact — remplace le cycle en sept étapes. */
+export type Situation =
+  | "nrp"
+  | "barrage"
+  | "email_envoye"
+  | "pas_le_bon_moment"
+  | "decision_groupe"
+  | "interet"
+  | "refus"
+  | "rdv";
+
+export interface SituationOption {
+  key: Situation;
+  label: string;
+  result: LogResult;
+  actionType: string;
 }
 
-export function currentStageOf(prospect: {
-  prospection_logs?: Array<{ stage: CycleStage | null; action_date: string }>;
-}): CycleStage {
+export const situationOptions: SituationOption[] = [
+  { key: "nrp", label: "NRP / personne au bout du fil", result: "NRP", actionType: "NRP" },
+  { key: "barrage", label: "Barrage accueil", result: "Pas dispo", actionType: "Barrage accueil" },
+  { key: "email_envoye", label: "Email envoyé", result: "Pas dispo", actionType: "Email envoyé" },
+  {
+    key: "pas_le_bon_moment",
+    label: "Échange — pas le bon moment",
+    result: "Échange",
+    actionType: "Pas le bon moment",
+  },
+  {
+    key: "decision_groupe",
+    label: "Échange — décision au niveau groupe",
+    result: "Échange",
+    actionType: "Décision groupe",
+  },
+  {
+    key: "interet",
+    label: "Échange — intérêt exprimé",
+    result: "Échange",
+    actionType: "Intérêt exprimé",
+  },
+  { key: "refus", label: "Refus net", result: "Échange", actionType: "Refus net" },
+  { key: "rdv", label: "RDV obtenu", result: "RDV", actionType: "RDV obtenu" },
+];
+
+export interface EtapeContexte {
+  situation: Situation;
+  /** Date donnée par le prospect, date de promesse ou date du RDV selon la situation. */
+  dateSaisie?: string | null;
+  motif?: string | null;
+  promesse?: string | null;
+}
+
+export interface Etape {
+  situation: Situation;
+  /** Action proposée — toujours renseignée. */
+  action: string;
+  /** Canal proposé — null quand l'action ne passe par aucun canal (parquer, préparer). */
+  canal: Canal | null;
+  /** Date proposée (YYYY-MM-DD) — toujours renseignée. */
+  date: string;
+  /** Raison, toujours affichée à l'écran. */
+  raison: string;
+  status?: ProspectStatus;
+  decision_level?: DecisionLevel;
+  /** « Parquer » exige toujours un motif écrit. */
+  motifRequis: boolean;
+  /** Date à saisir obligatoirement (donnée par le prospect / RDV). */
+  dateRequise: boolean;
+  /** Promesse datée obligatoire. */
+  promesseRequise: boolean;
+}
+
+type EtapeProspect = {
+  decision_maker?: string | null;
+  contacts?: Array<{ first_name: string | null; last_name: string | null }>;
+  prospection_logs?: Array<{ result: string | null; action_date: string }>;
+};
+
+/** Nombre de NRP consécutifs, en comptant celui qu'on consigne. */
+export function nrpStreak(prospect: EtapeProspect) {
   const logs = [...(prospect.prospection_logs || [])].sort(
     (a, b) => +new Date(b.action_date) - +new Date(a.action_date),
   );
-  const last = logs.find((log) => log.stage);
-  return last?.stage || "J1";
+  let streak = 0;
+  for (const log of logs) {
+    if (log.result === "NRP") streak += 1;
+    else break;
+  }
+  return streak;
 }
 
-export function nodeForStage(stage: CycleStage | null | undefined) {
-  return playbookNodes[stage || "J1"] || playbookNodes.J1;
+function contactConnu(prospect: EtapeProspect) {
+  if (prospect.decision_maker?.trim()) return true;
+  return Boolean(prospect.contacts?.some((c) => (c.first_name || c.last_name || "").trim()));
 }
 
-export function dateForOutcome(outcome: PlaybookOutcome) {
-  return addDaysIso(outcome.delayDays);
+/**
+ * Table de décision unique : renvoie toujours une action, un canal et une date.
+ * La proposition s'applique automatiquement mais reste modifiable avant validation.
+ */
+export function prochaineEtape(prospect: EtapeProspect, dernierLog: EtapeContexte): Etape {
+  const base = {
+    situation: dernierLog.situation,
+    motifRequis: false,
+    dateRequise: false,
+    promesseRequise: false,
+  };
+  const saisie = dernierLog.dateSaisie?.slice(0, 10) || "";
+
+  switch (dernierLog.situation) {
+    case "nrp": {
+      const count = nrpStreak(prospect) + 1;
+      if (count <= 1)
+        return {
+          ...base,
+          action: "Rappeler sur un autre créneau de la journée",
+          canal: "téléphone",
+          date: addDaysIso(3),
+          raison: "1er NRP — on retente sur un autre créneau",
+        };
+      if (count === 2)
+        return {
+          ...base,
+          action: "Basculer sur l'écrit",
+          canal: "email",
+          date: addDaysIso(1),
+          raison: "2e NRP, on passe à l'écrit",
+        };
+      return {
+        ...base,
+        action: "Parquer",
+        canal: null,
+        date: addDaysIso(90),
+        raison: `${count}e NRP — on parque 3 mois`,
+        status: "Parké",
+        motifRequis: true,
+      };
+    }
+    case "barrage":
+      return contactConnu(prospect)
+        ? {
+            ...base,
+            action: "Écrire directement au contact",
+            canal: "email",
+            date: addDaysIso(1),
+            raison: "Barrage accueil, contact nommé connu — on écrit en direct",
+          }
+        : {
+            ...base,
+            action: "Rappeler pour obtenir le nom et l'adresse",
+            canal: "téléphone",
+            date: addDaysIso(7),
+            raison: "Barrage accueil sans contact identifié — objectif : nom + email",
+          };
+    case "email_envoye":
+      return {
+        ...base,
+        action: "Rappeler",
+        canal: "téléphone",
+        date: enforceCallbackRule("email", addDaysIso(2)),
+        raison: "Email envoyé — rappel à J+2 minimum, jamais le jour même",
+      };
+    case "pas_le_bon_moment":
+      return {
+        ...base,
+        action: "Parquer à la date donnée par le prospect",
+        canal: null,
+        date: saisie || addDaysIso(30),
+        raison: "Pas le bon moment — on parque à la date annoncée",
+        status: "Parké",
+        motifRequis: true,
+        dateRequise: true,
+      };
+    case "decision_groupe":
+      return {
+        ...base,
+        action: "Basculer le prospect en décision groupe",
+        canal: null,
+        date: addDaysIso(180),
+        raison: "Décision au niveau groupe — suivi à 6 mois",
+        decision_level: "groupe",
+      };
+    case "interet":
+      return {
+        ...base,
+        action: "Tenir la promesse faite au prospect",
+        canal: null,
+        date: saisie || addDaysIso(2),
+        raison: "Intérêt exprimé — la date de la promesse fait foi",
+        status: "En discussion",
+        promesseRequise: true,
+        dateRequise: true,
+      };
+    case "refus":
+      return {
+        ...base,
+        action: "Parquer sur déclencheur",
+        canal: null,
+        date: saisie || addDaysIso(180),
+        raison: "Refus net — réveil uniquement sur déclencheur",
+        status: "Parké",
+        motifRequis: true,
+      };
+    case "rdv":
+    default:
+      return {
+        ...base,
+        situation: "rdv",
+        action: "Préparer le rendez-vous",
+        canal: null,
+        date: saisie ? shiftIso(saisie, -1) : addDaysIso(1),
+        raison: "RDV obtenu — préparation la veille du rendez-vous",
+        status: "En discussion",
+        dateRequise: true,
+      };
+  }
 }
+
+/** « Prochaine étape : rappeler le 12/08 — 2e NRP, on passe à l'écrit ». */
+export function formatEtape(etape: Etape) {
+  const action = etape.action.charAt(0).toLowerCase() + etape.action.slice(1);
+  return `Prochaine étape : ${action} le ${formatDate(etape.date)} — ${etape.raison}`;
+}
+
 
 export function sessionReason(prospect: ProspectWithRelations) {
   if (isDueTodayOrLate(prospect.next_action_date)) return "Relance prévue aujourd'hui ou en retard";

@@ -14,33 +14,33 @@ import {
 import {
   addLog,
   buildCalendarUrl,
+  callScript,
   contactName,
   dataQualityIssues,
-  dateForOutcome,
   emailTemplates,
   enforceCallbackRule,
   formatDate,
+  formatEtape,
   formatEuro,
   headcountRanges,
   loadProspects,
-  currentStageOf,
   minCallbackDate,
-  nodeForStage,
   offerTargets,
-  playbookNodes,
   prioritizeCallSession,
+  prochaineEtape,
   sessionReason,
   shortDateTime,
-  stages,
+  situationOptions,
   statuses,
   updateProspect,
   type Canal,
-  type CycleStage,
-  type PlaybookOutcome,
+  type Etape,
   type Prospect,
   type ProspectStatus,
   type ProspectWithRelations,
+  type Situation,
 } from "@/lib/prm";
+
 
 
 export const Route = createFileRoute("/session-appels")({
@@ -55,17 +55,8 @@ export const Route = createFileRoute("/session-appels")({
 
 type Mode = "idle" | "form" | "meeting";
 
-const LOST_OUTCOME: PlaybookOutcome = {
-  key: "lost",
-  label: "Perdu / pas de besoin",
-  result: "Échange",
-  actionType: "Prospect perdu",
-  nextStage: "J21",
-  delayDays: 0,
-  status: "Perdu",
-  note: "Pas de besoin identifié — coordonnées envoyées pour rester en contact.",
-  mode: "exchange",
-};
+const situationByKey = new Map(situationOptions.map((option) => [option.key, option]));
+
 
 function SessionRoute() {
   return (
@@ -88,9 +79,12 @@ function SessionPage() {
   const [duration, setDuration] = useState(30);
   const [videoLink, setVideoLink] = useState("");
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
-  const [selectedOutcome, setSelectedOutcome] = useState<PlaybookOutcome | null>(null);
-  const [overrideStage, setOverrideStage] = useState<CycleStage | "">("");
+  const [situation, setSituation] = useState<Situation | null>(null);
+  const [etape, setEtape] = useState<Etape | null>(null);
+  const [motif, setMotif] = useState("");
+  const [overrideAction, setOverrideAction] = useState("");
   const [overrideStatus, setOverrideStatus] = useState<ProspectStatus | "">("");
+
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [canal, setCanal] = useState<Canal>("téléphone");
@@ -108,7 +102,7 @@ function SessionPage() {
   const current = session[index];
   const contact =
     current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
-  const activeNode = current ? nodeForStage(currentStageOf(current)) : null;
+  const selectedSituation = situation ? situationByKey.get(situation) : null;
   const progress = session.length ? Math.round(((Math.min(index + 1, session.length)) / session.length) * 100) : 0;
 
   useEffect(() => {
@@ -117,11 +111,11 @@ function SessionPage() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) return;
-      if (["1", "2", "3", "4"].includes(event.key)) {
-        const outcome = activeNode?.outcomes[Number(event.key) - 1];
-        if (outcome) selectOutcome(outcome);
+      const shortcut = Number(event.key);
+      if (shortcut >= 1 && shortcut <= situationOptions.length) {
+        selectSituation(situationOptions[shortcut - 1].key);
       }
-      if (event.key === "5" || event.key === "ArrowRight") nextCard();
+      if (event.key === "ArrowRight") nextCard();
       if (event.key === "ArrowLeft") previousCard();
     };
     window.addEventListener("keydown", onKey);
@@ -174,8 +168,10 @@ function SessionPage() {
     setPromiseText("");
     setPromiseDate("");
     setActiveContactId(null);
-    setSelectedOutcome(null);
-    setOverrideStage("");
+    setSituation(null);
+    setEtape(null);
+    setMotif("");
+    setOverrideAction("");
     setOverrideStatus("");
     setEditOpen(false);
     setEditForm({});
@@ -197,14 +193,26 @@ function SessionPage() {
     nextCard();
   }
 
-  function selectOutcome(outcome: PlaybookOutcome) {
-    setSelectedOutcome(outcome);
+  /** Applique automatiquement la table de décision, la proposition restant modifiable. */
+  function selectSituation(key: Situation, dateSaisie?: string) {
+    if (!current) return;
+    const proposal = prochaineEtape(current, { situation: key, dateSaisie });
+    setSituation(key);
+    setEtape(proposal);
     setMessage("");
-    setNotes((prev) => prev || outcome.note);
-    setOverrideStage(outcome.nextStage);
-    setOverrideStatus(outcome.status || current?.status || "Tiède");
-    setCallbackDate(dateForOutcome(outcome));
-    setMode(outcome.mode === "meeting" ? "meeting" : "form");
+    setOverrideAction(proposal.action);
+    setOverrideStatus(proposal.status || current.status);
+    setCanal(proposal.canal || "téléphone");
+    setCallbackDate(proposal.date);
+    setMode(key === "rdv" ? "meeting" : "form");
+  }
+
+  /** Recalcule la proposition quand le prospect donne une date (parking, promesse, RDV). */
+  function refreshEtape(dateSaisie: string) {
+    if (!current || !situation) return;
+    const proposal = prochaineEtape(current, { situation, dateSaisie });
+    setEtape(proposal);
+    setCallbackDate(proposal.date);
   }
 
   function openQuickEdit() {
@@ -249,23 +257,23 @@ function SessionPage() {
   }
 
   async function saveOutcome(
-    outcome = selectedOutcome,
     options: { nextActionDate?: string; meetingAt?: string; customNotes?: string } = {},
   ) {
-    if (!current || !outcome || busy) return;
+    const option = selectedSituation;
+    if (!current || !option || !etape || busy) return;
     setBusy(true);
     setMessage("");
-    const stage = (overrideStage || outcome.nextStage) as CycleStage;
-    const status = (overrideStatus || outcome.status || current.status) as ProspectStatus;
+    const status = (overrideStatus || etape.status || current.status) as ProspectStatus;
+    const action = overrideAction || etape.action;
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
-      action_type: outcome.actionType,
+      action_type: option.actionType,
       canal,
-      stage,
-      objective: activeNode?.objective,
-      result: outcome.result,
-      notes: options.customNotes || notes || outcome.note,
+      stage: option.key,
+      objective: action,
+      result: option.result,
+      notes: options.customNotes || notes || etape.raison,
       next_action_date: options.nextActionDate,
       meeting_date: options.meetingAt,
       meeting_duration_minutes: options.meetingAt ? duration : undefined,
@@ -281,20 +289,33 @@ function SessionPage() {
       next_action_date:
         status === "Perdu"
           ? null
-          : (options.meetingAt || options.nextActionDate || dateForOutcome(outcome)).slice(0, 10),
+          : (options.meetingAt || options.nextActionDate || etape.date).slice(0, 10),
+      ...(etape.decision_level ? { decision_level: etape.decision_level } : {}),
+      ...(status === "Parké"
+        ? { parking_trigger: motif, parking_date: (options.nextActionDate || etape.date).slice(0, 10) }
+        : {}),
     });
-    if (outcome.result === "NRP") setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
-    if (outcome.result === "Échange") setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
-    if (outcome.result === "RDV") setSummary((prev) => ({ ...prev, rdv: prev.rdv + 1 }));
+    if (option.result === "NRP") setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
+    if (option.result === "Échange") setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
+    if (option.result === "RDV") setSummary((prev) => ({ ...prev, rdv: prev.rdv + 1 }));
     setBusy(false);
     markDoneAndNext();
   }
 
   async function saveForm() {
-    if (!selectedOutcome) return;
-    const isLost = (overrideStatus || selectedOutcome.status) === "Perdu";
+    if (!etape) return;
+    const status = (overrideStatus || etape.status || current?.status) as ProspectStatus;
+    const isLost = status === "Perdu";
     if (!isLost && !callbackDate) {
       setMessage("Choisissez une prochaine date d'action pour garder la relance sous contrôle.");
+      return;
+    }
+    if ((etape.motifRequis || status === "Parké") && !motif.trim()) {
+      setMessage("« Parquer » exige un motif écrit : indiquez le déclencheur ou la raison.");
+      return;
+    }
+    if (etape.promesseRequise && (!promiseText.trim() || !promiseDate)) {
+      setMessage("Intérêt exprimé : saisissez la promesse et sa date d'échéance.");
       return;
     }
     if (promiseText && !promiseDate) {
@@ -302,21 +323,20 @@ function SessionPage() {
       return;
     }
     if (!isLost && canal === "email" && callbackDate < minCallbackDate("email")) {
-      setMessage("Email consigné : la relance ne peut pas être le jour même — au plus tôt demain.");
+      setMessage("Email consigné : le rappel ne peut pas être le jour même — au plus tôt demain.");
       setCallbackDate(minCallbackDate("email"));
       return;
     }
-    await saveOutcome(selectedOutcome, {
+    await saveOutcome({
       nextActionDate: callbackDate || undefined,
       customNotes: notes,
     });
   }
 
-
   function markLost() {
-    selectOutcome(LOST_OUTCOME);
-    setNotes(LOST_OUTCOME.note);
-    setCallbackDate("");
+    selectSituation("refus");
+    setOverrideStatus("Perdu");
+    setNotes((prev) => prev || "Pas de besoin identifié — coordonnées envoyées pour rester en contact.");
   }
 
   function mailtoCoordinates() {
@@ -329,13 +349,13 @@ function SessionPage() {
   }
 
   async function saveMeeting() {
-    if (!current || !meetingDate || busy || !selectedOutcome) return;
+    if (!current || !meetingDate || busy || !etape) return;
     window.open(
       buildCalendarUrl({ prospect: current, contact, date: meetingDate, duration, videoLink }),
       "_blank",
       "noopener,noreferrer",
     );
-    await saveOutcome(selectedOutcome, { meetingAt: meetingDate, customNotes: notes || selectedOutcome.note });
+    await saveOutcome({ meetingAt: meetingDate, customNotes: notes || etape.raison });
   }
 
 
@@ -647,10 +667,10 @@ function SessionPage() {
                 ) : null}
               </div>
               <div className="mt-5 rounded-r-md border-l-[3px] border-script-border bg-script p-4">
-                <p className={labelClass}>{activeNode?.label}</p>
-                <p className="mt-2 text-sm leading-6">{activeNode?.script}</p>
+                <p className={labelClass}>{callScript.label}</p>
+                <p className="mt-2 text-sm leading-6">{callScript.text}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {activeNode?.checklist.map((item) => (
+                  {callScript.checklist.map((item) => (
                     <span key={item} className="rounded-full bg-background px-3 py-1 text-xs text-muted-foreground">
                       {item}
                     </span>
@@ -660,24 +680,24 @@ function SessionPage() {
             </div>
           </Card>
           <Card className="p-4">
-            <p className={labelClass}>Issues du nœud</p>
+            <p className={labelClass}>Situation constatée</p>
             <div className="mt-3 grid gap-2">
-              {activeNode?.outcomes.map((outcome, outcomeIndex) => (
+              {situationOptions.map((option, optionIndex) => (
                 <Button
-                  key={outcome.key}
-                  variant={outcome.result === "RDV" ? "success" : outcome.result === "Échange" ? "info" : outcome.result === "NRP" ? "danger" : "warning"}
-                  onClick={() => selectOutcome(outcome)}
+                  key={option.key}
+                  variant={option.result === "RDV" ? "success" : option.result === "Échange" ? "info" : option.result === "NRP" ? "danger" : "warning"}
+                  onClick={() => selectSituation(option.key)}
                   disabled={busy}
                   className="justify-start text-left"
                 >
-                  {outcomeIndex + 1} · {outcome.label}
+                  {optionIndex + 1} · {option.label}
                 </Button>
               ))}
               <Button variant="neutral" onClick={markLost} disabled={busy} className="justify-start text-left">
                 Perdu / pas de besoin
               </Button>
               <Button variant="neutral" onClick={nextCard} disabled={busy}>
-                5 · Passer sans log
+                Passer sans log (→)
               </Button>
             </div>
 
@@ -691,35 +711,59 @@ function SessionPage() {
               />
             </div>
 
-            {selectedOutcome ? (
-              <div className="mt-3 rounded-lg bg-muted p-3 text-sm">
-                <p className={labelClass}>Recommandation par défaut</p>
-                <p className="mt-1">{selectedOutcome.note}</p>
+            {etape ? (
+              <div className="mt-3 rounded-lg border border-primary/40 bg-muted p-3 text-sm">
+                <p className={labelClass}>Proposition automatique (modifiable)</p>
+                <p className="mt-1 font-medium">{formatEtape(etape)}</p>
                 <p className="mt-1 text-muted-foreground">
-                  Suite : {selectedOutcome.nextStage} · {selectedOutcome.delayDays === 0 ? "immédiat" : `J+${selectedOutcome.delayDays}`}
+                  Canal : {etape.canal ? etape.canal : "aucun canal — action interne"}
                 </p>
               </div>
             ) : null}
             {message ? <p className="mt-3 rounded-lg bg-script p-3 text-sm">{message}</p> : null}
 
-            {mode === "form" && selectedOutcome ? (
+            {mode === "form" && etape ? (
               <Panel>
-                <label className={labelClass}>Prochaine étape (modifiable)</label>
-                <select
+                <label className={labelClass}>Action proposée (modifiable)</label>
+                <input
                   className={fieldClass}
-                  value={overrideStage || selectedOutcome.nextStage}
-                  onChange={(e) => setOverrideStage(e.target.value as CycleStage)}
-                >
-                  {stages.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {stage} · {playbookNodes[stage].label}
-                    </option>
-                  ))}
-                </select>
+                  value={overrideAction}
+                  onChange={(e) => setOverrideAction(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Raison : {etape.raison}</p>
+                {etape.dateRequise && situation !== "interet" ? (
+                  <>
+                    <label className={labelClass}>
+                      Date donnée par le prospect (obligatoire)
+                    </label>
+                    <input
+                      className={fieldClass}
+                      type="date"
+                      value={callbackDate}
+                      onChange={(e) => {
+                        setCallbackDate(e.target.value);
+                        refreshEtape(e.target.value);
+                      }}
+                    />
+                  </>
+                ) : null}
+                {etape.motifRequis || overrideStatus === "Parké" ? (
+                  <>
+                    <label className={labelClass}>
+                      Motif / déclencheur de parking (obligatoire)
+                    </label>
+                    <input
+                      className={fieldClass}
+                      value={motif}
+                      onChange={(e) => setMotif(e.target.value)}
+                      placeholder="ex. budget formation revu en janvier"
+                    />
+                  </>
+                ) : null}
                 <label className={labelClass}>Statut</label>
                 <select
                   className={fieldClass}
-                  value={overrideStatus || selectedOutcome.status || "Tiède"}
+                  value={overrideStatus || etape.status || current.status}
                   onChange={(e) => setOverrideStatus(e.target.value as ProspectStatus)}
                 >
                   {statuses.map((status) => (
@@ -774,7 +818,10 @@ function SessionPage() {
                       className={fieldClass}
                       type="date"
                       value={promiseDate}
-                      onChange={(e) => setPromiseDate(e.target.value)}
+                      onChange={(e) => {
+                        setPromiseDate(e.target.value);
+                        if (situation === "interet") refreshEtape(e.target.value);
+                      }}
                     />
                   </>
                 ) : null}
@@ -809,7 +856,8 @@ function SessionPage() {
                 <Button
                   variant="neutral"
                   onClick={() => {
-                    setSelectedOutcome(null);
+                    setSituation(null);
+                    setEtape(null);
                     setMode("idle");
                   }}
                   disabled={busy}
@@ -826,8 +874,14 @@ function SessionPage() {
                   className={fieldClass}
                   type="datetime-local"
                   value={meetingDate}
-                  onChange={(e) => setMeetingDate(e.target.value)}
+                  onChange={(e) => {
+                    setMeetingDate(e.target.value);
+                    refreshEtape(e.target.value);
+                  }}
                 />
+                {etape ? (
+                  <p className="text-xs text-muted-foreground">{formatEtape(etape)}</p>
+                ) : null}
                 <label className={labelClass}>Durée</label>
                 <input
                   className={fieldClass}
