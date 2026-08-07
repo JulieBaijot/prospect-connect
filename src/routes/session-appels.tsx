@@ -246,7 +246,7 @@ function SessionPage() {
       contact_id: contact?.id,
       action_type: outcome.actionType,
       canal: "téléphone",
-      stage: currentStageOf(current),
+      stage,
       objective: activeNode?.objective,
       result: outcome.result,
       notes: options.customNotes || notes || outcome.note,
@@ -255,7 +255,6 @@ function SessionPage() {
       meeting_duration_minutes: options.meetingAt ? duration : undefined,
       video_link: options.meetingAt ? videoLink : undefined,
     });
-    void stage;
     await updateProspect(current.id, {
       status,
       last_contacted_at: new Date().toISOString().slice(0, 10),
