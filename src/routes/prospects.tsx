@@ -528,7 +528,10 @@ function ProspectsPage() {
                           : "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={p.status} />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={p.status} />
+                        <SegmentBadge headcount={p.headcount_range} segment={p.segment} />
+                      </div>
                     </td>
                     <td className="px-4 py-3">{formatDate(p.next_action_date)}</td>
                     <td className="px-4 py-3">
