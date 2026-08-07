@@ -95,6 +95,8 @@ function ProspectsPage() {
   const [contactForm, setContactForm] = useState(emptyContact);
   const formRef = useRef<HTMLDivElement | null>(null);
   const companyInputRef = useRef<HTMLInputElement | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+
   const [filters, setFilters] = useState({
     status: "",
     offer: "",
@@ -178,7 +180,9 @@ function ProspectsPage() {
     [prospects],
   );
   function openProspect(prospect: ProspectWithRelations) {
+    setPanelOpen(true);
     setSelected(prospect);
+
     const picked = Object.fromEntries(
       Object.keys(emptyProspect).map((key) => [
         key,
@@ -212,16 +216,17 @@ function ProspectsPage() {
   }
 
   function addNew() {
+    setPanelOpen(true);
     setSelected(null);
     setForm(emptyProspect);
     setContactForm(emptyContact);
     setDeleteStatus("");
     setPlacesStatus("Nouvelle fiche : renseignez au minimum le nom de l'entreprise puis Sauvegarder.");
     requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       companyInputRef.current?.focus();
     });
   }
+
 
   async function save() {
     if (!form.company_name.trim()) {
@@ -446,7 +451,7 @@ function ProspectsPage() {
         <MiniKpi label="Chauds" value={counters.hot} />
         <MiniKpi label="Convertis" value={counters.converted} />
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-4">
         <Card className="overflow-hidden">
           <div className="grid gap-3 border-b border-border p-4 md:grid-cols-4 xl:grid-cols-7">
             <input
@@ -589,9 +594,19 @@ function ProspectsPage() {
             ))}
           </div>
         </Card>
-        <div ref={formRef} className="scroll-mt-6">
+        {panelOpen ? (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <button
+            aria-label="Fermer le panneau"
+            className="absolute inset-0 bg-foreground/20"
+            onClick={() => setPanelOpen(false)}
+          />
+        <div
+          ref={formRef}
+          className="relative z-10 h-full w-full max-w-[460px] overflow-y-auto border-l border-border bg-background p-4 shadow-xl"
+        >
         <Card className="p-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="sticky -top-4 z-10 -mx-4 -mt-4 mb-2 flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
             <h3 className="text-[16px] font-medium">
               {selected ? "Modifier le prospect" : "Ajouter un prospect"}
             </h3>
@@ -606,8 +621,12 @@ function ProspectsPage() {
                 <Save className="mr-2 h-4 w-4" />
                 Sauvegarder
               </Button>
+              <Button variant="neutral" onClick={() => setPanelOpen(false)}>
+                Fermer
+              </Button>
             </div>
           </div>
+
           <div className="mt-4 grid gap-3">
             <Field label="Entreprise *">
               <input
@@ -945,7 +964,10 @@ function ProspectsPage() {
           </div>
         </Card>
         </div>
+        </div>
+        ) : null}
       </div>
+
     </>
   );
 }
