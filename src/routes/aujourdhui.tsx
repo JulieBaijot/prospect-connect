@@ -3,7 +3,7 @@ import { ArrowRight, CalendarClock, PhoneCall, Search, UserRoundCheck } from "lu
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Card, CategoryBadge, PageTitle, StatusBadge, labelClass } from "@/components/prm/ui";
+import { Card, PageTitle, StatusBadge, labelClass } from "@/components/prm/ui";
 import {
   bestPhone,
   contactName,

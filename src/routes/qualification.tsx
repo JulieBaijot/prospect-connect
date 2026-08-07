@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, ChevronRight, ExternalLink, Star, Trash2, UserX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Button, Card, CategoryBadge, PageTitle, fieldClass, labelClass } from "@/components/prm/ui";
+import { Button, Card, PageTitle, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
 import {
   dataQualityIssues,
   deleteProspect,
@@ -11,7 +11,6 @@ import {
   loadProspects,
   offerTargets,
   prioritizeQualificationSession,
-  suggestProspectCategory,
   updateProspect,
   type HeadcountRange,
   type OfferTarget,
@@ -134,22 +133,6 @@ function QualificationPage() {
   const current = session[index];
   const issues = current ? dataQualityIssues(current) : [];
   const progress = session.length ? Math.round((Math.min(index + 1, session.length) / session.length) * 100) : 0;
-  const autoCategory = useMemo(
-    () =>
-      current && form
-        ? suggestProspectCategory({
-            headcount_range: form.headcount_range,
-            offer_target: form.offer_target,
-            sector: form.sector,
-            estimated_value: current.estimated_value,
-            comments: form.comments,
-            contactKnown: current.contacts.length > 0 || Boolean(form.main_email),
-            history: current.prospection_logs,
-          })
-        : null,
-    [current, form],
-  );
-
   // Charger prospects et détecter session sauvegardée
   useEffect(() => {
     loadProspects().then((items) => {

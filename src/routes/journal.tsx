@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Button, Card, CategoryBadge, PageTitle, fieldClass } from "@/components/prm/ui";
+import { Button, Card, PageTitle, fieldClass } from "@/components/prm/ui";
 import {
   contactName,
   exportCsv,
