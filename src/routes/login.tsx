@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function isSafeNext(n: string) {
-  return n.startsWith("/") && !n.startsWith("//");
+  return n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/login");
 }
 
 function Login() {
@@ -24,11 +24,11 @@ function Login() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const target = isSafeNext(next) ? next : "/";
+  const target = isSafeNext(next) ? next : "/prospects";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = target;
+      if (data.session) void router.navigate({ href: target, replace: true });
     });
   }, [target]);
 
@@ -41,7 +41,7 @@ function Login() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
       if (error) return setError(error.message);
-      window.location.href = target;
+      void router.navigate({ href: target, replace: true });
     } else {
       const emailRedirectTo = `${window.location.origin}/login?next=${encodeURIComponent(target)}`;
       const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } });

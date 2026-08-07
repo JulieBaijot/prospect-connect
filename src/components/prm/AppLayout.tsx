@@ -12,14 +12,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/prm/ui";
 
-function protectedReturnPath(href: string) {
-  let candidate = href;
-  for (let depth = 0; depth < 5 && candidate.startsWith("/login"); depth += 1) {
-    const next = new URL(candidate, window.location.origin).searchParams.get("next");
-    if (!next || !next.startsWith("/") || next.startsWith("//")) return "/prospects";
-    candidate = next;
+function protectedReturnPath(pathname: string) {
+  if (!pathname.startsWith("/") || pathname.startsWith("//") || pathname.startsWith("/login")) {
+    return "/prospects";
   }
-  return candidate.startsWith("/") && !candidate.startsWith("//") ? candidate : "/prospects";
+  return pathname;
 }
 
 const navItems = [
@@ -35,7 +32,7 @@ const navItems = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnPath = useRef(protectedReturnPath(location.href));
+  const returnPath = useRef(protectedReturnPath(location.pathname));
   const redirecting = useRef(false);
   const [authReady, setAuthReady] = useState(false);
   const [userEmail, setUserEmail] = useState("");
