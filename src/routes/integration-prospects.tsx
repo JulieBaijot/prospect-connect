@@ -195,6 +195,9 @@ function IntegrationPage() {
   >([]);
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [activeCompany, setActiveCompany] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState("");
+  const [saveBusy, setSaveBusy] = useState(false);
+
 
   useEffect(() => {
     const saved = localStorage.getItem("prm-search-source") as SearchSource | null;
