@@ -11,6 +11,7 @@ import {
   loadProspects,
   offerTargets,
   prioritizeQualificationSession,
+  targetValueOf,
   updateProspect,
   type HeadcountRange,
   type OfferTarget,
