@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  Copy,
   Mail,
   PhoneCall,
   Sparkles,
@@ -23,12 +24,16 @@ import {
 } from "@/components/prm/ui";
 import { emptyPlan, savePlan, todayPlan, type DayPlan } from "@/lib/day-plan";
 import {
+  fillTemplate,
+  loadEmailTemplates,
+  type EmailTemplate,
+} from "@/lib/email-templates";
+import {
   addLog,
   bestPhone,
   brokenPromises,
   contactName,
   decisionLevels,
-  emailTemplates,
   enforceCallbackRule,
   formatDate,
   formatEuro,
@@ -90,11 +95,15 @@ function TodayPage() {
   const [plan, setPlan] = useState<DayPlan>(() => emptyPlan(today));
   const [screen, setScreen] = useState<"jour" | "bilan">("jour");
   const [message, setMessage] = useState("");
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
 
   useEffect(() => {
     setPlan(todayPlan());
     loadProspects().then(setProspects);
     loadLogs().then(setLogs);
+    loadEmailTemplates()
+      .then(setTemplates)
+      .catch(() => setTemplates([]));
   }, []);
 
   function refresh() {
@@ -272,6 +281,7 @@ function TodayPage() {
                 key={prospect.id}
                 prospect={prospect}
                 logs={logs.filter((log) => log.prospect_id === prospect.id)}
+                templates={templates}
                 onSaved={() => {
                   refresh();
                   setMessage("Email consigné.");
