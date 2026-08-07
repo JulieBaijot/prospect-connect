@@ -622,14 +622,30 @@ function ProspectsPage() {
                 <select
                   className={fieldClass}
                   value={form.headcount_range}
-                  onChange={(e) =>
-                    setForm({ ...form, headcount_range: e.target.value as HeadcountRange })
-                  }
+                  onChange={(e) => {
+                    const next = e.target.value as HeadcountRange;
+                    const previousTarget = targetValueOf(form.headcount_range);
+                    const keepManual =
+                      Number(form.estimated_value) > 0 &&
+                      Number(form.estimated_value) !== previousTarget;
+                    setForm({
+                      ...form,
+                      headcount_range: next,
+                      estimated_value: keepManual
+                        ? Number(form.estimated_value)
+                        : targetValueOf(next),
+                    });
+                  }}
                 >
                   {headcountRanges.map((x) => (
                     <option key={x}>{x}</option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Segment (auto)">
+                <div className="flex min-h-10 items-center">
+                  <SegmentBadge headcount={form.headcount_range} />
+                </div>
               </Field>
               <Field label="Statut">
                 <select
