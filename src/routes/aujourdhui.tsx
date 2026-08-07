@@ -238,6 +238,7 @@ function ProspectRow({ prospect }: { prospect: ProspectWithRelations }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <SegmentBadge headcount={prospect.headcount_range} segment={prospect.segment} />
           <StatusBadge status={prospect.status} />
         </div>
       </div>
