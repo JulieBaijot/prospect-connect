@@ -45,6 +45,26 @@ export function StatusBadge({ status }: { status: ProspectStatus | null | undefi
   );
 }
 
+export function SegmentBadge({
+  headcount,
+  segment,
+}: {
+  headcount?: string | null;
+  segment?: Segment | null;
+}) {
+  const value = segment ?? segmentOf(headcount);
+  if (!value) return null;
+  return (
+    <span
+      className="inline-flex rounded-full border border-border bg-secondary px-3 py-1 text-[11px] font-medium text-secondary-foreground"
+      title="Segment déduit de la tranche d'effectif (lecture seule)"
+    >
+      {value}
+    </span>
+  );
+}
+
+
 export function Button({
   children,
   variant = "primary",
