@@ -84,6 +84,15 @@ function callRanking(prospects: ProspectWithRelations[], tomorrow: string, today
   const ranked: Array<{ prospect: ProspectWithRelations; reason: Reason; rank: number }> = [];
 
   for (const prospect of pool) {
+    // Un parking arrivé à échéance revient en tête, motif affiché.
+    if (prospect.status === "Parké" && prospect.parking_date && prospect.parking_date <= tomorrow) {
+      ranked.push({
+        prospect,
+        reason: `Réveil de parking (${formatDate(prospect.parking_date)}) — ${prospect.parking_trigger || "motif non renseigné"}`,
+        rank: 0,
+      });
+      continue;
+    }
     const promise = prospect.prospection_logs.find(
       (log) => log.promise_date && log.promise_kept === null && log.promise_date <= tomorrow,
     );
@@ -103,6 +112,7 @@ function callRanking(prospects: ProspectWithRelations[], tomorrow: string, today
       });
       continue;
     }
+
     if (bestPhone(prospect) && contactNamed(prospect) && !prospect.last_contacted_at) {
       ranked.push({ prospect, reason: "Téléphone + contact nommé, jamais appelé", rank: 3 });
       continue;
