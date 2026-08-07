@@ -95,6 +95,8 @@ function ProspectsPage() {
   const [contactForm, setContactForm] = useState(emptyContact);
   const formRef = useRef<HTMLDivElement | null>(null);
   const companyInputRef = useRef<HTMLInputElement | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+
   const [filters, setFilters] = useState({
     status: "",
     offer: "",
