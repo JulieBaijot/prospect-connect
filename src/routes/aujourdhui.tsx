@@ -238,7 +238,6 @@ function ProspectRow({ prospect }: { prospect: ProspectWithRelations }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <CategoryBadge category={prospect.category} />
           <StatusBadge status={prospect.status} />
         </div>
       </div>

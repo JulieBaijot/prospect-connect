@@ -9,6 +9,7 @@ import {
   formatDate,
   loadLogs,
   shortDateTime,
+  statuses,
   type Category,
   type Contact,
   type ProspectionLog,
@@ -33,7 +34,7 @@ function JournalPage() {
   const [logs, setLogs] = useState<
     Array<ProspectionLog & { prospects: Prospect | null; contacts: Contact | null }>
   >([]);
-  const [filters, setFilters] = useState({ period: "", canal: "", category: "" });
+  const [filters, setFilters] = useState({ period: "", canal: "", status: "" });
   useEffect(() => {
     loadLogs()
       .then(setLogs)
@@ -49,7 +50,7 @@ function JournalPage() {
         return (
           (!filters.period || (filters.period === "week" ? withinWeek : withinMonth)) &&
           (!filters.canal || log.canal === filters.canal) &&
-          (!filters.category || log.prospects?.category === filters.category)
+          (!filters.status || log.prospects?.status === filters.status)
         );
       }),
     [logs, filters],
@@ -105,15 +106,13 @@ function JournalPage() {
           </select>
           <select
             className={fieldClass}
-            value={filters.category}
-            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           >
-            <option value="">Toutes catégories</option>
-            {["A – Pilier", "B – Socle prévention", "C – Porte d'entrée", "Récurrent", "Exceptionnel"].map(
-              (c) => (
-                <option key={c}>{c}</option>
-              ),
-            )}
+            <option value="">Tous statuts</option>
+            {statuses.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
           </select>
         </div>
         <div className="overflow-x-auto">

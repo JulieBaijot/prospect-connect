@@ -314,7 +314,7 @@ function IntegrationPage() {
   function addContact(company: Company, contact?: Partial<ContactDraft>) {
     const suggested = suggestProspectCategory({
       headcount_range: company.headcount,
-      offer_target: company.offer || "Formation SST",
+      offer_target: company.offer || "SST",
       sector: company.sector,
       estimated_value: company.value,
       comments: company.comments,
@@ -328,7 +328,7 @@ function IntegrationPage() {
       email: contact?.email || "",
       linkedin: contact?.linkedin || "",
       maturity: "Pas joint",
-      offer: company.offer || "Formation SST",
+      offer: company.offer || "SST",
       category: company.category || suggested?.category || "C – Porte d'entrée",
       value: company.value || 0,
       comments: "",
@@ -363,7 +363,7 @@ function IntegrationPage() {
       const first = company.contacts[0];
       const suggested = suggestProspectCategory({
         headcount_range: company.headcount,
-        offer_target: first?.offer || company.offer || "Formation SST",
+        offer_target: first?.offer || company.offer || "SST",
         sector: company.sector,
         estimated_value: first?.value || company.value,
         comments: [company.comments, first?.comments].filter(Boolean).join(" "),
@@ -376,10 +376,10 @@ function IntegrationPage() {
           headcount_range: (company.headcount || "20-49") as HeadcountRange,
           category:
             first?.category || company.category || suggested?.category || "C – Porte d'entrée",
-          offer_target: first?.offer || company.offer || "Formation SST",
+          offer_target: first?.offer || company.offer || "SST",
           estimated_value: first?.value || company.value || 0,
           current_stage: "J1",
-          status: "Tiède",
+          status: "À qualifier",
           main_phone: company.phone || "",
           website: company.website || "",
           address: company.address || "",

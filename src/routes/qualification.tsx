@@ -84,7 +84,7 @@ function initialFormFor(prospect: ProspectWithRelations): FormState {
     siren: prospect.siren || "",
     sector: prospect.sector || "",
     headcount_range: prospect.headcount_range || "20-49",
-    offer_target: prospect.offer_target || "Formation SST",
+    offer_target: prospect.offer_target || "SST",
     comments: prospect.comments || "",
     next_action_date: prospect.next_action_date || "",
     decision_maker: prospect.decision_maker || "",
@@ -327,7 +327,6 @@ function QualificationPage() {
     if (form.enrichment_sources) {
       (patch as Partial<Prospect> & { enriched_at?: string }).enriched_at = new Date().toISOString();
     }
-    if (autoCategory && current.category === "C – Porte d'entrée") patch.category = autoCategory.category;
     await updateProspect(current.id, patch);
     if (!completedIds.includes(current.id)) {
       setCompletedIds((prev) => [...prev, current.id]);
@@ -451,7 +450,7 @@ function QualificationPage() {
                 <Button variant="neutral" onClick={nextCard} disabled={busy} className="px-3">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <CategoryBadge category={autoCategory?.category || current.category} />
+                <StatusBadge status={current.status} />
               </div>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
