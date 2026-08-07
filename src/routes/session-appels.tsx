@@ -84,6 +84,8 @@ function SessionPage() {
   const [motif, setMotif] = useState("");
   const [overrideAction, setOverrideAction] = useState("");
   const [overrideStatus, setOverrideStatus] = useState<ProspectStatus | "">("");
+  /** Surcharge manuelle de « quelqu'un a décroché » ; null = valeur déduite du résultat. */
+  const [reachedManual, setReachedManual] = useState<boolean | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
