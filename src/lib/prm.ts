@@ -815,41 +815,237 @@ export function dataQualityIssues(prospect: ProspectWithRelations) {
   ].filter(Boolean);
 }
 
-export function nextStage(stage: CycleStage): CycleStage {
-  const index = stages.indexOf(stage);
-  return stages[Math.min(index + 1, stages.length - 1)] || "J2";
+/** Décale une date ISO d'un nombre de jours. */
+export function shiftIso(value: string, days: number) {
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
-export function nextDateForStage(stage: CycleStage) {
-  const delays: Record<CycleStage, number> = {
-    J1: 1,
-    J2: 2,
-    J4: 2,
-    J6: 4,
-    J10: 5,
-    J15: 6,
-    J21: 30,
-  };
-  return addDaysIso(delays[stage] || 2);
+/** Situations possibles à l'issue d'un contact — remplace le cycle en sept étapes. */
+export type Situation =
+  | "nrp"
+  | "barrage"
+  | "email_envoye"
+  | "pas_le_bon_moment"
+  | "decision_groupe"
+  | "interet"
+  | "refus"
+  | "rdv";
+
+export interface SituationOption {
+  key: Situation;
+  label: string;
+  result: LogResult;
+  actionType: string;
 }
 
-export function currentStageOf(prospect: {
-  prospection_logs?: Array<{ stage: CycleStage | null; action_date: string }>;
-}): CycleStage {
+export const situationOptions: SituationOption[] = [
+  { key: "nrp", label: "NRP / personne au bout du fil", result: "NRP", actionType: "NRP" },
+  { key: "barrage", label: "Barrage accueil", result: "Pas dispo", actionType: "Barrage accueil" },
+  { key: "email_envoye", label: "Email envoyé", result: "Pas dispo", actionType: "Email envoyé" },
+  {
+    key: "pas_le_bon_moment",
+    label: "Échange — pas le bon moment",
+    result: "Échange",
+    actionType: "Pas le bon moment",
+  },
+  {
+    key: "decision_groupe",
+    label: "Échange — décision au niveau groupe",
+    result: "Échange",
+    actionType: "Décision groupe",
+  },
+  {
+    key: "interet",
+    label: "Échange — intérêt exprimé",
+    result: "Échange",
+    actionType: "Intérêt exprimé",
+  },
+  { key: "refus", label: "Refus net", result: "Échange", actionType: "Refus net" },
+  { key: "rdv", label: "RDV obtenu", result: "RDV", actionType: "RDV obtenu" },
+];
+
+export interface EtapeContexte {
+  situation: Situation;
+  /** Date donnée par le prospect, date de promesse ou date du RDV selon la situation. */
+  dateSaisie?: string | null;
+  motif?: string | null;
+  promesse?: string | null;
+}
+
+export interface Etape {
+  situation: Situation;
+  /** Action proposée — toujours renseignée. */
+  action: string;
+  /** Canal proposé — null quand l'action ne passe par aucun canal (parquer, préparer). */
+  canal: Canal | null;
+  /** Date proposée (YYYY-MM-DD) — toujours renseignée. */
+  date: string;
+  /** Raison, toujours affichée à l'écran. */
+  raison: string;
+  status?: ProspectStatus;
+  decision_level?: DecisionLevel;
+  /** « Parquer » exige toujours un motif écrit. */
+  motifRequis: boolean;
+  /** Date à saisir obligatoirement (donnée par le prospect / RDV). */
+  dateRequise: boolean;
+  /** Promesse datée obligatoire. */
+  promesseRequise: boolean;
+}
+
+type EtapeProspect = {
+  decision_maker?: string | null;
+  contacts?: Array<{ first_name: string | null; last_name: string | null }>;
+  prospection_logs?: Array<{ result: string | null; action_date: string }>;
+};
+
+/** Nombre de NRP consécutifs, en comptant celui qu'on consigne. */
+export function nrpStreak(prospect: EtapeProspect) {
   const logs = [...(prospect.prospection_logs || [])].sort(
     (a, b) => +new Date(b.action_date) - +new Date(a.action_date),
   );
-  const last = logs.find((log) => log.stage);
-  return last?.stage || "J1";
+  let streak = 0;
+  for (const log of logs) {
+    if (log.result === "NRP") streak += 1;
+    else break;
+  }
+  return streak;
 }
 
-export function nodeForStage(stage: CycleStage | null | undefined) {
-  return playbookNodes[stage || "J1"] || playbookNodes.J1;
+function contactConnu(prospect: EtapeProspect) {
+  if (prospect.decision_maker?.trim()) return true;
+  return Boolean(prospect.contacts?.some((c) => (c.first_name || c.last_name || "").trim()));
 }
 
-export function dateForOutcome(outcome: PlaybookOutcome) {
-  return addDaysIso(outcome.delayDays);
+/**
+ * Table de décision unique : renvoie toujours une action, un canal et une date.
+ * La proposition s'applique automatiquement mais reste modifiable avant validation.
+ */
+export function prochaineEtape(prospect: EtapeProspect, dernierLog: EtapeContexte): Etape {
+  const base = {
+    situation: dernierLog.situation,
+    motifRequis: false,
+    dateRequise: false,
+    promesseRequise: false,
+  };
+  const saisie = dernierLog.dateSaisie?.slice(0, 10) || "";
+
+  switch (dernierLog.situation) {
+    case "nrp": {
+      const count = nrpStreak(prospect) + 1;
+      if (count <= 1)
+        return {
+          ...base,
+          action: "Rappeler sur un autre créneau de la journée",
+          canal: "téléphone",
+          date: addDaysIso(3),
+          raison: "1er NRP — on retente sur un autre créneau",
+        };
+      if (count === 2)
+        return {
+          ...base,
+          action: "Basculer sur l'écrit",
+          canal: "email",
+          date: addDaysIso(1),
+          raison: "2e NRP, on passe à l'écrit",
+        };
+      return {
+        ...base,
+        action: "Parquer",
+        canal: null,
+        date: addDaysIso(90),
+        raison: `${count}e NRP — on parque 3 mois`,
+        status: "Parké",
+        motifRequis: true,
+      };
+    }
+    case "barrage":
+      return contactConnu(prospect)
+        ? {
+            ...base,
+            action: "Écrire directement au contact",
+            canal: "email",
+            date: addDaysIso(1),
+            raison: "Barrage accueil, contact nommé connu — on écrit en direct",
+          }
+        : {
+            ...base,
+            action: "Rappeler pour obtenir le nom et l'adresse",
+            canal: "téléphone",
+            date: addDaysIso(7),
+            raison: "Barrage accueil sans contact identifié — objectif : nom + email",
+          };
+    case "email_envoye":
+      return {
+        ...base,
+        action: "Rappeler",
+        canal: "téléphone",
+        date: enforceCallbackRule("email", addDaysIso(2)),
+        raison: "Email envoyé — rappel à J+2 minimum, jamais le jour même",
+      };
+    case "pas_le_bon_moment":
+      return {
+        ...base,
+        action: "Parquer à la date donnée par le prospect",
+        canal: null,
+        date: saisie || addDaysIso(30),
+        raison: "Pas le bon moment — on parque à la date annoncée",
+        status: "Parké",
+        motifRequis: true,
+        dateRequise: true,
+      };
+    case "decision_groupe":
+      return {
+        ...base,
+        action: "Basculer le prospect en décision groupe",
+        canal: null,
+        date: addDaysIso(180),
+        raison: "Décision au niveau groupe — suivi à 6 mois",
+        decision_level: "groupe",
+      };
+    case "interet":
+      return {
+        ...base,
+        action: "Tenir la promesse faite au prospect",
+        canal: null,
+        date: saisie || addDaysIso(2),
+        raison: "Intérêt exprimé — la date de la promesse fait foi",
+        status: "En discussion",
+        promesseRequise: true,
+        dateRequise: true,
+      };
+    case "refus":
+      return {
+        ...base,
+        action: "Parquer sur déclencheur",
+        canal: null,
+        date: saisie || addDaysIso(180),
+        raison: "Refus net — réveil uniquement sur déclencheur",
+        status: "Parké",
+        motifRequis: true,
+      };
+    case "rdv":
+    default:
+      return {
+        ...base,
+        situation: "rdv",
+        action: "Préparer le rendez-vous",
+        canal: null,
+        date: saisie ? shiftIso(saisie, -1) : addDaysIso(1),
+        raison: "RDV obtenu — préparation la veille du rendez-vous",
+        status: "En discussion",
+        dateRequise: true,
+      };
+  }
 }
+
+/** « Prochaine étape : rappeler le 12/08 — 2e NRP, on passe à l'écrit ». */
+export function formatEtape(etape: Etape) {
+  const action = etape.action.charAt(0).toLowerCase() + etape.action.slice(1);
+  return `Prochaine étape : ${action} le ${formatDate(etape.date)} — ${etape.raison}`;
+}
+
 
 export function sessionReason(prospect: ProspectWithRelations) {
   if (isDueTodayOrLate(prospect.next_action_date)) return "Relance prévue aujourd'hui ou en retard";
