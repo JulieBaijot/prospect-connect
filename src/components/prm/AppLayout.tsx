@@ -26,6 +26,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const returnPath = useRef(location.href);
+  const redirecting = useRef(false);
   const [authReady, setAuthReady] = useState(false);
   const [userEmail, setUserEmail] = useState("");
 
@@ -35,7 +36,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       if (!active) return;
       const session = data.session;
       if (!session) {
-        if (window.location.pathname === "/login") return;
+        if (redirecting.current || window.location.pathname === "/login") return;
+        redirecting.current = true;
         void navigate({ to: "/login", search: { next: returnPath.current }, replace: true });
         return;
       }
@@ -46,7 +48,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       if (!active) return;
       if (!session) {
         setAuthReady(false);
-        if (window.location.pathname === "/login") return;
+        if (redirecting.current || window.location.pathname === "/login") return;
+        redirecting.current = true;
         void navigate({ to: "/login", search: { next: returnPath.current }, replace: true });
         return;
       }
