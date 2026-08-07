@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, CalendarClock, Coins, PhoneCall, Search, UserRoundCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, Coins, PhoneCall, Search, UserRoundCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
@@ -132,7 +132,6 @@ function TodayPage() {
                   {log.prospects?.id ? (
                     <Link
                       to="/prospects"
-                      search={{ q: log.prospects.company_name }}
                       className="inline-flex min-h-9 items-center rounded-lg bg-secondary px-3 text-sm font-medium text-secondary-foreground hover:bg-accent"
                     >
                       Ouvrir
