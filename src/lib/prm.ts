@@ -59,6 +59,9 @@ export interface Prospect {
   company_name: string;
   city: string | null;
   headcount_range: HeadcountRange | null;
+  /** Colonne générée en base, lecture seule. */
+  segment: Segment | null;
+
   offer_target: OfferTarget | null;
   estimated_value: number;
   status: ProspectStatus;
