@@ -112,6 +112,8 @@ export interface ProspectionLog {
   stage: string | null;
   objective: string | null;
   result: LogResult | null;
+  /** Un humain a-t-il décroché ? Indépendant du résultat commercial. null = inconnu. */
+  reached: boolean | null;
   notes: string | null;
   /** Relance que je me fixe à moi-même. */
   next_action_date: string | null;
