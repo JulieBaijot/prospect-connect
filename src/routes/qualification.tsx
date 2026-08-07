@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, ChevronRight, ExternalLink, Star, Trash2, UserX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Button, Card, PageTitle, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
+import { Button, Card, PageTitle, SegmentBadge, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
 import {
   dataQualityIssues,
   deleteProspect,
