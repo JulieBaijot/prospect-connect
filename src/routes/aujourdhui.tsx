@@ -79,7 +79,7 @@ function TodayPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-5">
         <Kpi
           icon={<CalendarClock className="h-4 w-4" />}
           label="Rappels dus"
@@ -100,7 +100,13 @@ function TodayPage() {
           label="Qualification"
           value={`${dashboard.qualificationCycle.length}/20`}
         />
+        <Kpi
+          icon={<Coins className="h-4 w-4" />}
+          label="Valeur liste du jour"
+          value={formatEuro(dashboard.dayValue)}
+        />
       </div>
+
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <ActionSection
