@@ -844,7 +844,11 @@ export async function loadLogs(): Promise<
 function prepareProspectWrite<T extends Partial<Prospect>>(input: T) {
   const { segment: _segment, ...rest } = input as T & { segment?: unknown };
   const payload = rest as Partial<Prospect>;
-  if ("headcount_range" in payload && (payload.estimated_value ?? 0) === 0) {
+  if (
+    "headcount_range" in payload &&
+    "estimated_value" in payload &&
+    Number(payload.estimated_value ?? 0) === 0
+  ) {
     payload.estimated_value = targetValueOf(payload.headcount_range);
   }
   return payload;
