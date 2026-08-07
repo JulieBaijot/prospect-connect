@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { categoryClass, statusBandClass, type Category, type ProspectStatus } from "@/lib/prm";
+import {
+  categoryClass,
+  segmentOf,
+  statusBandClass,
+  type Category,
+  type ProspectStatus,
+  type Segment,
+} from "@/lib/prm";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-xl border border-border bg-card ${className}`}>{children}</div>;
