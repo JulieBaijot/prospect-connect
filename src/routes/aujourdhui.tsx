@@ -422,6 +422,10 @@ function CallCard({
         stage: key,
         objective: proposal.action,
         result: option.result,
+        reached:
+          (proposal.canal || "téléphone") === "téléphone"
+            ? (reachedManual ?? reachedFromResult(option.result))
+            : null,
         notes: freeNotes || proposal.raison,
         next_action_date: nextDate,
         promise_text: promiseText || null,
