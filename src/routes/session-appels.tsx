@@ -115,7 +115,7 @@ function SessionPage() {
       if (shortcut >= 1 && shortcut <= situationOptions.length) {
         selectSituation(situationOptions[shortcut - 1].key);
       }
-      if (event.key === "5" || event.key === "ArrowRight") nextCard();
+      if (event.key === "ArrowRight") nextCard();
       if (event.key === "ArrowLeft") previousCard();
     };
     window.addEventListener("keydown", onKey);
@@ -697,7 +697,7 @@ function SessionPage() {
                 Perdu / pas de besoin
               </Button>
               <Button variant="neutral" onClick={nextCard} disabled={busy}>
-                5 · Passer sans log
+                Passer sans log (→)
               </Button>
             </div>
 
