@@ -25,6 +25,7 @@ import {
   offerTargets,
   saveProspect,
   statuses,
+  targetValueOf,
   decisionLevels,
   updateProspect,
   type Contact,
