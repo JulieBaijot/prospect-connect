@@ -63,9 +63,26 @@ function TodayPage() {
     const callReminders = callCycle.filter((p) => isDueTodayOrLate(p.next_action_date)).length;
     const qualificationCycle = prioritizeQualificationSession(active, 20);
     const dayValue = callCycle.reduce((sum, p) => sum + Number(p.estimated_value || 0), 0);
+    const promises = brokenPromises(logs);
 
-    return { reminders, meetings, callCycle, callReminders, qualificationCycle, dayValue };
+    return {
+      reminders,
+      meetings,
+      callCycle,
+      callReminders,
+      qualificationCycle,
+      dayValue,
+      promises,
+    };
   }, [logs, prospects, today]);
+
+  async function keepPromise(logId: string) {
+    await setPromiseKept(logId, true);
+    setLogs((prev) =>
+      prev.map((log) => (log.id === logId ? { ...log, promise_kept: true } : log)),
+    );
+  }
+
 
   return (
     <>
