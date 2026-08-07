@@ -433,6 +433,7 @@ function QualificationPage() {
                 <Button variant="neutral" onClick={nextCard} disabled={busy} className="px-3">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
+                <SegmentBadge headcount={form.headcount_range} />
                 <StatusBadge status={current.status} />
               </div>
             </div>
