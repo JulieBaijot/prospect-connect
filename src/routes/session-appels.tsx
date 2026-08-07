@@ -667,10 +667,10 @@ function SessionPage() {
                 ) : null}
               </div>
               <div className="mt-5 rounded-r-md border-l-[3px] border-script-border bg-script p-4">
-                <p className={labelClass}>{activeNode?.label}</p>
-                <p className="mt-2 text-sm leading-6">{activeNode?.script}</p>
+                <p className={labelClass}>{callScript.label}</p>
+                <p className="mt-2 text-sm leading-6">{callScript.text}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {activeNode?.checklist.map((item) => (
+                  {callScript.checklist.map((item) => (
                     <span key={item} className="rounded-full bg-background px-3 py-1 text-xs text-muted-foreground">
                       {item}
                     </span>
@@ -680,17 +680,17 @@ function SessionPage() {
             </div>
           </Card>
           <Card className="p-4">
-            <p className={labelClass}>Issues du nœud</p>
+            <p className={labelClass}>Situation constatée</p>
             <div className="mt-3 grid gap-2">
-              {activeNode?.outcomes.map((outcome, outcomeIndex) => (
+              {situationOptions.map((option, optionIndex) => (
                 <Button
-                  key={outcome.key}
-                  variant={outcome.result === "RDV" ? "success" : outcome.result === "Échange" ? "info" : outcome.result === "NRP" ? "danger" : "warning"}
-                  onClick={() => selectOutcome(outcome)}
+                  key={option.key}
+                  variant={option.result === "RDV" ? "success" : option.result === "Échange" ? "info" : option.result === "NRP" ? "danger" : "warning"}
+                  onClick={() => selectSituation(option.key)}
                   disabled={busy}
                   className="justify-start text-left"
                 >
-                  {outcomeIndex + 1} · {outcome.label}
+                  {optionIndex + 1} · {option.label}
                 </Button>
               ))}
               <Button variant="neutral" onClick={markLost} disabled={busy} className="justify-start text-left">
@@ -711,35 +711,59 @@ function SessionPage() {
               />
             </div>
 
-            {selectedOutcome ? (
-              <div className="mt-3 rounded-lg bg-muted p-3 text-sm">
-                <p className={labelClass}>Recommandation par défaut</p>
-                <p className="mt-1">{selectedOutcome.note}</p>
+            {etape ? (
+              <div className="mt-3 rounded-lg border border-primary/40 bg-muted p-3 text-sm">
+                <p className={labelClass}>Proposition automatique (modifiable)</p>
+                <p className="mt-1 font-medium">{formatEtape(etape)}</p>
                 <p className="mt-1 text-muted-foreground">
-                  Suite : {selectedOutcome.nextStage} · {selectedOutcome.delayDays === 0 ? "immédiat" : `J+${selectedOutcome.delayDays}`}
+                  Canal : {etape.canal ? etape.canal : "aucun canal — action interne"}
                 </p>
               </div>
             ) : null}
             {message ? <p className="mt-3 rounded-lg bg-script p-3 text-sm">{message}</p> : null}
 
-            {mode === "form" && selectedOutcome ? (
+            {mode === "form" && etape ? (
               <Panel>
-                <label className={labelClass}>Prochaine étape (modifiable)</label>
-                <select
+                <label className={labelClass}>Action proposée (modifiable)</label>
+                <input
                   className={fieldClass}
-                  value={overrideStage || selectedOutcome.nextStage}
-                  onChange={(e) => setOverrideStage(e.target.value as CycleStage)}
-                >
-                  {stages.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {stage} · {playbookNodes[stage].label}
-                    </option>
-                  ))}
-                </select>
+                  value={overrideAction}
+                  onChange={(e) => setOverrideAction(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Raison : {etape.raison}</p>
+                {etape.dateRequise && situation !== "interet" ? (
+                  <>
+                    <label className={labelClass}>
+                      Date donnée par le prospect (obligatoire)
+                    </label>
+                    <input
+                      className={fieldClass}
+                      type="date"
+                      value={callbackDate}
+                      onChange={(e) => {
+                        setCallbackDate(e.target.value);
+                        refreshEtape(e.target.value);
+                      }}
+                    />
+                  </>
+                ) : null}
+                {etape.motifRequis || overrideStatus === "Parké" ? (
+                  <>
+                    <label className={labelClass}>
+                      Motif / déclencheur de parking (obligatoire)
+                    </label>
+                    <input
+                      className={fieldClass}
+                      value={motif}
+                      onChange={(e) => setMotif(e.target.value)}
+                      placeholder="ex. budget formation revu en janvier"
+                    />
+                  </>
+                ) : null}
                 <label className={labelClass}>Statut</label>
                 <select
                   className={fieldClass}
-                  value={overrideStatus || selectedOutcome.status || "Tiède"}
+                  value={overrideStatus || etape.status || current.status}
                   onChange={(e) => setOverrideStatus(e.target.value as ProspectStatus)}
                 >
                   {statuses.map((status) => (
@@ -794,7 +818,10 @@ function SessionPage() {
                       className={fieldClass}
                       type="date"
                       value={promiseDate}
-                      onChange={(e) => setPromiseDate(e.target.value)}
+                      onChange={(e) => {
+                        setPromiseDate(e.target.value);
+                        if (situation === "interet") refreshEtape(e.target.value);
+                      }}
                     />
                   </>
                 ) : null}
@@ -829,7 +856,8 @@ function SessionPage() {
                 <Button
                   variant="neutral"
                   onClick={() => {
-                    setSelectedOutcome(null);
+                    setSituation(null);
+                    setEtape(null);
                     setMode("idle");
                   }}
                   disabled={busy}
@@ -846,8 +874,14 @@ function SessionPage() {
                   className={fieldClass}
                   type="datetime-local"
                   value={meetingDate}
-                  onChange={(e) => setMeetingDate(e.target.value)}
+                  onChange={(e) => {
+                    setMeetingDate(e.target.value);
+                    refreshEtape(e.target.value);
+                  }}
                 />
+                {etape ? (
+                  <p className="text-xs text-muted-foreground">{formatEtape(etape)}</p>
+                ) : null}
                 <label className={labelClass}>Durée</label>
                 <input
                   className={fieldClass}
