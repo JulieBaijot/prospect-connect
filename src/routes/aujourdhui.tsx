@@ -59,8 +59,9 @@ function TodayPage() {
     const callCycle = prioritizeCallSession(active, 20);
     const callReminders = callCycle.filter((p) => isDueTodayOrLate(p.next_action_date)).length;
     const qualificationCycle = prioritizeQualificationSession(active, 20);
+    const dayValue = callCycle.reduce((sum, p) => sum + Number(p.estimated_value || 0), 0);
 
-    return { reminders, meetings, callCycle, callReminders, qualificationCycle };
+    return { reminders, meetings, callCycle, callReminders, qualificationCycle, dayValue };
   }, [logs, prospects, today]);
 
   return (
