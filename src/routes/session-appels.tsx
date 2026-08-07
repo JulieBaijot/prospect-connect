@@ -519,8 +519,10 @@ function SessionPage() {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Valeur estimée (€)">
-                    <input className={fieldClass} type="number" value={editForm.estimated_value ?? 0} onChange={(e) => setEditForm((f) => ({ ...f, estimated_value: Number(e.target.value) }))} />
+                  <Field label="Segment (auto)">
+                    <div className="flex min-h-10 items-center">
+                      <SegmentBadge headcount={editForm.headcount_range} />
+                    </div>
                   </Field>
                   <div className="md:col-span-2">
                     <Field label="Commentaires">
