@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
   CalendarDays,
@@ -25,6 +25,7 @@ const navItems = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const returnPath = useRef(location.href);
   const [authReady, setAuthReady] = useState(false);
   const [userEmail, setUserEmail] = useState("");
 
@@ -34,7 +35,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       if (!active) return;
       const session = data.session;
       if (!session) {
-        void navigate({ to: "/login", search: { next: location.href }, replace: true });
+        void navigate({ to: "/login", search: { next: returnPath.current }, replace: true });
         return;
       }
       setUserEmail(session.user.email || "Compte connecté");
@@ -44,7 +45,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       if (!active) return;
       if (!session) {
         setAuthReady(false);
-        void navigate({ to: "/login", search: { next: location.href }, replace: true });
+        void navigate({ to: "/login", search: { next: returnPath.current }, replace: true });
         return;
       }
       setUserEmail(session.user.email || "Compte connecté");
@@ -54,7 +55,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [location.href, navigate]);
+  }, [navigate]);
 
   async function signOut() {
     await supabase.auth.signOut();
