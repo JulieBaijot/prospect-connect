@@ -420,10 +420,17 @@ function ProspectsPage() {
   return (
     <>
       <PageTitle
-        title="Base prospects"
-        subtitle="Tableau desktop filtrable avec panneau d'ajout et d'édition."
+        title="Prospects"
+        subtitle="Liste filtrable, qualification des fiches incomplètes et panneau d'édition."
         action={
           <div className="flex flex-wrap gap-2">
+            <Link
+              to="/integration-prospects"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent"
+            >
+              <FileUp className="h-4 w-4" />
+              Importer un CSV
+            </Link>
             <Button
               variant="neutral"
               onClick={qualifyIncompleteBatch}
@@ -455,6 +462,26 @@ function ProspectsPage() {
         <MiniKpi label="Chauds" value={counters.hot} />
         <MiniKpi label="Convertis" value={counters.converted} />
       </div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[
+          { value: "", label: "Toutes les fiches" },
+          { value: "incomplete", label: `Fiches incomplètes (${counters.incomplete})` },
+          { value: "due", label: `À appeler (${counters.due})` },
+        ].map((chip) => (
+          <button
+            key={chip.value || "all"}
+            onClick={() => setFilters({ ...filters, view: chip.value })}
+            className={`inline-flex min-h-9 items-center rounded-full px-4 text-sm font-medium transition-colors ${
+              filters.view === chip.value
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-accent"
+            }`}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-4">
         <Card className="overflow-hidden">
           <div className="grid gap-3 border-b border-border p-4 md:grid-cols-4 xl:grid-cols-7">
