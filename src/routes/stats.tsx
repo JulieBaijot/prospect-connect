@@ -162,8 +162,11 @@ function StatsPage() {
         <Kpi
           label="Taux de décrochage"
           value={`${pickupKpi.taux}%`}
-          hint={`${pickupKpi.décrochages} décrochages / ${pickupKpi.appels} appels · ${pickupKpi.periode}`}
+          hint={`${pickupKpi.décrochages} décrochages / ${pickupKpi.appels} appels · ${pickupKpi.periode}${
+            pickupKpi.inconnus ? ` · ${pickupKpi.inconnus} appels non renseignés exclus` : ""
+          }`}
         />
+
 
         <Kpi
           label="Régularité (30 j)"
