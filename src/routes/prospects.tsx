@@ -180,7 +180,9 @@ function ProspectsPage() {
     [prospects],
   );
   function openProspect(prospect: ProspectWithRelations) {
+    setPanelOpen(true);
     setSelected(prospect);
+
     const picked = Object.fromEntries(
       Object.keys(emptyProspect).map((key) => [
         key,
