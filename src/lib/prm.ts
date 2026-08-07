@@ -500,7 +500,7 @@ export interface SituationOption {
 
 export const situationOptions: SituationOption[] = [
   { key: "nrp", label: "NRP / personne au bout du fil", result: "NRP", actionType: "NRP" },
-  { key: "barrage", label: "Barrage accueil", result: "Pas dispo", actionType: "Barrage accueil" },
+  { key: "barrage", label: "Barrage accueil", result: "Barrage", actionType: "Barrage accueil" },
   { key: "email_envoye", label: "Email envoyé", result: "Pas dispo", actionType: "Email envoyé" },
   {
     key: "pas_le_bon_moment",
