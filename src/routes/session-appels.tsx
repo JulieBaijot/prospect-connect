@@ -79,9 +79,12 @@ function SessionPage() {
   const [duration, setDuration] = useState(30);
   const [videoLink, setVideoLink] = useState("");
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
-  const [selectedOutcome, setSelectedOutcome] = useState<PlaybookOutcome | null>(null);
-  const [overrideStage, setOverrideStage] = useState<CycleStage | "">("");
+  const [situation, setSituation] = useState<Situation | null>(null);
+  const [etape, setEtape] = useState<Etape | null>(null);
+  const [motif, setMotif] = useState("");
+  const [overrideAction, setOverrideAction] = useState("");
   const [overrideStatus, setOverrideStatus] = useState<ProspectStatus | "">("");
+
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [canal, setCanal] = useState<Canal>("téléphone");
