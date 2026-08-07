@@ -359,6 +359,24 @@ function IntegrationPage() {
       });
   }
 
+  /** Retourne l'id d'un prospect déjà en base (même SIREN, ou même nom + ville). */
+  async function findExistingProspect(company: Company) {
+    if (company.siren) {
+      const { data } = await supabase
+        .from("prospects")
+        .select("id")
+        .eq("siren", company.siren)
+        .limit(1);
+      if (data?.length) return data[0].id;
+    }
+    const { data } = await supabase
+      .from("prospects")
+      .select("id")
+      .ilike("company_name", company.name)
+      .limit(5);
+    return data?.length ? data[0].id : null;
+  }
+
   async function saveAll(continueAfter = false) {
     if (!companies.length) {
       setSaveStatus("Aucune entreprise sélectionnée.");
