@@ -134,12 +134,21 @@ export interface ProspectionLog {
   objective: string | null;
   result: LogResult | null;
   notes: string | null;
+  /** Relance que je me fixe à moi-même. */
   next_action_date: string | null;
   meeting_date: string | null;
   meeting_duration_minutes: number | null;
   video_link: string | null;
+  /** Engagement pris auprès du prospect, en clair. */
+  promise_text: string | null;
+  /** Date promise au prospect — distincte de next_action_date. */
+  promise_date: string | null;
+  promise_kept: boolean | null;
+  /** Modèle d'email utilisé (canal email). */
+  template_used: string | null;
   created_at: string;
 }
+
 
 export interface ProspectWithRelations extends Prospect {
   contacts: Contact[];
