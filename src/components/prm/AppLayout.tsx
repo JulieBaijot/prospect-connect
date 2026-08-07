@@ -4,16 +4,11 @@ import {
   BarChart3,
   FileText,
   Building2,
-
   CalendarClock,
   CalendarDays,
   Database,
   ListChecks,
   PauseCircle,
-  PhoneCall,
-
-  Search,
-  Wand2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/prm/ui";
@@ -27,19 +22,15 @@ function protectedReturnPath(pathname: string) {
 
 const navItems = [
   { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
-  { to: "/demain", label: "Préparer demain", icon: CalendarClock },
-  { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
-  { to: "/qualification", label: "Qualification", icon: Wand2 },
-  { to: "/parking", label: "Parking", icon: PauseCircle },
+  { to: "/demain", label: "Demain", icon: CalendarClock },
+  { to: "/prospects", label: "Prospects", icon: Database },
   { to: "/groupes", label: "Groupes", icon: Building2 },
+  { to: "/parking", label: "Parking", icon: PauseCircle },
   { to: "/modeles", label: "Modèles", icon: FileText },
-
-  { to: "/prospects", label: "Base prospects", icon: Database },
-
-  { to: "/integration-prospects", label: "Intégration prospects", icon: Search },
-  { to: "/journal", label: "Journal de prospection", icon: ListChecks },
-  { to: "/stats", label: "Stats", icon: BarChart3 },
+  { to: "/journal", label: "Journal", icon: ListChecks },
+  { to: "/stats", label: "Pilotage", icon: BarChart3 },
 ] as const;
+
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
