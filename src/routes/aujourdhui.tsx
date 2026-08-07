@@ -514,8 +514,29 @@ function CallCard({
           <Button variant="success" className="min-h-9 px-3" onClick={() => open("rdv")}>
             RDV
           </Button>
+          <ParkingAction
+            id={prospect.id}
+            defaultMotif={prospect.parking_trigger || ""}
+            defaultDate={prospect.parking_date || ""}
+            onPark={async (motif, wakeDate) => {
+              await addLog({
+                prospect_id: prospect.id,
+                contact_id: contact?.id,
+                action_type: "Prospect parké",
+                canal: "téléphone",
+                stage: "parking",
+                objective: `Reprise : ${motif}`,
+                result: "Pas dispo",
+                notes: `Parké jusqu'au ${wakeDate} — ${motif}`,
+                next_action_date: wakeDate,
+              });
+              await parkProspect(prospect.id, motif, wakeDate);
+              onSaved();
+            }}
+          />
         </div>
       )}
+
 
       {situation && etape ? (
         <div className="mt-4 grid gap-3 rounded-lg border border-border bg-secondary/40 p-3">
