@@ -466,6 +466,9 @@ function SessionPage() {
                     {current.city || "Ville à compléter"} ·{" "}
                     {current.headcount_range || "Effectif ?"}
                   </p>
+                  <div className="mt-2">
+                    <SegmentBadge headcount={current.headcount_range} segment={current.segment} />
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="neutral" onClick={previousCard} disabled={index === 0 || busy} className="px-3">
