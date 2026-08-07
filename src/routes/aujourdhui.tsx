@@ -33,7 +33,9 @@ import {
   formatDate,
   formatEuro,
   loadLogs,
+  isParked,
   loadProspects,
+
   parkProspect,
 
   prioritizeCallSession,
