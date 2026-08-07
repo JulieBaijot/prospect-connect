@@ -941,6 +941,15 @@ export async function addLog(
   return data as unknown as ProspectionLog;
 }
 
+export async function setPromiseKept(logId: string, kept: boolean | null) {
+  const { error } = await supabase
+    .from("prospection_logs")
+    .update({ promise_kept: kept } as never)
+    .eq("id", logId);
+  if (error) throw error;
+}
+
+
 export async function updateProspect(id: string, payload: Partial<Prospect>) {
   const { error } = await supabase
     .from("prospects")
