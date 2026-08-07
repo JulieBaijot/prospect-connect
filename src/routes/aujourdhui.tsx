@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/prm/AppLayout";
 import { Card, PageTitle, SegmentBadge, StatusBadge, labelClass } from "@/components/prm/ui";
 import {
   bestPhone,
+  brokenPromises,
   contactName,
   formatDate,
   formatEuro,
@@ -14,12 +15,14 @@ import {
   loadProspects,
   prioritizeCallSession,
   prioritizeQualificationSession,
+  setPromiseKept,
   shortDateTime,
   todayIsoDate,
   type ProspectionLog,
   type Prospect,
   type ProspectWithRelations,
 } from "@/lib/prm";
+
 
 export const Route = createFileRoute("/aujourdhui")({
   head: () => ({
