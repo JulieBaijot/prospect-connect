@@ -254,6 +254,7 @@ export type Database = {
           reception_hours: string | null
           reviews_count: number | null
           sector: string | null
+          segment: string | null
           siren: string | null
           social_links: Json | null
           source: string | null
@@ -297,6 +298,7 @@ export type Database = {
           reception_hours?: string | null
           reviews_count?: number | null
           sector?: string | null
+          segment?: string | null
           siren?: string | null
           social_links?: Json | null
           source?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           reception_hours?: string | null
           reviews_count?: number | null
           sector?: string | null
+          segment?: string | null
           siren?: string | null
           social_links?: Json | null
           source?: string | null
