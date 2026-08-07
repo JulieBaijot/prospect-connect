@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type HeadcountRange =
+  | "1-9"
   | "10-19"
   | "20-49"
   | "50-99"
@@ -16,21 +17,16 @@ export type Category =
   | "C – Porte d'entrée"
   | "Récurrent"
   | "Exceptionnel";
-export type OfferTarget =
-  | "Formation SST"
-  | "DUERP"
-  | "QVCT / RPS"
-  | "SSCT / CSE"
-  | "Conseil prévention"
-  | "Sur mesure"
-  | "SST FI"
-  | "SST MAC"
-  | "CSE-CSSCT"
-  | "QVCT"
-  | "Émotions"
-  | "Excel";
+export type OfferTarget = "SST" | "DUERP" | "SSCT / CSE" | "QVCT / RPS" | "Sur mesure";
+export type DecisionLevel = "site" | "groupe" | "inconnu";
 export type CycleStage = "J1" | "J2" | "J4" | "J6" | "J10" | "J15" | "J21";
-export type ProspectStatus = "Chaud" | "Tiède" | "En attente" | "Perdu" | "Converti";
+export type ProspectStatus =
+  | "À qualifier"
+  | "En contact"
+  | "En discussion"
+  | "Parké"
+  | "Converti"
+  | "Perdu";
 export type Canal = "email" | "téléphone" | "physique";
 export type LogResult = "NRP" | "Pas dispo" | "Échange" | "RDV";
 export type SearchSource = "pappers" | "insee" | "annuaire";
@@ -61,11 +57,14 @@ export interface Prospect {
   company_name: string;
   city: string | null;
   headcount_range: HeadcountRange | null;
-  category: Category;
   offer_target: OfferTarget | null;
   estimated_value: number;
-  current_stage: CycleStage;
   status: ProspectStatus;
+  decision_level: DecisionLevel;
+  group_name: string | null;
+  parking_trigger: string | null;
+  parking_date: string | null;
+  last_contacted_at: string | null;
   next_action_date: string | null;
   main_phone: string | null;
   main_email: string | null;
@@ -143,6 +142,7 @@ export interface ProspectWithRelations extends Prospect {
 }
 
 export const headcountRanges: HeadcountRange[] = [
+  "1-9",
   "10-19",
   "20-49",
   "50-99",
@@ -160,15 +160,22 @@ export const categories: Category[] = [
   "Exceptionnel",
 ];
 export const offerTargets: OfferTarget[] = [
-  "Formation SST",
+  "SST",
   "DUERP",
-  "QVCT / RPS",
   "SSCT / CSE",
-  "Conseil prévention",
+  "QVCT / RPS",
   "Sur mesure",
 ];
+export const decisionLevels: DecisionLevel[] = ["site", "groupe", "inconnu"];
 export const stages: CycleStage[] = ["J1", "J2", "J4", "J6", "J10", "J15", "J21"];
-export const statuses: ProspectStatus[] = ["Chaud", "Tiède", "En attente", "Perdu", "Converti"];
+export const statuses: ProspectStatus[] = [
+  "À qualifier",
+  "En contact",
+  "En discussion",
+  "Parké",
+  "Converti",
+  "Perdu",
+];
 
 export const playbookNodes: Record<CycleStage, PlaybookNode> = {
   J1: {
@@ -191,7 +198,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "NRP",
         nextStage: "J2",
         delayDays: 1,
-        status: "Tiède",
+        status: "À qualifier",
         note: "Pas de réponse. Relance douce au prochain créneau.",
       },
       {
@@ -201,7 +208,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Barrage accueil",
         nextStage: "J2",
         delayDays: 2,
-        status: "Tiède",
+        status: "À qualifier",
         note: "Accueil filtrant. Revenir avec une accroche courte sur formation, DUERP ou obligations prévention.",
         mode: "callback",
       },
@@ -212,7 +219,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Échange qualifiant",
         nextStage: "J4",
         delayDays: 2,
-        status: "Chaud",
+        status: "En contact",
         note: "Ouverture identifiée. Prochaine étape : qualifier le besoin exact, le décideur et l'échéance.",
         mode: "exchange",
       },
@@ -223,7 +230,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "RDV diagnostic obtenu",
         nextStage: "J10",
         delayDays: 0,
-        status: "Chaud",
+        status: "En contact",
         note: "Rendez-vous obtenu pour cadrer les besoins formation, conseil ou accompagnement.",
         mode: "meeting",
       },
@@ -248,7 +255,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "NRP",
         nextStage: "J4",
         delayDays: 2,
-        status: "Tiède",
+        status: "À qualifier",
         note: "Deuxième tentative sans réponse. Relance avec angle de qualification prévention.",
       },
       {
@@ -258,7 +265,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Pas le bon moment",
         nextStage: "J6",
         delayDays: 4,
-        status: "En attente",
+        status: "Parké",
         note: "Moment peu favorable. Programmer un rappel contextualisé sur la prochaine échéance utile.",
         mode: "callback",
       },
@@ -269,7 +276,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Qualification prévention",
         nextStage: "J4",
         delayDays: 2,
-        status: "Chaud",
+        status: "En contact",
         note: "Informations obtenues. Approfondir le sujet prioritaire : SST, DUERP, QVCT, SSCT, audit ou sur mesure.",
         mode: "exchange",
       },
@@ -280,7 +287,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "RDV diagnostic obtenu",
         nextStage: "J10",
         delayDays: 0,
-        status: "Chaud",
+        status: "En contact",
         note: "Rendez-vous planifié pour diagnostiquer le besoin global santé-sécurité.",
         mode: "meeting",
       },
@@ -306,7 +313,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Besoin prioritaire identifié",
         nextStage: "J10",
         delayDays: 1,
-        status: "Chaud",
+        status: "En contact",
         note: "Besoin concret identifié : DUERP à mettre à jour, formation à planifier, sujet QVCT/RPS, demande CSE ou accompagnement sur mesure.",
         mode: "exchange",
       },
@@ -317,7 +324,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Besoin futur identifié",
         nextStage: "J6",
         delayDays: 7,
-        status: "Tiède",
+        status: "À qualifier",
         note: "Fenêtre future. Relance avec un contenu utile lié au sujet détecté et une proposition de cadrage.",
         mode: "exchange",
       },
@@ -328,7 +335,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Déjà couvert",
         nextStage: "J21",
         delayDays: 30,
-        status: "En attente",
+        status: "Parké",
         note: "Organisation ou intervenant déjà en place. Revenir sur une fenêtre trimestrielle avec un angle complémentaire.",
         mode: "callback",
       },
@@ -339,7 +346,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "RDV diagnostic obtenu",
         nextStage: "J10",
         delayDays: 0,
-        status: "Chaud",
+        status: "En contact",
         note: "Rendez-vous obtenu suite à qualification du besoin prévention.",
         mode: "meeting",
       },
@@ -365,7 +372,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Contenu prévention envoyé",
         nextStage: "J10",
         delayDays: 4,
-        status: "Tiède",
+        status: "À qualifier",
         note: "Contenu envoyé. Relancer avec une demande de rendez-vous court pour cadrer l'action possible.",
         mode: "exchange",
       },
@@ -376,7 +383,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "NRP",
         nextStage: "J10",
         delayDays: 4,
-        status: "Tiède",
+        status: "À qualifier",
         note: "Pas de réponse après contenu. Relance demande RDV avec angle prévention global.",
       },
       {
@@ -411,7 +418,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "RDV diagnostic obtenu",
         nextStage: "J15",
         delayDays: 0,
-        status: "Chaud",
+        status: "En contact",
         note: "Rendez-vous accepté. Préparer diagnostic, hypothèses d'offre et questions de cadrage.",
         mode: "meeting",
       },
@@ -422,7 +429,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "RDV à confirmer",
         nextStage: "J15",
         delayDays: 5,
-        status: "Chaud",
+        status: "En contact",
         note: "Intérêt présent mais créneau non confirmé. Relancer avec une proposition précise et l'angle de valeur détecté.",
         mode: "exchange",
       },
@@ -433,7 +440,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Refus poli",
         nextStage: "J21",
         delayDays: 30,
-        status: "En attente",
+        status: "Parké",
         note: "Refus sans fermeture définitive. Revenir plus tard avec un angle opportunité ou échéance réglementaire.",
         mode: "callback",
       },
@@ -459,7 +466,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Proposition à envoyer",
         nextStage: "J21",
         delayDays: 6,
-        status: "Chaud",
+        status: "En contact",
         note: "Proposition attendue. Relance décision à programmer avec prochaines étapes claires.",
         mode: "exchange",
       },
@@ -481,7 +488,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Silence après proposition",
         nextStage: "J21",
         delayDays: 6,
-        status: "En attente",
+        status: "Parké",
         note: "Décision en attente. Dernier contact avant relance longue ou archivage.",
       },
     ],
@@ -501,7 +508,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Reprise ultérieure",
         nextStage: "J1",
         delayDays: 90,
-        status: "En attente",
+        status: "Parké",
         note: "Relance trimestrielle programmée sur une fenêtre réglementaire, budgétaire ou formation.",
         mode: "callback",
       },
@@ -512,7 +519,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Réponse tardive positive",
         nextStage: "J10",
         delayDays: 1,
-        status: "Chaud",
+        status: "En contact",
         note: "Réactivation positive. Repartir sur un diagnostic court.",
         mode: "exchange",
       },
@@ -523,7 +530,7 @@ export const playbookNodes: Record<CycleStage, PlaybookNode> = {
         actionType: "Archivage commercial",
         nextStage: "J21",
         delayDays: 90,
-        status: "En attente",
+        status: "Parké",
         note: "Aucune ouverture. Archivage avec relance longue si la cible reste pertinente.",
       },
     ],
@@ -652,8 +659,8 @@ export function suggestProspectCategory(input: {
 }
 
 export function statusBandClass(status: ProspectStatus | null | undefined) {
-  if (status === "Chaud") return "bg-status-hot";
-  if (status === "Tiède") return "bg-status-warm";
+  if (status === "En contact" || status === "En discussion") return "bg-status-hot";
+  if (status === "À qualifier") return "bg-status-warm";
   if (status === "Converti") return "bg-status-won";
   return "bg-status-waiting";
 }
@@ -737,6 +744,16 @@ export function nextDateForStage(stage: CycleStage) {
   return addDaysIso(delays[stage] || 2);
 }
 
+export function currentStageOf(prospect: {
+  prospection_logs?: Array<{ stage: CycleStage | null; action_date: string }>;
+}): CycleStage {
+  const logs = [...(prospect.prospection_logs || [])].sort(
+    (a, b) => +new Date(b.action_date) - +new Date(a.action_date),
+  );
+  const last = logs.find((log) => log.stage);
+  return last?.stage || "J1";
+}
+
 export function nodeForStage(stage: CycleStage | null | undefined) {
   return playbookNodes[stage || "J1"] || playbookNodes.J1;
 }
@@ -749,9 +766,10 @@ export function sessionReason(prospect: ProspectWithRelations) {
   if (isDueTodayOrLate(prospect.next_action_date)) return "Relance prévue aujourd'hui ou en retard";
   if (!bestPhone(prospect)) return "À enrichir avant appel";
   if (!prospect.contacts.length) return "Contact à identifier";
-  if (prospect.status === "Chaud") return "Prospect chaud à suivre";
+  if (prospect.status === "En contact" || prospect.status === "En discussion")
+    return "Échange en cours à suivre";
   if (prospect.import_source) return "Prospect importé à qualifier";
-  return "Priorité selon catégorie et statut";
+  return "Priorité selon statut et fraîcheur";
 }
 
 export async function loadProspects(): Promise<ProspectWithRelations[]> {
@@ -837,20 +855,13 @@ export async function deleteProspect(id: string) {
 }
 
 export function prioritizeSession(prospects: ProspectWithRelations[]) {
-  const categoryRank: Record<string, number> = {
-    "A – Pilier": 0,
-    "B – Socle prévention": 1,
-    "B – Socle SST": 1,
-    "C – Porte d'entrée": 2,
-    Récurrent: 3,
-    Exceptionnel: 4,
-  };
   const statusRank: Record<string, number> = {
-    Chaud: 0,
-    Tiède: 1,
-    "En attente": 2,
-    Converti: 3,
-    Perdu: 4,
+    "En discussion": 0,
+    "En contact": 1,
+    "À qualifier": 2,
+    Parké: 3,
+    Converti: 4,
+    Perdu: 5,
   };
   return [...prospects]
     .filter((prospect) => !["Perdu", "Converti"].includes(prospect.status))
@@ -861,8 +872,6 @@ export function prioritizeSession(prospects: ProspectWithRelations[]) {
       if (byDue !== 0) return byDue;
       const byCallable = Number(!bestPhone(a)) - Number(!bestPhone(b));
       if (byCallable !== 0) return byCallable;
-      const byCategory = (categoryRank[a.category] ?? 9) - (categoryRank[b.category] ?? 9);
-      if (byCategory !== 0) return byCategory;
       const byDate =
         +new Date(a.next_action_date || "2099-12-31") -
         +new Date(b.next_action_date || "2099-12-31");
