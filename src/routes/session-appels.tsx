@@ -169,6 +169,10 @@ function SessionPage() {
     setMeetingDate("");
     setVideoLink("");
     setMessage("");
+    setCanal("téléphone");
+    setTemplateUsed("");
+    setPromiseText("");
+    setPromiseDate("");
     setActiveContactId(null);
     setSelectedOutcome(null);
     setOverrideStage("");
@@ -176,6 +180,7 @@ function SessionPage() {
     setEditOpen(false);
     setEditForm({});
   }
+
 
   function nextCard() {
     resetCardState();
