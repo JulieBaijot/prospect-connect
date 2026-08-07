@@ -766,6 +766,28 @@ function ProspectsPage() {
                 />
               </Field>
             </div>
+            {selected ? (
+              <ParkingAction
+                id={selected.id}
+                defaultMotif={form.parking_trigger}
+                defaultDate={form.parking_date}
+                onPark={async (motif, wakeDate) => {
+                  await parkProspect(selected.id, motif, wakeDate);
+                  setForm((prev) => ({
+                    ...prev,
+                    status: "Parké",
+                    parking_trigger: motif,
+                    parking_date: wakeDate,
+                    next_action_date: wakeDate,
+                  }));
+                  await refresh();
+                  setPlacesStatus(
+                    `${selected.company_name} parké jusqu'au ${formatDate(wakeDate)} — ${motif}`,
+                  );
+                }}
+              />
+            ) : null}
+
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="Prénom">
                 <input
