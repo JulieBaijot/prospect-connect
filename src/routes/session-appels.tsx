@@ -276,6 +276,8 @@ function SessionPage() {
       stage: option.key,
       objective: action,
       result: option.result,
+      reached:
+        canal === "téléphone" ? (reachedManual ?? reachedFromResult(option.result)) : null,
       notes: options.customNotes || notes || etape.raison,
       next_action_date: options.nextActionDate,
       meeting_date: options.meetingAt,
