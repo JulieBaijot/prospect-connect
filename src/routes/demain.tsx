@@ -2,7 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, RefreshCw, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Button, Card, PageTitle, SegmentBadge, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
+import {
+  Button,
+  Card,
+  PageTitle,
+  SegmentBadge,
+  StatusBadge,
+  fieldClass,
+  labelClass,
+} from "@/components/prm/ui";
 import { loadPlan, savePlan, tomorrowIso, type DayPlan } from "@/lib/day-plan";
 import {
   bestPhone,
@@ -179,7 +187,8 @@ function TomorrowPage() {
   const byId = useMemo(() => new Map(prospects.map((p) => [p.id, p])), [prospects]);
   const callReasons = useMemo(() => {
     const map = new Map<string, Reason>();
-    for (const entry of callRanking(prospects, tomorrow, today)) map.set(entry.prospect.id, entry.reason);
+    for (const entry of callRanking(prospects, tomorrow, today))
+      map.set(entry.prospect.id, entry.reason);
     return map;
   }, [prospects, today, tomorrow]);
   const emailReasons = useMemo(() => {
@@ -189,7 +198,9 @@ function TomorrowPage() {
   }, [prospects, today]);
 
   const callProspects = calls.map((id) => byId.get(id)).filter(Boolean) as ProspectWithRelations[];
-  const emailProspects = emails.map((id) => byId.get(id)).filter(Boolean) as ProspectWithRelations[];
+  const emailProspects = emails
+    .map((id) => byId.get(id))
+    .filter(Boolean) as ProspectWithRelations[];
 
   const bigSegment = callProspects.filter(
     (p) => (p.segment ?? segmentOf(p.headcount_range)) === "50 et plus",
@@ -286,7 +297,8 @@ function TomorrowPage() {
           <ul className="mt-2 list-disc pl-5">
             {bigSegment < 2 ? (
               <li>
-                Au moins 2 appels doivent être du segment « 50 et plus » — actuellement {bigSegment}.
+                Au moins 2 appels doivent être du segment « 50 et plus » — actuellement {bigSegment}
+                .
               </li>
             ) : null}
             {overContacted > 2 ? (
@@ -378,8 +390,8 @@ function TomorrowPage() {
         </Button>
         {saved ? (
           <p className="text-sm text-muted-foreground">
-            Liste enregistrée pour le {formatDate(tomorrow)} — elle alimentera les blocs « Mes appels »
-            et « Mes emails » de l'écran Aujourd'hui.
+            Liste enregistrée pour le {formatDate(tomorrow)} — elle alimentera les blocs « Mes
+            appels » et « Mes emails » de l'écran Aujourd'hui.
           </p>
         ) : null}
       </div>
@@ -427,7 +439,9 @@ function TomorrowPage() {
                   <span className="text-sm font-medium">
                     {prospect.company_name}
                     {prospect.city ? (
-                      <span className="ml-2 font-normal text-muted-foreground">{prospect.city}</span>
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        {prospect.city}
+                      </span>
                     ) : null}
                   </span>
                   <span className="flex flex-wrap items-center gap-2">

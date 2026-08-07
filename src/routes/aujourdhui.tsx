@@ -10,7 +10,15 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Button, Card, PageTitle, SegmentBadge, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
+import {
+  Button,
+  Card,
+  PageTitle,
+  SegmentBadge,
+  StatusBadge,
+  fieldClass,
+  labelClass,
+} from "@/components/prm/ui";
 import { emptyPlan, savePlan, todayPlan, type DayPlan } from "@/lib/day-plan";
 import {
   addLog,
@@ -95,7 +103,9 @@ function TodayPage() {
 
   const byId = useMemo(() => new Map(prospects.map((p) => [p.id, p])), [prospects]);
   const callList = plan.calls.map((id) => byId.get(id)).filter(Boolean) as ProspectWithRelations[];
-  const emailList = plan.emails.map((id) => byId.get(id)).filter(Boolean) as ProspectWithRelations[];
+  const emailList = plan.emails
+    .map((id) => byId.get(id))
+    .filter(Boolean) as ProspectWithRelations[];
 
   const todayLogs = useMemo(
     () => logs.filter((log) => (log.action_date || "").slice(0, 10) === today),
@@ -438,7 +448,9 @@ function CallCard({
           <p className="text-[16px] font-medium">
             {prospect.company_name}
             {prospect.city ? (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">{prospect.city}</span>
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {prospect.city}
+              </span>
             ) : null}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -480,7 +492,12 @@ function CallCard({
 
       {situation ? null : (
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="danger" className="min-h-9 px-3" disabled={busy} onClick={() => quick("nrp")}>
+          <Button
+            variant="danger"
+            className="min-h-9 px-3"
+            disabled={busy}
+            onClick={() => quick("nrp")}
+          >
             NRP
           </Button>
           <Button
@@ -642,7 +659,9 @@ function EmailCard({
   const [error, setError] = useState("");
   const address = contact?.email || prospect.main_email || "";
   const duplicate = emailLogs.some(
-    (log) => log.template_used === template && (!contact || !log.contact_id || log.contact_id === contact.id),
+    (log) =>
+      log.template_used === template &&
+      (!contact || !log.contact_id || log.contact_id === contact.id),
   );
 
   async function save() {
@@ -681,7 +700,9 @@ function EmailCard({
           <p className="text-[16px] font-medium">
             {prospect.company_name}
             {prospect.city ? (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">{prospect.city}</span>
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {prospect.city}
+              </span>
             ) : null}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
