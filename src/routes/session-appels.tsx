@@ -102,7 +102,7 @@ function SessionPage() {
   const current = session[index];
   const contact =
     current?.contacts.find((item) => item.id === activeContactId) || current?.contacts[0];
-  const activeNode = current ? nodeForStage(currentStageOf(current)) : null;
+  const selectedSituation = situation ? situationByKey.get(situation) : null;
   const progress = session.length ? Math.round(((Math.min(index + 1, session.length)) / session.length) * 100) : 0;
 
   useEffect(() => {
@@ -111,9 +111,9 @@ function SessionPage() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) return;
-      if (["1", "2", "3", "4"].includes(event.key)) {
-        const outcome = activeNode?.outcomes[Number(event.key) - 1];
-        if (outcome) selectOutcome(outcome);
+      const shortcut = Number(event.key);
+      if (shortcut >= 1 && shortcut <= situationOptions.length) {
+        selectSituation(situationOptions[shortcut - 1].key);
       }
       if (event.key === "5" || event.key === "ArrowRight") nextCard();
       if (event.key === "ArrowLeft") previousCard();
@@ -168,8 +168,10 @@ function SessionPage() {
     setPromiseText("");
     setPromiseDate("");
     setActiveContactId(null);
-    setSelectedOutcome(null);
-    setOverrideStage("");
+    setSituation(null);
+    setEtape(null);
+    setMotif("");
+    setOverrideAction("");
     setOverrideStatus("");
     setEditOpen(false);
     setEditForm({});
@@ -191,14 +193,26 @@ function SessionPage() {
     nextCard();
   }
 
-  function selectOutcome(outcome: PlaybookOutcome) {
-    setSelectedOutcome(outcome);
+  /** Applique automatiquement la table de décision, la proposition restant modifiable. */
+  function selectSituation(key: Situation, dateSaisie?: string) {
+    if (!current) return;
+    const proposal = prochaineEtape(current, { situation: key, dateSaisie });
+    setSituation(key);
+    setEtape(proposal);
     setMessage("");
-    setNotes((prev) => prev || outcome.note);
-    setOverrideStage(outcome.nextStage);
-    setOverrideStatus(outcome.status || current?.status || "Tiède");
-    setCallbackDate(dateForOutcome(outcome));
-    setMode(outcome.mode === "meeting" ? "meeting" : "form");
+    setOverrideAction(proposal.action);
+    setOverrideStatus(proposal.status || current.status);
+    setCanal(proposal.canal || "téléphone");
+    setCallbackDate(proposal.date);
+    setMode(key === "rdv" ? "meeting" : "form");
+  }
+
+  /** Recalcule la proposition quand le prospect donne une date (parking, promesse, RDV). */
+  function refreshEtape(dateSaisie: string) {
+    if (!current || !situation) return;
+    const proposal = prochaineEtape(current, { situation, dateSaisie });
+    setEtape(proposal);
+    setCallbackDate(proposal.date);
   }
 
   function openQuickEdit() {
@@ -243,23 +257,23 @@ function SessionPage() {
   }
 
   async function saveOutcome(
-    outcome = selectedOutcome,
     options: { nextActionDate?: string; meetingAt?: string; customNotes?: string } = {},
   ) {
-    if (!current || !outcome || busy) return;
+    const option = selectedSituation;
+    if (!current || !option || !etape || busy) return;
     setBusy(true);
     setMessage("");
-    const stage = (overrideStage || outcome.nextStage) as CycleStage;
-    const status = (overrideStatus || outcome.status || current.status) as ProspectStatus;
+    const status = (overrideStatus || etape.status || current.status) as ProspectStatus;
+    const action = overrideAction || etape.action;
     await addLog({
       prospect_id: current.id,
       contact_id: contact?.id,
-      action_type: outcome.actionType,
+      action_type: option.actionType,
       canal,
-      stage,
-      objective: activeNode?.objective,
-      result: outcome.result,
-      notes: options.customNotes || notes || outcome.note,
+      stage: option.key,
+      objective: action,
+      result: option.result,
+      notes: options.customNotes || notes || etape.raison,
       next_action_date: options.nextActionDate,
       meeting_date: options.meetingAt,
       meeting_duration_minutes: options.meetingAt ? duration : undefined,
@@ -275,20 +289,33 @@ function SessionPage() {
       next_action_date:
         status === "Perdu"
           ? null
-          : (options.meetingAt || options.nextActionDate || dateForOutcome(outcome)).slice(0, 10),
+          : (options.meetingAt || options.nextActionDate || etape.date).slice(0, 10),
+      ...(etape.decision_level ? { decision_level: etape.decision_level } : {}),
+      ...(status === "Parké"
+        ? { parking_trigger: motif, parking_date: (options.nextActionDate || etape.date).slice(0, 10) }
+        : {}),
     });
-    if (outcome.result === "NRP") setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
-    if (outcome.result === "Échange") setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
-    if (outcome.result === "RDV") setSummary((prev) => ({ ...prev, rdv: prev.rdv + 1 }));
+    if (option.result === "NRP") setSummary((prev) => ({ ...prev, nrp: prev.nrp + 1 }));
+    if (option.result === "Échange") setSummary((prev) => ({ ...prev, exchanges: prev.exchanges + 1 }));
+    if (option.result === "RDV") setSummary((prev) => ({ ...prev, rdv: prev.rdv + 1 }));
     setBusy(false);
     markDoneAndNext();
   }
 
   async function saveForm() {
-    if (!selectedOutcome) return;
-    const isLost = (overrideStatus || selectedOutcome.status) === "Perdu";
+    if (!etape) return;
+    const status = (overrideStatus || etape.status || current?.status) as ProspectStatus;
+    const isLost = status === "Perdu";
     if (!isLost && !callbackDate) {
       setMessage("Choisissez une prochaine date d'action pour garder la relance sous contrôle.");
+      return;
+    }
+    if ((etape.motifRequis || status === "Parké") && !motif.trim()) {
+      setMessage("« Parquer » exige un motif écrit : indiquez le déclencheur ou la raison.");
+      return;
+    }
+    if (etape.promesseRequise && (!promiseText.trim() || !promiseDate)) {
+      setMessage("Intérêt exprimé : saisissez la promesse et sa date d'échéance.");
       return;
     }
     if (promiseText && !promiseDate) {
@@ -296,21 +323,20 @@ function SessionPage() {
       return;
     }
     if (!isLost && canal === "email" && callbackDate < minCallbackDate("email")) {
-      setMessage("Email consigné : la relance ne peut pas être le jour même — au plus tôt demain.");
+      setMessage("Email consigné : le rappel ne peut pas être le jour même — au plus tôt demain.");
       setCallbackDate(minCallbackDate("email"));
       return;
     }
-    await saveOutcome(selectedOutcome, {
+    await saveOutcome({
       nextActionDate: callbackDate || undefined,
       customNotes: notes,
     });
   }
 
-
   function markLost() {
-    selectOutcome(LOST_OUTCOME);
-    setNotes(LOST_OUTCOME.note);
-    setCallbackDate("");
+    selectSituation("refus");
+    setOverrideStatus("Perdu");
+    setNotes((prev) => prev || "Pas de besoin identifié — coordonnées envoyées pour rester en contact.");
   }
 
   function mailtoCoordinates() {
@@ -323,13 +349,13 @@ function SessionPage() {
   }
 
   async function saveMeeting() {
-    if (!current || !meetingDate || busy || !selectedOutcome) return;
+    if (!current || !meetingDate || busy || !etape) return;
     window.open(
       buildCalendarUrl({ prospect: current, contact, date: meetingDate, duration, videoLink }),
       "_blank",
       "noopener,noreferrer",
     );
-    await saveOutcome(selectedOutcome, { meetingAt: meetingDate, customNotes: notes || selectedOutcome.note });
+    await saveOutcome({ meetingAt: meetingDate, customNotes: notes || etape.raison });
   }
 
 
