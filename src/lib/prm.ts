@@ -836,13 +836,24 @@ export async function loadLogs(): Promise<
   >;
 }
 
+/** `segment` est calculée en base : jamais envoyée en écriture.
+ *  `estimated_value` est dérivée du segment sauf valeur explicite (cas particulier). */
+function prepareProspectWrite<T extends Partial<Prospect>>(input: T) {
+  const { segment: _segment, ...rest } = input as T & { segment?: unknown };
+  const payload = rest as Partial<Prospect>;
+  if ("headcount_range" in payload && (payload.estimated_value ?? 0) === 0) {
+    payload.estimated_value = targetValueOf(payload.headcount_range);
+  }
+  return payload;
+}
+
 export async function saveProspect(
   input: Partial<Prospect> & { company_name: string },
   contact?: Partial<Contact>,
 ) {
   const { data: prospect, error } = await supabase
     .from("prospects")
-    .upsert(input)
+    .upsert(prepareProspectWrite(input) as never)
     .select()
     .single();
   if (error) throw error;
@@ -874,9 +885,13 @@ export async function addLog(
 }
 
 export async function updateProspect(id: string, payload: Partial<Prospect>) {
-  const { error } = await supabase.from("prospects").update(payload).eq("id", id);
+  const { error } = await supabase
+    .from("prospects")
+    .update(prepareProspectWrite(payload) as never)
+    .eq("id", id);
   if (error) throw error;
 }
+
 
 export async function deleteProspect(id: string) {
   const { error: logsError } = await supabase
