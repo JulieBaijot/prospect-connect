@@ -2,6 +2,8 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
+  Building2,
+
   CalendarClock,
   CalendarDays,
   Database,
@@ -28,6 +30,8 @@ const navItems = [
   { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
   { to: "/qualification", label: "Qualification", icon: Wand2 },
   { to: "/parking", label: "Parking", icon: PauseCircle },
+  { to: "/groupes", label: "Groupes", icon: Building2 },
+
   { to: "/prospects", label: "Base prospects", icon: Database },
 
   { to: "/integration-prospects", label: "Intégration prospects", icon: Search },
