@@ -374,11 +374,8 @@ function IntegrationPage() {
           company_name: company.name,
           city: company.city,
           headcount_range: (company.headcount || "20-49") as HeadcountRange,
-          category:
-            first?.category || company.category || suggested?.category || "C – Porte d'entrée",
           offer_target: first?.offer || company.offer || "SST",
           estimated_value: first?.value || company.value || 0,
-          current_stage: "J1",
           status: "À qualifier",
           main_phone: company.phone || "",
           website: company.website || "",
