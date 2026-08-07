@@ -17,11 +17,14 @@ import {
   contactName,
   dataQualityIssues,
   dateForOutcome,
+  emailTemplates,
+  enforceCallbackRule,
   formatDate,
   formatEuro,
   headcountRanges,
   loadProspects,
   currentStageOf,
+  minCallbackDate,
   nodeForStage,
   offerTargets,
   playbookNodes,
@@ -31,12 +34,14 @@ import {
   stages,
   statuses,
   updateProspect,
+  type Canal,
   type CycleStage,
   type PlaybookOutcome,
   type Prospect,
   type ProspectStatus,
   type ProspectWithRelations,
 } from "@/lib/prm";
+
 
 export const Route = createFileRoute("/session-appels")({
   head: () => ({
