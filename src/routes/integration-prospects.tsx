@@ -503,6 +503,19 @@ function IntegrationPage() {
               saveAll={saveAll}
             />
           )}
+          {saveStatus ? (
+            <p
+              className={`mt-3 rounded-md border px-3 py-2 text-sm ${
+                saveStatus.includes("échec")
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-border bg-muted text-muted-foreground"
+              }`}
+            >
+              {saveBusy ? "⏳ " : ""}
+              {saveStatus}
+            </p>
+          ) : null}
+
           {step < 4 ? (
             <div className="mt-5 flex justify-end">
               <Button
