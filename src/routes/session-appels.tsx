@@ -261,7 +261,7 @@ function SessionPage() {
       prospect_id: current.id,
       contact_id: contact?.id,
       action_type: outcome.actionType,
-      canal: "téléphone",
+      canal,
       stage,
       objective: activeNode?.objective,
       result: outcome.result,
@@ -270,6 +270,10 @@ function SessionPage() {
       meeting_date: options.meetingAt,
       meeting_duration_minutes: options.meetingAt ? duration : undefined,
       video_link: options.meetingAt ? videoLink : undefined,
+      promise_text: promiseText || null,
+      promise_date: promiseText ? promiseDate || null : null,
+      promise_kept: null,
+      template_used: canal === "email" ? templateUsed || null : null,
     });
     await updateProspect(current.id, {
       status,
@@ -293,11 +297,21 @@ function SessionPage() {
       setMessage("Choisissez une prochaine date d'action pour garder la relance sous contrôle.");
       return;
     }
+    if (promiseText && !promiseDate) {
+      setMessage("Indiquez la date promise au prospect (ou effacez la promesse).");
+      return;
+    }
+    if (!isLost && canal === "email" && callbackDate < minCallbackDate("email")) {
+      setMessage("Email consigné : la relance ne peut pas être le jour même — au plus tôt demain.");
+      setCallbackDate(minCallbackDate("email"));
+      return;
+    }
     await saveOutcome(selectedOutcome, {
       nextActionDate: callbackDate || undefined,
       customNotes: notes,
     });
   }
+
 
   function markLost() {
     selectOutcome(LOST_OUTCOME);
