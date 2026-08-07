@@ -833,7 +833,7 @@ export function prioritizeSession(prospects: ProspectWithRelations[]) {
     Perdu: 5,
   };
   return [...prospects]
-    .filter((prospect) => !["Perdu", "Converti"].includes(prospect.status))
+    .filter((prospect) => !["Perdu", "Converti"].includes(prospect.status) && !isParked(prospect))
     .sort((a, b) => {
       const byDue =
         Number(!isDueTodayOrLate(a.next_action_date)) -
