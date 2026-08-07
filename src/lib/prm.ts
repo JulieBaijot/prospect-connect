@@ -19,6 +19,8 @@ export type Category =
   | "Exceptionnel";
 export type OfferTarget = "SST" | "DUERP" | "SSCT / CSE" | "QVCT / RPS" | "Sur mesure";
 export type DecisionLevel = "site" | "groupe" | "inconnu";
+export type Segment = "Moins de 11" | "11 à 24" | "25 à 49" | "50 et plus";
+
 export type CycleStage = "J1" | "J2" | "J4" | "J6" | "J10" | "J15" | "J21";
 export type ProspectStatus =
   | "À qualifier"
