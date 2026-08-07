@@ -158,10 +158,11 @@ function StatsPage() {
 
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Kpi
-          label="Taux de décrochage (7 j)"
-          value={`${currentWeek?.taux ?? 0}%`}
-          hint={`${currentWeek?.décrochages ?? 0} décrochages / ${currentWeek?.appels ?? 0} appels`}
+          label="Taux de décrochage"
+          value={`${pickupKpi.taux}%`}
+          hint={`${pickupKpi.décrochages} décrochages / ${pickupKpi.appels} appels · ${pickupKpi.periode}`}
         />
+
         <Kpi
           label="Régularité (30 j)"
           value={`${regularite.full} j`}
