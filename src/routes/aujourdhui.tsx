@@ -1,9 +1,9 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, CalendarClock, PhoneCall, Search, UserRoundCheck } from "lucide-react";
+import { ArrowRight, CalendarClock, Coins, PhoneCall, Search, UserRoundCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Card, PageTitle, StatusBadge, labelClass } from "@/components/prm/ui";
+import { Card, PageTitle, SegmentBadge, StatusBadge, labelClass } from "@/components/prm/ui";
 import {
   bestPhone,
   contactName,
@@ -59,8 +59,9 @@ function TodayPage() {
     const callCycle = prioritizeCallSession(active, 20);
     const callReminders = callCycle.filter((p) => isDueTodayOrLate(p.next_action_date)).length;
     const qualificationCycle = prioritizeQualificationSession(active, 20);
+    const dayValue = callCycle.reduce((sum, p) => sum + Number(p.estimated_value || 0), 0);
 
-    return { reminders, meetings, callCycle, callReminders, qualificationCycle };
+    return { reminders, meetings, callCycle, callReminders, qualificationCycle, dayValue };
   }, [logs, prospects, today]);
 
   return (
@@ -78,7 +79,7 @@ function TodayPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-5">
         <Kpi
           icon={<CalendarClock className="h-4 w-4" />}
           label="Rappels dus"
@@ -99,7 +100,13 @@ function TodayPage() {
           label="Qualification"
           value={`${dashboard.qualificationCycle.length}/20`}
         />
+        <Kpi
+          icon={<Coins className="h-4 w-4" />}
+          label="Valeur liste du jour"
+          value={formatEuro(dashboard.dayValue)}
+        />
       </div>
+
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <ActionSection
@@ -238,6 +245,7 @@ function ProspectRow({ prospect }: { prospect: ProspectWithRelations }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <SegmentBadge headcount={prospect.headcount_range} segment={prospect.segment} />
           <StatusBadge status={prospect.status} />
         </div>
       </div>

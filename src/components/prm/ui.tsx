@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { categoryClass, statusBandClass, type Category, type ProspectStatus } from "@/lib/prm";
+import {
+  categoryClass,
+  segmentOf,
+  statusBandClass,
+  type Category,
+  type ProspectStatus,
+  type Segment,
+} from "@/lib/prm";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-xl border border-border bg-card ${className}`}>{children}</div>;
@@ -44,6 +51,26 @@ export function StatusBadge({ status }: { status: ProspectStatus | null | undefi
     </span>
   );
 }
+
+export function SegmentBadge({
+  headcount,
+  segment,
+}: {
+  headcount?: string | null;
+  segment?: Segment | null;
+}) {
+  const value = segment ?? segmentOf(headcount);
+  if (!value) return null;
+  return (
+    <span
+      className="inline-flex rounded-full border border-border bg-secondary px-3 py-1 text-[11px] font-medium text-secondary-foreground"
+      title="Segment déduit de la tranche d'effectif (lecture seule)"
+    >
+      {value}
+    </span>
+  );
+}
+
 
 export function Button({
   children,

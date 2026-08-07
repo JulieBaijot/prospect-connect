@@ -17,6 +17,7 @@ import {
   offerTargets,
   saveProspect,
   suggestProspectCategory,
+  targetValueOf,
   type Category,
   type HeadcountRange,
   type OfferTarget,
@@ -375,7 +376,8 @@ function IntegrationPage() {
           city: company.city,
           headcount_range: (company.headcount || "20-49") as HeadcountRange,
           offer_target: first?.offer || company.offer || "SST",
-          estimated_value: first?.value || company.value || 0,
+          estimated_value:
+            first?.value || company.value || targetValueOf(company.headcount || "20-49"),
           status: "À qualifier",
           main_phone: company.phone || "",
           website: company.website || "",

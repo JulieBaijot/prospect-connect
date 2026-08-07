@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, ChevronRight, ExternalLink, Star, Trash2, UserX, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
-import { Button, Card, PageTitle, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
+import { Button, Card, PageTitle, SegmentBadge, StatusBadge, fieldClass, labelClass } from "@/components/prm/ui";
 import {
   dataQualityIssues,
   deleteProspect,
@@ -11,6 +11,7 @@ import {
   loadProspects,
   offerTargets,
   prioritizeQualificationSession,
+  targetValueOf,
   updateProspect,
   type HeadcountRange,
   type OfferTarget,
@@ -294,6 +295,12 @@ function QualificationPage() {
       siren: form.siren,
       sector: form.sector,
       headcount_range: form.headcount_range,
+      // valeur dérivée du segment, sauf ajustement manuel déjà présent sur la fiche
+      estimated_value:
+        Number(current.estimated_value || 0) === 0 ||
+        Number(current.estimated_value) === targetValueOf(current.headcount_range)
+          ? targetValueOf(form.headcount_range)
+          : Number(current.estimated_value),
       offer_target: form.offer_target,
       comments: form.comments,
       next_action_date: form.next_action_date || null,
@@ -433,6 +440,7 @@ function QualificationPage() {
                 <Button variant="neutral" onClick={nextCard} disabled={busy} className="px-3">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
+                <SegmentBadge headcount={form.headcount_range} />
                 <StatusBadge status={current.status} />
               </div>
             </div>

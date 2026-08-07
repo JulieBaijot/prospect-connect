@@ -19,6 +19,8 @@ export type Category =
   | "Exceptionnel";
 export type OfferTarget = "SST" | "DUERP" | "SSCT / CSE" | "QVCT / RPS" | "Sur mesure";
 export type DecisionLevel = "site" | "groupe" | "inconnu";
+export type Segment = "Moins de 11" | "11 à 24" | "25 à 49" | "50 et plus";
+
 export type CycleStage = "J1" | "J2" | "J4" | "J6" | "J10" | "J15" | "J21";
 export type ProspectStatus =
   | "À qualifier"
@@ -57,6 +59,9 @@ export interface Prospect {
   company_name: string;
   city: string | null;
   headcount_range: HeadcountRange | null;
+  /** Colonne générée en base, lecture seule. */
+  segment: Segment | null;
+
   offer_target: OfferTarget | null;
   estimated_value: number;
   status: ProspectStatus;
@@ -167,6 +172,40 @@ export const offerTargets: OfferTarget[] = [
   "Sur mesure",
 ];
 export const decisionLevels: DecisionLevel[] = ["site", "groupe", "inconnu"];
+
+export const segmentRules: Record<
+  Segment,
+  { ranges: HeadcountRange[]; defaultOffer: OfferTarget; targetValue: number }
+> = {
+  "Moins de 11": { ranges: ["1-9"], defaultOffer: "DUERP", targetValue: 350 },
+  "11 à 24": { ranges: ["10-19"], defaultOffer: "DUERP", targetValue: 900 },
+  "25 à 49": { ranges: ["20-49"], defaultOffer: "DUERP", targetValue: 3600 },
+  "50 et plus": {
+    ranges: ["50-99", "100-199", "200-249", "250-499", "500-999", "1000+"],
+    defaultOffer: "SSCT / CSE",
+    targetValue: 5890,
+  },
+};
+
+export function segmentOf(headcount: HeadcountRange | string | null | undefined): Segment | null {
+  if (!headcount) return null;
+  const found = (Object.keys(segmentRules) as Segment[]).find((seg) =>
+    segmentRules[seg].ranges.includes(headcount as HeadcountRange),
+  );
+  return found || null;
+}
+
+/** Valeur cible dérivée du segment — jamais saisie par l'utilisateur. */
+export function targetValueOf(headcount: HeadcountRange | string | null | undefined) {
+  const segment = segmentOf(headcount);
+  return segment ? segmentRules[segment].targetValue : 0;
+}
+
+export function defaultOfferOf(headcount: HeadcountRange | string | null | undefined) {
+  const segment = segmentOf(headcount);
+  return segment ? segmentRules[segment].defaultOffer : null;
+}
+
 export const stages: CycleStage[] = ["J1", "J2", "J4", "J6", "J10", "J15", "J21"];
 export const statuses: ProspectStatus[] = [
   "À qualifier",
@@ -800,13 +839,28 @@ export async function loadLogs(): Promise<
   >;
 }
 
+/** `segment` est calculée en base : jamais envoyée en écriture.
+ *  `estimated_value` est dérivée du segment sauf valeur explicite (cas particulier). */
+function prepareProspectWrite<T extends Partial<Prospect>>(input: T) {
+  const { segment: _segment, ...rest } = input as T & { segment?: unknown };
+  const payload = rest as Partial<Prospect>;
+  if (
+    "headcount_range" in payload &&
+    "estimated_value" in payload &&
+    Number(payload.estimated_value ?? 0) === 0
+  ) {
+    payload.estimated_value = targetValueOf(payload.headcount_range);
+  }
+  return payload;
+}
+
 export async function saveProspect(
   input: Partial<Prospect> & { company_name: string },
   contact?: Partial<Contact>,
 ) {
   const { data: prospect, error } = await supabase
     .from("prospects")
-    .upsert(input)
+    .upsert(prepareProspectWrite(input) as never)
     .select()
     .single();
   if (error) throw error;
@@ -838,9 +892,13 @@ export async function addLog(
 }
 
 export async function updateProspect(id: string, payload: Partial<Prospect>) {
-  const { error } = await supabase.from("prospects").update(payload).eq("id", id);
+  const { error } = await supabase
+    .from("prospects")
+    .update(prepareProspectWrite(payload) as never)
+    .eq("id", id);
   if (error) throw error;
 }
+
 
 export async function deleteProspect(id: string) {
   const { error: logsError } = await supabase

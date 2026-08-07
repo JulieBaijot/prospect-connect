@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   PageTitle,
+  SegmentBadge,
   StatusBadge,
   fieldClass,
   labelClass,
@@ -24,6 +25,7 @@ import {
   offerTargets,
   saveProspect,
   statuses,
+  targetValueOf,
   decisionLevels,
   updateProspect,
   type Contact,
@@ -55,7 +57,7 @@ const emptyProspect = {
   city: "",
   headcount_range: "20-49" as HeadcountRange,
   offer_target: "SST" as OfferTarget,
-  estimated_value: 0,
+  estimated_value: targetValueOf("20-49"),
   status: "À qualifier" as ProspectStatus,
   next_action_date: "",
   decision_level: "inconnu" as DecisionLevel,
@@ -526,7 +528,10 @@ function ProspectsPage() {
                           : "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={p.status} />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={p.status} />
+                        <SegmentBadge headcount={p.headcount_range} segment={p.segment} />
+                      </div>
                     </td>
                     <td className="px-4 py-3">{formatDate(p.next_action_date)}</td>
                     <td className="px-4 py-3">
@@ -621,14 +626,30 @@ function ProspectsPage() {
                 <select
                   className={fieldClass}
                   value={form.headcount_range}
-                  onChange={(e) =>
-                    setForm({ ...form, headcount_range: e.target.value as HeadcountRange })
-                  }
+                  onChange={(e) => {
+                    const next = e.target.value as HeadcountRange;
+                    const previousTarget = targetValueOf(form.headcount_range);
+                    const keepManual =
+                      Number(form.estimated_value) > 0 &&
+                      Number(form.estimated_value) !== previousTarget;
+                    setForm({
+                      ...form,
+                      headcount_range: next,
+                      estimated_value: keepManual
+                        ? Number(form.estimated_value)
+                        : targetValueOf(next),
+                    });
+                  }}
                 >
                   {headcountRanges.map((x) => (
                     <option key={x}>{x}</option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Segment (auto)">
+                <div className="flex min-h-10 items-center">
+                  <SegmentBadge headcount={form.headcount_range} />
+                </div>
               </Field>
               <Field label="Statut">
                 <select
@@ -656,7 +677,7 @@ function ProspectsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Valeur €">
+              <Field label="Valeur € (auto, ajustable)">
                 <input
                   className={fieldClass}
                   type="number"
