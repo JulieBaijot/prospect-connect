@@ -93,6 +93,11 @@ function SessionPage() {
   const [overrideStatus, setOverrideStatus] = useState<ProspectStatus | "">("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [canal, setCanal] = useState<Canal>("téléphone");
+  const [templateUsed, setTemplateUsed] = useState("");
+  const [promiseText, setPromiseText] = useState("");
+  const [promiseDate, setPromiseDate] = useState("");
+
   const [pickedIds, setPickedIds] = useState<string[]>([]);
   const [pickerQuery, setPickerQuery] = useState("");
   const [sessionSize, setSessionSize] = useState(3);
