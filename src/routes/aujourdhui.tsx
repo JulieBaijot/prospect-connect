@@ -674,26 +674,52 @@ function CallCard({
 function EmailCard({
   prospect,
   logs,
+  templates,
   onSaved,
 }: {
   prospect: ProspectWithRelations;
   logs: FullLog[];
+  templates: EmailTemplate[];
   onSaved: () => void;
 }) {
   const contact = prospect.contacts[0];
   const emailLogs = logs.filter((log) => log.canal === "email");
   const lastEmail = emailLogs[0];
-  const [template, setTemplate] = useState(emailTemplates[0]);
+  const [templateId, setTemplateId] = useState("");
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState(enforceCallbackRule("email", ""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
   const address = contact?.email || prospect.main_email || "";
-  const duplicate = emailLogs.some(
+
+  const selected = templates.find((item) => item.id === templateId) || templates[0];
+  const templateName = selected?.name || "";
+  const values = {
+    contact: contactName(contact) || prospect.decision_maker,
+    entreprise: prospect.company_name,
+    ville: prospect.city,
+  };
+  const finalSubject = selected ? fillTemplate(selected.subject, values) : "";
+  const finalBody = selected ? fillTemplate(selected.body, values) : "";
+
+  /** Envoi antérieur du même modèle à ce contact — on affiche sa date. */
+  const previousSend = emailLogs.find(
     (log) =>
-      log.template_used === template &&
+      templateName &&
+      log.template_used === templateName &&
       (!contact || !log.contact_id || log.contact_id === contact.id),
   );
+
+  async function copyFinal() {
+    try {
+      await navigator.clipboard.writeText(`${finalSubject}\n\n${finalBody}`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Copie impossible — sélectionnez le texte manuellement.");
+    }
+  }
 
   async function save() {
     if (busy) return;
@@ -708,9 +734,9 @@ function EmailCard({
         stage: "email_envoye",
         objective: "Relance téléphonique après email",
         result: "Pas dispo",
-        notes: notes || `Modèle : ${template}`,
+        notes: notes || (templateName ? `Modèle : ${templateName}` : "Email envoyé"),
         next_action_date: enforceCallbackRule("email", date),
-        template_used: template,
+        template_used: templateName || null,
       });
       await updateProspect(prospect.id, {
         last_contacted_at: todayIsoDate(),
@@ -763,18 +789,29 @@ function EmailCard({
           <label className={labelClass} htmlFor={`tpl-${prospect.id}`}>
             Modèle à envoyer
           </label>
-          <select
-            id={`tpl-${prospect.id}`}
-            className={fieldClass}
-            value={template}
-            onChange={(event) => setTemplate(event.target.value)}
-          >
-            {emailTemplates.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
+          {templates.length ? (
+            <select
+              id={`tpl-${prospect.id}`}
+              className={fieldClass}
+              value={selected?.id || ""}
+              onChange={(event) => setTemplateId(event.target.value)}
+            >
+              {templates.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                  {item.segment_cible ? ` — ${item.segment_cible}` : ""}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Aucun modèle enregistré —{" "}
+              <Link to="/modeles" className="underline">
+                créer un modèle
+              </Link>
+              .
+            </p>
+          )}
         </div>
         <div className="grid gap-1">
           <label className={labelClass} htmlFor={`edate-${prospect.id}`}>
@@ -791,11 +828,26 @@ function EmailCard({
         </div>
       </div>
 
-      {duplicate ? (
+      {previousSend ? (
         <p className="mt-3 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
           <AlertTriangle className="h-4 w-4" />
-          Ce modèle a déjà été envoyé à ce contact — changez de modèle ou personnalisez le message.
+          Ce modèle a déjà été envoyé à ce contact le {formatDate(previousSend.action_date)} —
+          changez de modèle ou personnalisez le message.
         </p>
+      ) : null}
+
+      {selected ? (
+        <div className="mt-3 rounded-lg border border-border bg-secondary/50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className={labelClass}>Texte final, prêt à copier</p>
+            <Button variant="neutral" className="min-h-9 px-3" onClick={copyFinal}>
+              <Copy className="mr-2 h-4 w-4" />
+              {copied ? "Copié" : "Copier"}
+            </Button>
+          </div>
+          <p className="mt-2 text-sm font-medium">{finalSubject || "(objet vide)"}</p>
+          <pre className="mt-1 whitespace-pre-wrap text-sm">{finalBody || "(corps vide)"}</pre>
+        </div>
       ) : null}
 
       <div className="mt-3 grid gap-1">
@@ -816,7 +868,7 @@ function EmailCard({
       <div className="mt-3 flex flex-wrap gap-2">
         {address ? (
           <a
-            href={`mailto:${address}?subject=${encodeURIComponent(template)}`}
+            href={`mailto:${address}?subject=${encodeURIComponent(finalSubject || templateName)}&body=${encodeURIComponent(finalBody)}`}
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-secondary px-4 text-sm font-medium text-secondary-foreground hover:bg-accent"
           >
             <Mail className="mr-2 h-4 w-4" />
@@ -830,3 +882,4 @@ function EmailCard({
     </Card>
   );
 }
+
