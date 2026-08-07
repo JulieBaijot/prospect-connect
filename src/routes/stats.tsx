@@ -53,12 +53,11 @@ function StatsPage() {
     void loadLogs().then(setLogs);
   }, []);
 
+  /** Seuls les appels téléphoniques entrent dans le taux de décrochage — jamais les emails. */
   const calls = useMemo(() => logs.filter((l) => l.canal === "téléphone"), [logs]);
 
-  const isPickup = (result?: string | null) => {
-    const r = (result ?? "").toLowerCase();
-    return r.includes("échange") || r.includes("echange") || r.includes("rdv");
-  };
+  /** Base du calcul : appels dont on sait si quelqu'un a décroché (reached non null). */
+  const scored = useMemo(() => calls.filter((l) => l.reached !== null), [calls]);
 
   /** Taux de décrochage par semaine sur 8 semaines. */
   const weekly = useMemo(() => {
@@ -66,11 +65,11 @@ function StatsPage() {
     return Array.from({ length: 8 }, (_, i) => {
       const end = now - (7 - i) * 7 * DAY;
       const start = end - 7 * DAY;
-      const inWeek = calls.filter((l) => {
+      const inWeek = scored.filter((l) => {
         const t = +new Date(l.action_date);
         return t > start && t <= end;
       });
-      const pickups = inWeek.filter((l) => isPickup(l.result)).length;
+      const pickups = inWeek.filter((l) => l.reached === true).length;
       return {
         semaine: new Date(end).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
         appels: inWeek.length,
@@ -78,24 +77,27 @@ function StatsPage() {
         taux: inWeek.length ? Math.round((pickups / inWeek.length) * 100) : 0,
       };
     });
-  }, [calls]);
+  }, [scored]);
 
   /**
-   * KPI décrochage : sur les 30 derniers jours ; si aucun appel sur la période,
-   * on retombe sur l'ensemble des appels consignés pour ne jamais afficher 0/0 à tort.
+   * KPI décrochage : sur les 30 derniers jours ; si aucun appel qualifié sur la période,
+   * on retombe sur l'historique connu pour ne jamais afficher 0/0 à tort.
    */
   const pickupKpi = useMemo(() => {
     const since = Date.now() - 30 * DAY;
-    const recent = calls.filter((l) => +new Date(l.action_date) >= since);
-    const base = recent.length ? recent : calls;
-    const pickups = base.filter((l) => isPickup(l.result)).length;
+    const recent = scored.filter((l) => +new Date(l.action_date) >= since);
+    const base = recent.length ? recent : scored;
+    const pickups = base.filter((l) => l.reached === true).length;
+    const inconnus = calls.length - scored.length;
     return {
       appels: base.length,
       décrochages: pickups,
       taux: base.length ? Math.round((pickups / base.length) * 100) : 0,
-      periode: recent.length ? "30 derniers jours" : "historique complet",
+      periode: recent.length ? "30 derniers jours" : "historique connu",
+      inconnus,
     };
-  }, [calls]);
+  }, [scored, calls]);
+
 
 
   /** Régularité : jours des 30 derniers où au moins 3 appels ont été passés. */
