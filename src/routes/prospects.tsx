@@ -657,7 +657,7 @@ function ProspectsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Valeur €">
+              <Field label="Valeur € (auto, ajustable)">
                 <input
                   className={fieldClass}
                   type="number"
