@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
   CalendarDays,
@@ -9,6 +9,18 @@ import {
   Search,
   Wand2,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/prm/ui";
+
+function protectedReturnPath(href: string) {
+  let candidate = href;
+  for (let depth = 0; depth < 5 && candidate.startsWith("/login"); depth += 1) {
+    const next = new URL(candidate, window.location.origin).searchParams.get("next");
+    if (!next || !next.startsWith("/") || next.startsWith("//")) return "/prospects";
+    candidate = next;
+  }
+  return candidate.startsWith("/") && !candidate.startsWith("//") ? candidate : "/prospects";
+}
 
 const navItems = [
   { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
@@ -21,6 +33,45 @@ const navItems = [
 ] as const;
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const returnPath = useRef(protectedReturnPath(location.href));
+  const redirecting = useRef(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      const session = data.session;
+      if (!session) {
+        if (redirecting.current || window.location.pathname === "/login") return;
+        redirecting.current = true;
+        void navigate({ to: "/login", search: { next: returnPath.current }, replace: true });
+        return;
+      }
+      setUserEmail(session.user.email || "Compte connecté");
+      setAuthReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    void navigate({ to: "/login", search: { next: "/prospects" }, replace: true });
+  }
+
+  if (!authReady) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4 text-sm text-muted-foreground">
+        Vérification de la session…
+      </main>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-background/95">
@@ -34,10 +85,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 Cockpit prospection Julie Baijot
               </h1>
             </div>
-            <p className="max-w-xl text-sm text-muted-foreground">
-              Prospects, appels, relances et pipeline formation/conseil dans un espace de travail
-              desktop.
-            </p>
+            <div className="flex flex-wrap items-center gap-3 md:justify-end">
+              <p className="max-w-xs truncate text-sm text-muted-foreground">{userEmail}</p>
+              <Button variant="neutral" onClick={signOut}>Se déconnecter</Button>
+            </div>
           </div>
           <nav className="flex gap-2 overflow-x-auto rounded-[10px] border border-border bg-card p-1">
             {navItems.map((item) => {

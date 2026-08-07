@@ -107,12 +107,20 @@ function ProspectsPage() {
   const [batchStatus, setBatchStatus] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     void refresh();
   }, []);
   async function refresh() {
-    setProspects(await loadProspects());
+    try {
+      setLoadError("");
+      setProspects(await loadProspects());
+    } catch (error) {
+      setLoadError(
+        `Impossible de charger les prospects : ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   const filtered = useMemo(
@@ -423,6 +431,11 @@ function ProspectsPage() {
         }
       />
       {batchStatus ? <p className="mb-4 rounded-lg bg-script p-3 text-sm">{batchStatus}</p> : null}
+      {loadError ? (
+        <p role="alert" className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          {loadError}
+        </p>
+      ) : null}
       {deleteStatus ? (
         <p className="mb-4 rounded-lg bg-script p-3 text-sm">{deleteStatus}</p>
       ) : null}
