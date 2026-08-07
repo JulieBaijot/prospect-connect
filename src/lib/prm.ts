@@ -215,7 +215,7 @@ export function defaultOfferOf(headcount: HeadcountRange | string | null | undef
   return segment ? segmentRules[segment].defaultOffer : null;
 }
 
-export const stages: CycleStage[] = ["J1", "J2", "J4", "J6", "J10", "J15", "J21"];
+
 export const statuses: ProspectStatus[] = [
   "À qualifier",
   "En contact",
