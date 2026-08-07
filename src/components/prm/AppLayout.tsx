@@ -12,6 +12,16 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/prm/ui";
 
+function protectedReturnPath(href: string) {
+  let candidate = href;
+  for (let depth = 0; depth < 5 && candidate.startsWith("/login"); depth += 1) {
+    const next = new URL(candidate, window.location.origin).searchParams.get("next");
+    if (!next || !next.startsWith("/") || next.startsWith("//")) return "/prospects";
+    candidate = next;
+  }
+  return candidate.startsWith("/") && !candidate.startsWith("//") ? candidate : "/prospects";
+}
+
 const navItems = [
   { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
   { to: "/session-appels", label: "Session d'appels", icon: PhoneCall },
@@ -25,7 +35,7 @@ const navItems = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnPath = useRef(location.href);
+  const returnPath = useRef(protectedReturnPath(location.href));
   const redirecting = useRef(false);
   const [authReady, setAuthReady] = useState(false);
   const [userEmail, setUserEmail] = useState("");
@@ -44,26 +54,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
       setUserEmail(session.user.email || "Compte connecté");
       setAuthReady(true);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-      if (!session) {
-        setAuthReady(false);
-        if (redirecting.current || window.location.pathname === "/login") return;
-        redirecting.current = true;
-        void navigate({ to: "/login", search: { next: returnPath.current }, replace: true });
-        return;
-      }
-      setUserEmail(session.user.email || "Compte connecté");
-      setAuthReady(true);
-    });
     return () => {
       active = false;
-      listener.subscription.unsubscribe();
     };
   }, [navigate]);
 
   async function signOut() {
     await supabase.auth.signOut();
+    void navigate({ to: "/login", search: { next: "/prospects" }, replace: true });
   }
 
   if (!authReady) {
