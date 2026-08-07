@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   PageTitle,
+  SegmentBadge,
   StatusBadge,
   fieldClass,
   labelClass,
