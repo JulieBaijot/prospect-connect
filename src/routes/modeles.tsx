@@ -13,7 +13,7 @@ import {
   updateEmailTemplate,
   type EmailTemplate,
 } from "@/lib/email-templates";
-import { segmentLabels } from "@/lib/prm";
+import { segmentRules, type Segment } from "@/lib/prm";
 
 export const Route = createFileRoute("/modeles")({
   head: () => ({
@@ -229,7 +229,7 @@ function TemplatesPage() {
                 onChange={(event) => setDraft({ ...draft, segment_cible: event.target.value })}
               >
                 <option value="">Tous segments</option>
-                {segmentLabels.map((segment) => (
+                {(Object.keys(segmentRules) as Segment[]).map((segment) => (
                   <option key={segment} value={segment}>
                     {segment}
                   </option>
