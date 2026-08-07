@@ -55,6 +55,11 @@ function StatsPage() {
 
   const calls = useMemo(() => logs.filter((l) => l.canal === "téléphone"), [logs]);
 
+  const isPickup = (result?: string | null) => {
+    const r = (result ?? "").toLowerCase();
+    return r.includes("échange") || r.includes("echange") || r.includes("rdv");
+  };
+
   /** Taux de décrochage par semaine sur 8 semaines. */
   const weekly = useMemo(() => {
     const now = Date.now();
@@ -65,7 +70,7 @@ function StatsPage() {
         const t = +new Date(l.action_date);
         return t > start && t <= end;
       });
-      const pickups = inWeek.filter((l) => l.result === "Échange" || l.result === "RDV").length;
+      const pickups = inWeek.filter((l) => isPickup(l.result)).length;
       return {
         semaine: new Date(end).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
         appels: inWeek.length,
@@ -75,7 +80,23 @@ function StatsPage() {
     });
   }, [calls]);
 
-  const currentWeek = weekly[weekly.length - 1];
+  /**
+   * KPI décrochage : sur les 30 derniers jours ; si aucun appel sur la période,
+   * on retombe sur l'ensemble des appels consignés pour ne jamais afficher 0/0 à tort.
+   */
+  const pickupKpi = useMemo(() => {
+    const since = Date.now() - 30 * DAY;
+    const recent = calls.filter((l) => +new Date(l.action_date) >= since);
+    const base = recent.length ? recent : calls;
+    const pickups = base.filter((l) => isPickup(l.result)).length;
+    return {
+      appels: base.length,
+      décrochages: pickups,
+      taux: base.length ? Math.round((pickups / base.length) * 100) : 0,
+      periode: recent.length ? "30 derniers jours" : "historique complet",
+    };
+  }, [calls]);
+
 
   /** Régularité : jours des 30 derniers où au moins 3 appels ont été passés. */
   const regularite = useMemo(() => {
