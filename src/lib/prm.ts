@@ -167,6 +167,40 @@ export const offerTargets: OfferTarget[] = [
   "Sur mesure",
 ];
 export const decisionLevels: DecisionLevel[] = ["site", "groupe", "inconnu"];
+
+export const segmentRules: Record<
+  Segment,
+  { ranges: HeadcountRange[]; defaultOffer: OfferTarget; targetValue: number }
+> = {
+  "Moins de 11": { ranges: ["1-9"], defaultOffer: "DUERP", targetValue: 350 },
+  "11 à 24": { ranges: ["10-19"], defaultOffer: "DUERP", targetValue: 900 },
+  "25 à 49": { ranges: ["20-49"], defaultOffer: "DUERP", targetValue: 3600 },
+  "50 et plus": {
+    ranges: ["50-99", "100-199", "200-249", "250-499", "500-999", "1000+"],
+    defaultOffer: "SSCT / CSE",
+    targetValue: 5890,
+  },
+};
+
+export function segmentOf(headcount: HeadcountRange | string | null | undefined): Segment | null {
+  if (!headcount) return null;
+  const found = (Object.keys(segmentRules) as Segment[]).find((seg) =>
+    segmentRules[seg].ranges.includes(headcount as HeadcountRange),
+  );
+  return found || null;
+}
+
+/** Valeur cible dérivée du segment — jamais saisie par l'utilisateur. */
+export function targetValueOf(headcount: HeadcountRange | string | null | undefined) {
+  const segment = segmentOf(headcount);
+  return segment ? segmentRules[segment].targetValue : 0;
+}
+
+export function defaultOfferOf(headcount: HeadcountRange | string | null | undefined) {
+  const segment = segmentOf(headcount);
+  return segment ? segmentRules[segment].defaultOffer : null;
+}
+
 export const stages: CycleStage[] = ["J1", "J2", "J4", "J6", "J10", "J15", "J21"];
 export const statuses: ProspectStatus[] = [
   "À qualifier",
