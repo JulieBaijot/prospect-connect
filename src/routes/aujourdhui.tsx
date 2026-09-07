@@ -523,7 +523,12 @@ function CallCard({
         ) : null}
       </div>
 
+      {!situation && error ? (
+        <p className="mt-3 text-sm text-destructive">{error}</p>
+      ) : null}
+
       {situation ? null : (
+
         <div className="mt-4 flex flex-wrap gap-2">
           <Button
             variant="danger"
