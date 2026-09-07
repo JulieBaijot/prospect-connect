@@ -744,14 +744,28 @@ function EmailCard({
     entreprise: prospect.company_name,
     ville: prospect.city,
   };
-  const finalSubject = selected ? fillTemplate(selected.subject, values) : "";
-  const finalBody = selected ? fillTemplate(selected.body, values) : "";
+  const modelSubject = selected ? fillTemplate(selected.subject, values) : "";
+  const modelBody = selected ? fillTemplate(selected.body, values) : "";
 
-  /** Envoi antérieur du même modèle à ce contact — on affiche sa date. */
+  // Texte réellement envoyé : pré-rempli par le modèle, librement modifiable.
+  const [subject, setSubject] = useState(modelSubject);
+  const [body, setBody] = useState(modelBody);
+  useEffect(() => {
+    setSubject(modelSubject);
+    setBody(modelBody);
+  }, [selected?.id]);
+
+  const finalSubject = subject;
+  const finalBody = body;
+
+  /** Envoi antérieur du même modèle à ce contact — hors envoi consigné aujourd'hui. */
+  const day = (value: string | null) => (value || "").slice(0, 10);
+  const sentToday = emailLogs.find((log) => day(log.action_date) === todayIsoDate());
   const previousSend = emailLogs.find(
     (log) =>
       templateName &&
       log.template_used === templateName &&
+      day(log.action_date) !== todayIsoDate() &&
       (!contact || !log.contact_id || log.contact_id === contact.id),
   );
 
@@ -781,6 +795,8 @@ function EmailCard({
         notes: notes || (templateName ? `Modèle : ${templateName}` : "Email envoyé"),
         next_action_date: enforceCallbackRule("email", date),
         template_used: templateName || null,
+        email_subject: finalSubject || null,
+        email_body: finalBody || null,
       });
       await updateProspect(prospect.id, {
         last_contacted_at: todayIsoDate(),
