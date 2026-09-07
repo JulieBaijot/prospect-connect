@@ -406,8 +406,14 @@ function CallCard({
 
   async function quick(key: Situation) {
     const proposal = prochaineEtape(prospect, { situation: key });
+    // Si la proposition exige un motif, une date ou une promesse, on ouvre le panneau.
+    if (proposal.motifRequis || proposal.dateRequise || proposal.promesseRequise) {
+      open(key);
+      return;
+    }
     await commit(key, proposal, proposal.date, "");
   }
+
 
   async function commit(key: Situation, proposal: Etape, nextDate: string, freeNotes: string) {
     const option = situationOptions.find((item) => item.key === key);
