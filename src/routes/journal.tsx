@@ -146,7 +146,22 @@ function JournalPage() {
                   <td className="px-4 py-3">{log.stage}</td>
                   <td className="px-4 py-3">{log.objective}</td>
                   <td className="px-4 py-3">{log.result}</td>
-                  <td className="px-4 py-3">{log.notes}</td>
+                  <td className="px-4 py-3">
+                    {log.notes}
+                    {log.email_body ? (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-xs underline">
+                          Email envoyé
+                        </summary>
+                        {log.email_subject ? (
+                          <p className="mt-1 text-xs font-medium">{log.email_subject}</p>
+                        ) : null}
+                        <pre className="mt-1 max-w-md whitespace-pre-wrap text-xs">
+                          {log.email_body}
+                        </pre>
+                      </details>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3">{formatDate(log.meeting_date)}</td>
                 </tr>
               ))}

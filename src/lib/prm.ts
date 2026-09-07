@@ -127,6 +127,10 @@ export interface ProspectionLog {
   promise_kept: boolean | null;
   /** Modèle d'email utilisé (canal email). */
   template_used: string | null;
+  /** Objet exact de l'email réellement envoyé. */
+  email_subject: string | null;
+  /** Texte exact de l'email réellement envoyé. */
+  email_body: string | null;
   created_at: string;
 }
 

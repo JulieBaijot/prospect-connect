@@ -185,6 +185,8 @@ export type Database = {
           canal: string
           contact_id: string | null
           created_at: string
+          email_body: string | null
+          email_subject: string | null
           id: string
           meeting_date: string | null
           meeting_duration_minutes: number | null
@@ -207,6 +209,8 @@ export type Database = {
           canal?: string
           contact_id?: string | null
           created_at?: string
+          email_body?: string | null
+          email_subject?: string | null
           id?: string
           meeting_date?: string | null
           meeting_duration_minutes?: number | null
@@ -229,6 +233,8 @@ export type Database = {
           canal?: string
           contact_id?: string | null
           created_at?: string
+          email_body?: string | null
+          email_subject?: string | null
           id?: string
           meeting_date?: string | null
           meeting_duration_minutes?: number | null

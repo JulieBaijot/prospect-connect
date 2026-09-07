@@ -744,14 +744,28 @@ function EmailCard({
     entreprise: prospect.company_name,
     ville: prospect.city,
   };
-  const finalSubject = selected ? fillTemplate(selected.subject, values) : "";
-  const finalBody = selected ? fillTemplate(selected.body, values) : "";
+  const modelSubject = selected ? fillTemplate(selected.subject, values) : "";
+  const modelBody = selected ? fillTemplate(selected.body, values) : "";
 
-  /** Envoi antérieur du même modèle à ce contact — on affiche sa date. */
+  // Texte réellement envoyé : pré-rempli par le modèle, librement modifiable.
+  const [subject, setSubject] = useState(modelSubject);
+  const [body, setBody] = useState(modelBody);
+  useEffect(() => {
+    setSubject(modelSubject);
+    setBody(modelBody);
+  }, [selected?.id]);
+
+  const finalSubject = subject;
+  const finalBody = body;
+
+  /** Envoi antérieur du même modèle à ce contact — hors envoi consigné aujourd'hui. */
+  const day = (value: string | null) => (value || "").slice(0, 10);
+  const sentToday = emailLogs.find((log) => day(log.action_date) === todayIsoDate());
   const previousSend = emailLogs.find(
     (log) =>
       templateName &&
       log.template_used === templateName &&
+      day(log.action_date) !== todayIsoDate() &&
       (!contact || !log.contact_id || log.contact_id === contact.id),
   );
 
@@ -781,6 +795,8 @@ function EmailCard({
         notes: notes || (templateName ? `Modèle : ${templateName}` : "Email envoyé"),
         next_action_date: enforceCallbackRule("email", date),
         template_used: templateName || null,
+        email_subject: finalSubject || null,
+        email_body: finalBody || null,
       });
       await updateProspect(prospect.id, {
         last_contacted_at: todayIsoDate(),
@@ -872,7 +888,12 @@ function EmailCard({
         </div>
       </div>
 
-      {previousSend ? (
+      {sentToday ? (
+        <p className="mt-3 rounded-lg border border-border bg-secondary p-2 text-sm text-muted-foreground">
+          Envoi déjà consigné aujourd'hui
+          {sentToday.template_used ? ` (${sentToday.template_used})` : ""}.
+        </p>
+      ) : previousSend ? (
         <p className="mt-3 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
           <AlertTriangle className="h-4 w-4" />
           Ce modèle a déjà été envoyé à ce contact le {formatDate(previousSend.action_date)} —
@@ -880,19 +901,46 @@ function EmailCard({
         </p>
       ) : null}
 
-      {selected ? (
-        <div className="mt-3 rounded-lg border border-border bg-secondary/50 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className={labelClass}>Texte final, prêt à copier</p>
-            <Button variant="neutral" className="min-h-9 px-3" onClick={copyFinal}>
-              <Copy className="mr-2 h-4 w-4" />
-              {copied ? "Copié" : "Copier"}
-            </Button>
-          </div>
-          <p className="mt-2 text-sm font-medium">{finalSubject || "(objet vide)"}</p>
-          <pre className="mt-1 whitespace-pre-wrap text-sm">{finalBody || "(corps vide)"}</pre>
+      <div className="mt-3 rounded-lg border border-border bg-secondary/50 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className={labelClass}>Email envoyé — modifiable, c'est ce texte qui est archivé</p>
+          <Button variant="neutral" className="min-h-9 px-3" onClick={copyFinal}>
+            <Copy className="mr-2 h-4 w-4" />
+            {copied ? "Copié" : "Copier"}
+          </Button>
         </div>
-      ) : null}
+        <input
+          className={`${fieldClass} mt-2`}
+          value={subject}
+          onChange={(event) => setSubject(event.target.value)}
+          placeholder="Objet réellement envoyé"
+          aria-label="Objet réellement envoyé"
+        />
+        <textarea
+          rows={9}
+          className={`${fieldClass} mt-2`}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          placeholder="Collez ou écrivez ici le message exact que vous avez envoyé"
+          aria-label="Texte réellement envoyé"
+        />
+        {selected && (subject !== modelSubject || body !== modelBody) ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-xs text-muted-foreground">Texte modifié par rapport au modèle.</p>
+            <button
+              type="button"
+              className="text-xs underline"
+              onClick={() => {
+                setSubject(modelSubject);
+                setBody(modelBody);
+              }}
+            >
+              Revenir au modèle
+            </button>
+          </div>
+        ) : null}
+      </div>
+
 
       <div className="mt-3 grid gap-1">
         <label className={labelClass} htmlFor={`enotes-${prospect.id}`}>
