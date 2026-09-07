@@ -1,0 +1,1 @@
+ALTER TABLE public.prospection_logs DROP CONSTRAINT IF EXISTS prospection_logs_stage_check;
