@@ -4,14 +4,17 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  ClipboardList,
   Copy,
   Mail,
   PhoneCall,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import { ParkingAction } from "@/components/prm/ParkingAction";
+import { ProspectQuickEdit } from "@/components/prm/ProspectQuickEdit";
 
 import {
   Button,
@@ -22,7 +25,14 @@ import {
   fieldClass,
   labelClass,
 } from "@/components/prm/ui";
-import { emptyPlan, savePlan, todayPlan, type DayPlan } from "@/lib/day-plan";
+import {
+  addToPlan,
+  emptyPlan,
+  savePlan,
+  todayPlan,
+  tomorrowIso,
+  type DayPlan,
+} from "@/lib/day-plan";
 import {
   fillTemplate,
   loadEmailTemplates,
@@ -34,6 +44,7 @@ import {
   bestPhone,
   brokenPromises,
   contactName,
+  dataQualityIssues,
   decisionLevels,
   enforceCallbackRule,
   formatDate,
@@ -45,6 +56,7 @@ import {
   parkProspect,
 
   prioritizeCallSession,
+  prioritizeQualificationSession,
   prochaineEtape,
   setPromiseKept,
   shortDateTime,
@@ -60,6 +72,7 @@ import {
   type ProspectWithRelations,
   type Situation,
 } from "@/lib/prm";
+
 
 export const Route = createFileRoute("/aujourdhui")({
   head: () => ({
