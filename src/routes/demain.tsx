@@ -262,9 +262,20 @@ function TomorrowPage() {
   }
 
   function validate() {
-    savePlan({ date: tomorrow, calls, emails, closed: false });
+    // On conserve les fiches qualifiées aujourd'hui et déjà orientées vers demain.
+    const existing = loadPlan(tomorrow);
+    const merge = (list: string[], routed: string[], limit: number) =>
+      [...new Set([...routed, ...list])].slice(0, limit);
+    savePlan({
+      date: tomorrow,
+      calls: merge(calls, existing.calls, 6),
+      emails: merge(emails, existing.emails, 3),
+      qualify: existing.qualify,
+      closed: false,
+    });
     setSaved(true);
   }
+
 
   const pickerResults = prospects
     .filter((p) => p.status !== "Perdu" && p.status !== "Converti")
