@@ -1056,3 +1056,73 @@ function EmailCard({
   );
 }
 
+
+/** Fiche à qualifier : je complète les informations, puis je l'oriente vers demain. */
+function QualifyCard({
+  prospect,
+  onRefresh,
+  onRouted,
+  onSkip,
+}: {
+  prospect: ProspectWithRelations;
+  onRefresh: () => void;
+  onRouted: (target: "calls" | "emails") => void;
+  onSkip: () => void;
+}) {
+  const contact = prospect.contacts[0];
+  const issues = dataQualityIssues(prospect);
+  const phone = bestPhone(prospect);
+
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[15px] font-medium">{prospect.company_name}</p>
+          <p className="text-sm text-muted-foreground">
+            {prospect.city || "ville inconnue"}
+            {prospect.sector ? ` · ${prospect.sector}` : ""}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <SegmentBadge headcount={prospect.headcount_range} segment={prospect.segment} />
+            <StatusBadge status={prospect.status} />
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {contact
+              ? `${contactName(contact) || "Contact"}${contact.role_title ? ` — ${contact.role_title}` : ""}`
+              : prospect.decision_maker || "Contact à identifier"}
+            {phone ? ` · ${phone}` : " · téléphone manquant"}
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {issues.length ? (
+            <span className="inline-flex items-center gap-1 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              {issues.join(", ")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-4 w-4" /> fiche complète
+            </span>
+          )}
+        </div>
+      </div>
+
+      <ProspectQuickEdit prospect={prospect} onSaved={onRefresh} openLabel="Compléter la fiche" />
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="info" className="min-h-9 px-3" onClick={() => onRouted("calls")}>
+          <PhoneCall className="mr-2 h-4 w-4" />
+          Appeler demain
+        </Button>
+        <Button variant="neutral" className="min-h-9 px-3" onClick={() => onRouted("emails")}>
+          <Mail className="mr-2 h-4 w-4" />
+          Email demain
+        </Button>
+        <Button variant="neutral" className="min-h-9 px-3" onClick={onSkip}>
+          <X className="mr-2 h-4 w-4" />
+          Retirer de la liste
+        </Button>
+      </div>
+    </Card>
+  );
+}
