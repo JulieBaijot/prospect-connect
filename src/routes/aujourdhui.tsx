@@ -4,14 +4,17 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  ClipboardList,
   Copy,
   Mail,
   PhoneCall,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
 import { ParkingAction } from "@/components/prm/ParkingAction";
+import { ProspectQuickEdit } from "@/components/prm/ProspectQuickEdit";
 
 import {
   Button,
@@ -22,7 +25,14 @@ import {
   fieldClass,
   labelClass,
 } from "@/components/prm/ui";
-import { emptyPlan, savePlan, todayPlan, type DayPlan } from "@/lib/day-plan";
+import {
+  addToPlan,
+  emptyPlan,
+  savePlan,
+  todayPlan,
+  tomorrowIso,
+  type DayPlan,
+} from "@/lib/day-plan";
 import {
   fillTemplate,
   loadEmailTemplates,
@@ -34,6 +44,7 @@ import {
   bestPhone,
   brokenPromises,
   contactName,
+  dataQualityIssues,
   decisionLevels,
   enforceCallbackRule,
   formatDate,
@@ -45,6 +56,7 @@ import {
   parkProspect,
 
   prioritizeCallSession,
+  prioritizeQualificationSession,
   prochaineEtape,
   setPromiseKept,
   shortDateTime,
@@ -60,6 +72,7 @@ import {
   type ProspectWithRelations,
   type Situation,
 } from "@/lib/prm";
+
 
 export const Route = createFileRoute("/aujourdhui")({
   head: () => ({
@@ -125,6 +138,11 @@ function TodayPage() {
   const emailList = plan.emails
     .map((id) => byId.get(id))
     .filter((p): p is ProspectWithRelations => Boolean(p) && !isParked(p!));
+  const qualifyList = plan.qualify
+    .map((id) => byId.get(id))
+    .filter((p): p is ProspectWithRelations => Boolean(p) && !isParked(p!));
+
+
 
 
   const todayLogs = useMemo(
@@ -159,11 +177,20 @@ function TodayPage() {
     });
   }
 
+  function suggestQualify() {
+    const taken = new Set([...plan.calls, ...plan.emails]);
+    const picks = prioritizeQualificationSession(
+      prospects.filter((p) => !taken.has(p.id)),
+    ).slice(0, 3);
+    updatePlan({ ...plan, qualify: picks.map((p) => p.id) });
+  }
+
   return (
     <>
       <PageTitle
         title="Aujourd'hui"
-        subtitle={`${formatDate(today)} — promesses, 3 appels, 3 emails, puis clôture.`}
+        subtitle={`${formatDate(today)} — promesses, 3 appels, 3 emails, 3 fiches à qualifier, puis clôture.`}
+
         action={
           <Link
             to="/prospects"
@@ -295,7 +322,56 @@ function TodayPage() {
         )}
       </section>
 
-      {/* Bloc 4 — Clôture */}
+      {/* Bloc 4 — 3 entreprises à qualifier pour demain */}
+      <section className="mb-6">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-[16px] font-medium">3 entreprises à qualifier</h3>
+          </div>
+          <Button variant="neutral" className="min-h-9 px-3" onClick={suggestQualify}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Proposer 3 fiches
+          </Button>
+        </div>
+        {qualifyList.length ? (
+          <div className="grid gap-3">
+            {qualifyList.map((prospect) => (
+              <QualifyCard
+                key={prospect.id}
+                prospect={prospect}
+                onRefresh={refresh}
+                onRouted={(target) => {
+                  addToPlan(tomorrowIso(), target, prospect.id);
+                  updatePlan({
+                    ...plan,
+                    qualify: plan.qualify.filter((id) => id !== prospect.id),
+                  });
+                  setMessage(
+                    target === "calls"
+                      ? `${prospect.company_name} ira dans les appels de demain.`
+                      : `${prospect.company_name} ira dans les emails de demain.`,
+                  );
+                }}
+                onSkip={() =>
+                  updatePlan({
+                    ...plan,
+                    qualify: plan.qualify.filter((id) => id !== prospect.id),
+                  })
+                }
+              />
+            ))}
+          </div>
+        ) : (
+          <Card className="p-4 text-sm text-muted-foreground">
+            Aucune fiche à qualifier pour l'instant. Utilisez « Proposer 3 fiches » pour préparer le
+            travail de demain.
+          </Card>
+        )}
+      </section>
+
+      {/* Bloc 5 — Clôture */}
+
       <section>
         <Card className="p-4">
           <h3 className="text-[16px] font-medium">Clôture</h3>
@@ -572,8 +648,10 @@ function CallCard({
               onSaved();
             }}
           />
+          <ProspectQuickEdit prospect={prospect} onSaved={onSaved} />
         </div>
       )}
+
 
 
       {situation && etape ? (
@@ -844,6 +922,9 @@ function EmailCard({
         </div>
       </div>
 
+      <ProspectQuickEdit prospect={prospect} onSaved={onSaved} />
+
+
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="grid gap-1">
           <label className={labelClass} htmlFor={`tpl-${prospect.id}`}>
@@ -975,3 +1056,73 @@ function EmailCard({
   );
 }
 
+
+/** Fiche à qualifier : je complète les informations, puis je l'oriente vers demain. */
+function QualifyCard({
+  prospect,
+  onRefresh,
+  onRouted,
+  onSkip,
+}: {
+  prospect: ProspectWithRelations;
+  onRefresh: () => void;
+  onRouted: (target: "calls" | "emails") => void;
+  onSkip: () => void;
+}) {
+  const contact = prospect.contacts[0];
+  const issues = dataQualityIssues(prospect);
+  const phone = bestPhone(prospect);
+
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[15px] font-medium">{prospect.company_name}</p>
+          <p className="text-sm text-muted-foreground">
+            {prospect.city || "ville inconnue"}
+            {prospect.sector ? ` · ${prospect.sector}` : ""}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <SegmentBadge headcount={prospect.headcount_range} segment={prospect.segment} />
+            <StatusBadge status={prospect.status} />
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {contact
+              ? `${contactName(contact) || "Contact"}${contact.role_title ? ` — ${contact.role_title}` : ""}`
+              : prospect.decision_maker || "Contact à identifier"}
+            {phone ? ` · ${phone}` : " · téléphone manquant"}
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {issues.length ? (
+            <span className="inline-flex items-center gap-1 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              {issues.join(", ")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-4 w-4" /> fiche complète
+            </span>
+          )}
+        </div>
+      </div>
+
+      <ProspectQuickEdit prospect={prospect} onSaved={onRefresh} openLabel="Compléter la fiche" />
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="info" className="min-h-9 px-3" onClick={() => onRouted("calls")}>
+          <PhoneCall className="mr-2 h-4 w-4" />
+          Appeler demain
+        </Button>
+        <Button variant="neutral" className="min-h-9 px-3" onClick={() => onRouted("emails")}>
+          <Mail className="mr-2 h-4 w-4" />
+          Email demain
+        </Button>
+        <Button variant="neutral" className="min-h-9 px-3" onClick={onSkip}>
+          <X className="mr-2 h-4 w-4" />
+          Retirer de la liste
+        </Button>
+      </div>
+    </Card>
+  );
+}

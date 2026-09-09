@@ -6,10 +6,12 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  CalendarRange,
   Database,
   ListChecks,
   PauseCircle,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/prm/ui";
 
@@ -23,6 +25,7 @@ function protectedReturnPath(pathname: string) {
 const navItems = [
   { to: "/aujourdhui", label: "Aujourd'hui", icon: CalendarDays },
   { to: "/demain", label: "Demain", icon: CalendarClock },
+  { to: "/calendrier", label: "Calendrier", icon: CalendarRange },
   { to: "/prospects", label: "Prospects", icon: Database },
   { to: "/groupes", label: "Groupes", icon: Building2 },
   { to: "/parking", label: "Parking", icon: PauseCircle },
@@ -30,6 +33,7 @@ const navItems = [
   { to: "/journal", label: "Journal", icon: ListChecks },
   { to: "/stats", label: "Pilotage", icon: BarChart3 },
 ] as const;
+
 
 
 export function AppLayout({ children }: { children: ReactNode }) {
