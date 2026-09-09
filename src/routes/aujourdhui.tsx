@@ -177,11 +177,20 @@ function TodayPage() {
     });
   }
 
+  function suggestQualify() {
+    const taken = new Set([...plan.calls, ...plan.emails]);
+    const picks = prioritizeQualificationSession(
+      prospects.filter((p) => !taken.has(p.id)),
+    ).slice(0, 3);
+    updatePlan({ ...plan, qualify: picks.map((p) => p.id) });
+  }
+
   return (
     <>
       <PageTitle
         title="Aujourd'hui"
-        subtitle={`${formatDate(today)} — promesses, 3 appels, 3 emails, puis clôture.`}
+        subtitle={`${formatDate(today)} — promesses, 3 appels, 3 emails, 3 fiches à qualifier, puis clôture.`}
+
         action={
           <Link
             to="/prospects"
@@ -313,7 +322,56 @@ function TodayPage() {
         )}
       </section>
 
-      {/* Bloc 4 — Clôture */}
+      {/* Bloc 4 — 3 entreprises à qualifier pour demain */}
+      <section className="mb-6">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-[16px] font-medium">3 entreprises à qualifier</h3>
+          </div>
+          <Button variant="neutral" className="min-h-9 px-3" onClick={suggestQualify}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Proposer 3 fiches
+          </Button>
+        </div>
+        {qualifyList.length ? (
+          <div className="grid gap-3">
+            {qualifyList.map((prospect) => (
+              <QualifyCard
+                key={prospect.id}
+                prospect={prospect}
+                onRefresh={refresh}
+                onRouted={(target) => {
+                  addToPlan(tomorrowIso(), target, prospect.id);
+                  updatePlan({
+                    ...plan,
+                    qualify: plan.qualify.filter((id) => id !== prospect.id),
+                  });
+                  setMessage(
+                    target === "calls"
+                      ? `${prospect.company_name} ira dans les appels de demain.`
+                      : `${prospect.company_name} ira dans les emails de demain.`,
+                  );
+                }}
+                onSkip={() =>
+                  updatePlan({
+                    ...plan,
+                    qualify: plan.qualify.filter((id) => id !== prospect.id),
+                  })
+                }
+              />
+            ))}
+          </div>
+        ) : (
+          <Card className="p-4 text-sm text-muted-foreground">
+            Aucune fiche à qualifier pour l'instant. Utilisez « Proposer 3 fiches » pour préparer le
+            travail de demain.
+          </Card>
+        )}
+      </section>
+
+      {/* Bloc 5 — Clôture */}
+
       <section>
         <Card className="p-4">
           <h3 className="text-[16px] font-medium">Clôture</h3>
