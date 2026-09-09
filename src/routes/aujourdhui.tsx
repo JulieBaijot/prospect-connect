@@ -648,8 +648,10 @@ function CallCard({
               onSaved();
             }}
           />
+          <ProspectQuickEdit prospect={prospect} onSaved={onSaved} />
         </div>
       )}
+
 
 
       {situation && etape ? (
@@ -919,6 +921,9 @@ function EmailCard({
           ) : null}
         </div>
       </div>
+
+      <ProspectQuickEdit prospect={prospect} onSaved={onSaved} />
+
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="grid gap-1">
