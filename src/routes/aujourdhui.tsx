@@ -138,6 +138,11 @@ function TodayPage() {
   const emailList = plan.emails
     .map((id) => byId.get(id))
     .filter((p): p is ProspectWithRelations => Boolean(p) && !isParked(p!));
+  const qualifyList = plan.qualify
+    .map((id) => byId.get(id))
+    .filter((p): p is ProspectWithRelations => Boolean(p) && !isParked(p!));
+
+
 
 
   const todayLogs = useMemo(
