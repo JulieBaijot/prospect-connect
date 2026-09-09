@@ -20,6 +20,7 @@ import { Route as JournalRouteImport } from './routes/journal'
 import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
 import { Route as GroupesRouteImport } from './routes/groupes'
 import { Route as DemainRouteImport } from './routes/demain'
+import { Route as CalendrierRouteImport } from './routes/calendrier'
 import { Route as AujourdhuiRouteImport } from './routes/aujourdhui'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -82,6 +83,11 @@ const DemainRoute = DemainRouteImport.update({
   path: '/demain',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalendrierRoute = CalendrierRouteImport.update({
+  id: '/calendrier',
+  path: '/calendrier',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AujourdhuiRoute = AujourdhuiRouteImport.update({
   id: '/aujourdhui',
   path: '/aujourdhui',
@@ -119,6 +125,7 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
+  '/calendrier': typeof CalendrierRoute
   '/demain': typeof DemainRoute
   '/groupes': typeof GroupesRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
+  '/calendrier': typeof CalendrierRoute
   '/demain': typeof DemainRoute
   '/groupes': typeof GroupesRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/aujourdhui': typeof AujourdhuiRoute
+  '/calendrier': typeof CalendrierRoute
   '/demain': typeof DemainRoute
   '/groupes': typeof GroupesRoute
   '/integration-prospects': typeof IntegrationProspectsRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aujourdhui'
+    | '/calendrier'
     | '/demain'
     | '/groupes'
     | '/integration-prospects'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aujourdhui'
+    | '/calendrier'
     | '/demain'
     | '/groupes'
     | '/integration-prospects'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/aujourdhui'
+    | '/calendrier'
     | '/demain'
     | '/groupes'
     | '/integration-prospects'
@@ -237,6 +249,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AujourdhuiRoute: typeof AujourdhuiRoute
+  CalendrierRoute: typeof CalendrierRoute
   DemainRoute: typeof DemainRoute
   GroupesRoute: typeof GroupesRoute
   IntegrationProspectsRoute: typeof IntegrationProspectsRoute
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemainRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calendrier': {
+      id: '/calendrier'
+      path: '/calendrier'
+      fullPath: '/calendrier'
+      preLoaderRoute: typeof CalendrierRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/aujourdhui': {
       id: '/aujourdhui'
       path: '/aujourdhui'
@@ -381,6 +401,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AujourdhuiRoute: AujourdhuiRoute,
+  CalendrierRoute: CalendrierRoute,
   DemainRoute: DemainRoute,
   GroupesRoute: GroupesRoute,
   IntegrationProspectsRoute: IntegrationProspectsRoute,
