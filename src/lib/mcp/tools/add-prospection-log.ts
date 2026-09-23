@@ -10,9 +10,11 @@ export default defineTool({
   inputSchema: {
     prospect_id: z.string().uuid(),
     canal: z.enum(["email", "téléphone", "physique"]),
-    result: z.enum(["NRP", "Pas dispo", "Échange", "RDV"]),
+    result: z.enum(["NRP", "Pas dispo", "Barrage", "Échange", "RDV"]),
     action_type: z.string().min(1).max(80).describe("Type d'action (ex: 'Appel J1', 'RDV pris', 'Relance mail')"),
     notes: z.string().max(2000).optional(),
+    promise_text: z.string().max(500).optional().describe("Engagement pris auprès du prospect (ex: 'Envoyer le programme SST')"),
+    promise_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Échéance de l'engagement (YYYY-MM-DD)"),
     next_action_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Date de prochaine action (YYYY-MM-DD)"),
     update_status: z.enum(["À qualifier", "En contact", "En discussion", "Parké", "Converti", "Perdu"]).optional(),
   },
@@ -26,12 +28,18 @@ export default defineTool({
       result: input.result,
       action_type: input.action_type,
       notes: input.notes ?? null,
+      promise_text: input.promise_text ?? null,
+      promise_date: input.promise_date ?? null,
+      next_action_date: input.next_action_date ?? null,
+      // Même règle que l'app : au téléphone, tout résultat sauf NRP signifie qu'on a eu quelqu'un.
+      reached: input.canal === "téléphone" ? input.result !== "NRP" : null,
     });
     if (logError) return { content: [{ type: "text", text: logError.message }], isError: true };
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (input.next_action_date) patch.next_action_date = input.next_action_date;
     if (input.update_status) patch.status = input.update_status;
+    if (input.canal === "téléphone" || input.canal === "physique") patch.last_contacted_at = new Date().toISOString().slice(0, 10);
     if (Object.keys(patch).length > 1) {
       const { error: upError } = await supabase.from("prospects").update(patch).eq("id", input.prospect_id);
       if (upError) return { content: [{ type: "text", text: upError.message }], isError: true };

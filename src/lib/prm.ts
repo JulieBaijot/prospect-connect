@@ -719,12 +719,29 @@ export function sessionReason(prospect: ProspectWithRelations) {
   return "Priorité selon statut et fraîcheur";
 }
 
+/** Supabase plafonne chaque réponse à 1 000 lignes : on lit par pages pour ne rien perdre. */
+const PAGE_SIZE = 1000;
+async function fetchAllPages<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await fetchPage(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < PAGE_SIZE) return rows;
+  }
+}
+
 export async function loadProspects(): Promise<ProspectWithRelations[]> {
-  const { data, error } = await supabase
-    .from("prospects")
-    .select("*, contacts(*), prospection_logs(*)")
-    .order("updated_at", { ascending: false });
-  if (error) throw error;
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from("prospects")
+      .select("*, contacts(*), prospection_logs(*)")
+      .order("updated_at", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
   return ((data || []) as unknown as ProspectWithRelations[]).map((prospect) => ({
     ...prospect,
     contacts: prospect.contacts || [],
@@ -737,11 +754,14 @@ export async function loadProspects(): Promise<ProspectWithRelations[]> {
 export async function loadLogs(): Promise<
   Array<ProspectionLog & { prospects: Prospect | null; contacts: Contact | null }>
 > {
-  const { data, error } = await supabase
-    .from("prospection_logs")
-    .select("*, prospects(*), contacts(*)")
-    .order("action_date", { ascending: false });
-  if (error) throw error;
+  const data = await fetchAllPages((from, to) =>
+    supabase
+      .from("prospection_logs")
+      .select("*, prospects(*), contacts(*)")
+      .order("action_date", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
   return (data || []) as unknown as Array<
     ProspectionLog & { prospects: Prospect | null; contacts: Contact | null }
   >;

@@ -1,6 +1,16 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createMiddleware, createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { enrichCompanyServer, findEmailServer, searchCompaniesBatchServer } from "@/server/prospect-search.server";
+
+// Les clés API (Pappers, Google, Perplexity, Hunter) sont payantes : réservé à la propriétaire du PRM.
+const requireOwner = createMiddleware({ type: "function" })
+  .middleware([requireSupabaseAuth])
+  .server(async ({ next, context }) => {
+    const { data, error } = await context.supabase.rpc("is_app_owner");
+    if (error || data !== true) throw new Response("Forbidden", { status: 403 });
+    return next();
+  });
 
 const sourceSchema = z.enum(["pappers", "insee", "annuaire"]);
 
@@ -31,13 +41,16 @@ const emailSchema = z.object({
 });
 
 export const searchCompaniesBatch = createServerFn({ method: "POST" })
+  .middleware([requireOwner])
   .inputValidator((data) => searchSchema.parse(data))
   .handler(async ({ data }) => searchCompaniesBatchServer(data));
 
 export const enrichCompany = createServerFn({ method: "POST" })
+  .middleware([requireOwner])
   .inputValidator((data) => enrichSchema.parse(data))
   .handler(async ({ data }) => enrichCompanyServer(data));
 
 export const findEmail = createServerFn({ method: "POST" })
+  .middleware([requireOwner])
   .inputValidator((data) => emailSchema.parse(data))
   .handler(async ({ data }) => findEmailServer(data));
