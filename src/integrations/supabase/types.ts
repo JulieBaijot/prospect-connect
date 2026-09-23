@@ -50,6 +50,21 @@ export type Database = {
         }
         Relationships: []
       }
+      app_owner: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           category: string | null
@@ -408,7 +423,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_app_owner: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
