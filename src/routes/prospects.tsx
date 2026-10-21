@@ -1046,7 +1046,7 @@ function buildEnrichmentPatch(prospect: Prospect, r: EnrichResponse): Partial<Pr
     const current = prospect[key];
     const empty = current == null || current === "" || (Array.isArray(current) && !current.length);
     if (empty && value != null && value !== "" && fs[from]) {
-      patch[key] = value;
+      (patch as Record<string, unknown>)[key as string] = value;
       origins[key as string] = fs[from];
     }
   };
