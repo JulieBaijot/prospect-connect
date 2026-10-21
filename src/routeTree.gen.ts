@@ -9,83 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as StatsRouteImport } from './routes/stats'
-import { Route as SessionAppelsRouteImport } from './routes/session-appels'
-import { Route as ProspectsRouteImport } from './routes/prospects'
-import { Route as ParkingRouteImport } from './routes/parking'
-import { Route as ModelesRouteImport } from './routes/modeles'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as JournalRouteImport } from './routes/journal'
-import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
-import { Route as GroupesRouteImport } from './routes/groupes'
-import { Route as DemainRouteImport } from './routes/demain'
-import { Route as CalendrierRouteImport } from './routes/calendrier'
-import { Route as AujourdhuiRouteImport } from './routes/aujourdhui'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AujourdhuiRouteImport } from './routes/aujourdhui'
+import { Route as CalendrierRouteImport } from './routes/calendrier'
+import { Route as DemainRouteImport } from './routes/demain'
+import { Route as GroupesRouteImport } from './routes/groupes'
+import { Route as IntegrationProspectsRouteImport } from './routes/integration-prospects'
+import { Route as JournalRouteImport } from './routes/journal'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as ModelesRouteImport } from './routes/modeles'
+import { Route as ParkingRouteImport } from './routes/parking'
+import { Route as ProspectsRouteImport } from './routes/prospects'
+import { Route as SessionAppelsRouteImport } from './routes/session-appels'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 
-const StatsRoute = StatsRouteImport.update({
-  id: '/stats',
-  path: '/stats',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SessionAppelsRoute = SessionAppelsRouteImport.update({
-  id: '/session-appels',
-  path: '/session-appels',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProspectsRoute = ProspectsRouteImport.update({
-  id: '/prospects',
-  path: '/prospects',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ParkingRoute = ParkingRouteImport.update({
-  id: '/parking',
-  path: '/parking',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ModelesRoute = ModelesRouteImport.update({
-  id: '/modeles',
-  path: '/modeles',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const JournalRoute = JournalRouteImport.update({
-  id: '/journal',
-  path: '/journal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IntegrationProspectsRoute = IntegrationProspectsRouteImport.update({
-  id: '/integration-prospects',
-  path: '/integration-prospects',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GroupesRoute = GroupesRouteImport.update({
-  id: '/groupes',
-  path: '/groupes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemainRoute = DemainRouteImport.update({
-  id: '/demain',
-  path: '/demain',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CalendrierRoute = CalendrierRouteImport.update({
-  id: '/calendrier',
-  path: '/calendrier',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AujourdhuiRoute = AujourdhuiRouteImport.update({
@@ -93,27 +38,76 @@ const AujourdhuiRoute = AujourdhuiRouteImport.update({
   path: '/aujourdhui',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CalendrierRoute = CalendrierRouteImport.update({
+  id: '/calendrier',
+  path: '/calendrier',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const DemainRoute = DemainRouteImport.update({
+  id: '/demain',
+  path: '/demain',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupesRoute = GroupesRouteImport.update({
+  id: '/groupes',
+  path: '/groupes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntegrationProspectsRoute = IntegrationProspectsRouteImport.update({
+  id: '/integration-prospects',
+  path: '/integration-prospects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JournalRoute = JournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModelesRoute = ModelesRouteImport.update({
+  id: '/modeles',
+  path: '/modeles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParkingRoute = ParkingRouteImport.update({
+  id: '/parking',
+  path: '/parking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProspectsRoute = ProspectsRouteImport.update({
+  id: '/prospects',
+  path: '/prospects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessionAppelsRoute = SessionAppelsRouteImport.update({
+  id: '/session-appels',
+  path: '/session-appels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotmcpChar93ListToolsRoute =
   Char91DotmcpChar93ListToolsRouteImport.update({
     id: '/.mcp/list-tools',
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
@@ -121,6 +115,12 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -269,88 +269,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/stats': {
-      id: '/stats'
-      path: '/stats'
-      fullPath: '/stats'
-      preLoaderRoute: typeof StatsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/session-appels': {
-      id: '/session-appels'
-      path: '/session-appels'
-      fullPath: '/session-appels'
-      preLoaderRoute: typeof SessionAppelsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/prospects': {
-      id: '/prospects'
-      path: '/prospects'
-      fullPath: '/prospects'
-      preLoaderRoute: typeof ProspectsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/parking': {
-      id: '/parking'
-      path: '/parking'
-      fullPath: '/parking'
-      preLoaderRoute: typeof ParkingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/modeles': {
-      id: '/modeles'
-      path: '/modeles'
-      fullPath: '/modeles'
-      preLoaderRoute: typeof ModelesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/journal': {
-      id: '/journal'
-      path: '/journal'
-      fullPath: '/journal'
-      preLoaderRoute: typeof JournalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/integration-prospects': {
-      id: '/integration-prospects'
-      path: '/integration-prospects'
-      fullPath: '/integration-prospects'
-      preLoaderRoute: typeof IntegrationProspectsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/groupes': {
-      id: '/groupes'
-      path: '/groupes'
-      fullPath: '/groupes'
-      preLoaderRoute: typeof GroupesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demain': {
-      id: '/demain'
-      path: '/demain'
-      fullPath: '/demain'
-      preLoaderRoute: typeof DemainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calendrier': {
-      id: '/calendrier'
-      path: '/calendrier'
-      fullPath: '/calendrier'
-      preLoaderRoute: typeof CalendrierRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aujourdhui': {
@@ -360,18 +283,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AujourdhuiRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/calendrier': {
+      id: '/calendrier'
+      path: '/calendrier'
+      fullPath: '/calendrier'
+      preLoaderRoute: typeof CalendrierRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/demain': {
+      id: '/demain'
+      path: '/demain'
+      fullPath: '/demain'
+      preLoaderRoute: typeof DemainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/groupes': {
+      id: '/groupes'
+      path: '/groupes'
+      fullPath: '/groupes'
+      preLoaderRoute: typeof GroupesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integration-prospects': {
+      id: '/integration-prospects'
+      path: '/integration-prospects'
+      fullPath: '/integration-prospects'
+      preLoaderRoute: typeof IntegrationProspectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journal': {
+      id: '/journal'
+      path: '/journal'
+      fullPath: '/journal'
+      preLoaderRoute: typeof JournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/modeles': {
+      id: '/modeles'
+      path: '/modeles'
+      fullPath: '/modeles'
+      preLoaderRoute: typeof ModelesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parking': {
+      id: '/parking'
+      path: '/parking'
+      fullPath: '/parking'
+      preLoaderRoute: typeof ParkingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prospects': {
+      id: '/prospects'
+      path: '/prospects'
+      fullPath: '/prospects'
+      preLoaderRoute: typeof ProspectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/session-appels': {
+      id: '/session-appels'
+      path: '/session-appels'
+      fullPath: '/session-appels'
+      preLoaderRoute: typeof SessionAppelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -381,11 +374,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -393,6 +386,13 @@ declare module '@tanstack/react-router' {
       path: '/.lovable/oauth/consent'
       fullPath: '/.lovable/oauth/consent'
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
