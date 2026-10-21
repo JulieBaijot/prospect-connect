@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { enrichCompanyServer, findEmailServer, searchCompaniesBatchServer } from "@/server/prospect-search.server";
 
-// Les clés API (Pappers, Google, Perplexity, Hunter) sont payantes : réservé à la propriétaire du PRM.
+// Les clés API (Pappers, Perplexity, Hunter) sont payantes : réservé à la propriétaire du PRM.
 const requireOwner = createMiddleware({ type: "function" })
   .middleware([requireSupabaseAuth])
   .server(async ({ next, context }) => {

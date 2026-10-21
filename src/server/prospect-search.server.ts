@@ -220,167 +220,118 @@ export async function searchCompaniesBatchServer(input: { source: SearchSource; 
   return { results: dedupe(results), runs, missingKeys };
 }
 
-// ─── Enrichment (Google Places v1 + Perplexity) ───
+// ─── Enrichment (Recherche d'entreprises + Perplexity) ───
 
 export type SourceStatus = { status: "ok" | "error" | "skipped"; message?: string };
 
-export type Icebreaker = {
-  type?: string;
-  title: string;
-  source?: string;
-  date?: string;
-  url?: string;
-};
+export type Icebreaker = { type?: string; title: string; source?: string; date?: string; url?: string };
+
+export const SOURCE_LABELS = {
+  recherche_entreprises: "Recherche d'entreprises (api.gouv.fr)",
+  perplexity: "Perplexity",
+} as const;
+export type EnrichmentSourceKey = keyof typeof SOURCE_LABELS;
 
 export type EnrichmentResult = {
   status: "found" | "partial" | "not_found" | "missing_key";
-  missingKey?: string;
-  // Google Places
-  phone?: string;
-  website?: string;
+  // Recherche d'entreprises
+  siren?: string;
   address?: string;
-  hours?: string;
-  placeId?: string;
-  average_rating?: number;
-  reviews_count?: number;
-  google_maps_url?: string;
+  headcount_range?: string;
+  naf_code?: string;
+  dirigeants?: { name: string; role: string }[];
   // Perplexity
-  decision_maker?: string;
-  employees_count?: string;
-  social_links?: { facebook?: string; instagram?: string; linkedin?: string };
-  icebreakers?: Icebreaker[];
-  additional_info?: string;
-  // Diagnostics
-  sources: { google_places: SourceStatus; perplexity: SourceStatus };
-};
-
-type GooglePlacesData = {
   phone?: string;
   website?: string;
-  address?: string;
-  hours?: string;
-  placeId?: string;
-  average_rating?: number;
-  reviews_count?: number;
-  google_maps_url?: string;
-};
-
-type PerplexityData = {
+  hr_contact?: string;
   decision_maker?: string;
   employees_count?: string;
   social_links?: { facebook?: string; instagram?: string; linkedin?: string };
   icebreakers?: Icebreaker[];
   additional_info?: string;
+  /** Origine de chaque information renvoyée. */
+  field_sources: Record<string, EnrichmentSourceKey>;
+  sources: { recherche_entreprises: SourceStatus; perplexity: SourceStatus };
 };
 
-async function fetchGooglePlacesV1(input: {
-  name: string;
-  city?: string;
-  activity?: string;
-  address?: string;
-}): Promise<{ data: GooglePlacesData; source: SourceStatus }> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) return { data: {}, source: { status: "skipped", message: "GOOGLE_PLACES_API_KEY non configurée" } };
+// Codes INSEE de tranche d'effectif → tranches du PRM.
+const TRANCHE_MAP: Record<string, string> = {
+  "01": "1-9", "02": "1-9", "03": "1-9",
+  "11": "10-19", "12": "20-49", "21": "50-99", "22": "100-199",
+  "31": "200-249", "32": "250-499", "41": "500-999", "42": "1000+",
+  "51": "1000+", "52": "1000+", "53": "1000+",
+};
 
-  const textQuery = [input.name, input.activity, input.address || input.city]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  const fieldMask = [
-    "places.displayName",
-    "places.formattedAddress",
-    "places.nationalPhoneNumber",
-    "places.internationalPhoneNumber",
-    "places.websiteUri",
-    "places.rating",
-    "places.userRatingCount",
-    "places.googleMapsUri",
-    "places.regularOpeningHours",
-    "places.id",
-  ].join(",");
+type RechercheData = Pick<EnrichmentResult, "siren" | "address" | "headcount_range" | "naf_code" | "dirigeants">;
 
-  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": fieldMask,
-    },
-    body: JSON.stringify({ textQuery, languageCode: "fr", regionCode: "FR", pageSize: 1 }),
+async function fetchRechercheEntreprises(input: { name: string; city?: string }): Promise<{ data: RechercheData; source: SourceStatus }> {
+  const q = [input.name, input.city].filter(Boolean).join(" ");
+  const res = await fetch(`${ANNUAIRE_URL}?${new URLSearchParams({ q, per_page: "1" }).toString()}`, {
+    headers: { Accept: "application/json" },
   });
-
   if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    console.error("Google Places v1 error:", res.status, errText);
-    const message =
-      res.status === 403
-        ? "Clé invalide ou Places API (New) désactivée sur Google Cloud"
-        : res.status === 429
-          ? "Quota Google Places atteint"
-          : `Erreur Google Places (${res.status})`;
+    const body = await res.text().catch(() => "");
+    console.error("Recherche d'entreprises error:", res.status, body);
+    const message = res.status === 429 ? "Trop de requêtes, réessayez dans une minute" : `Erreur Recherche d'entreprises (${res.status})`;
     return { data: {}, source: { status: "error", message } };
   }
-
-  const json = (await res.json()) as { places?: Array<Record<string, unknown>> };
-  const place = json.places?.[0];
-  if (!place) return { data: {}, source: { status: "ok", message: "Aucun résultat trouvé" } };
-
-  const oh = (place.regularOpeningHours as { weekdayDescriptions?: string[] } | undefined);
-  const hours = oh?.weekdayDescriptions?.length ? oh.weekdayDescriptions.join(" | ") : undefined;
-
-  return {
-    data: {
-      address: (place.formattedAddress as string) || undefined,
-      phone:
-        (place.nationalPhoneNumber as string) ||
-        (place.internationalPhoneNumber as string) ||
-        undefined,
-      website: (place.websiteUri as string) || undefined,
-      hours,
-      placeId: (place.id as string) || undefined,
-      average_rating: typeof place.rating === "number" ? (place.rating as number) : undefined,
-      reviews_count:
-        typeof place.userRatingCount === "number" ? (place.userRatingCount as number) : undefined,
-      google_maps_url: (place.googleMapsUri as string) || undefined,
-    },
-    source: { status: "ok" },
-  };
+  const json = (await res.json()) as { results?: Array<Record<string, unknown>> };
+  const item = json.results?.[0];
+  if (!item) return { data: {}, source: { status: "ok", message: "Aucune entreprise trouvée" } };
+  const siege = (item.siege || {}) as Record<string, unknown>;
+  const dirigeants = (Array.isArray(item.dirigeants) ? (item.dirigeants as Array<Record<string, unknown>>) : [])
+    .map((d) => ({
+      name: [d.prenoms, d.nom].filter(Boolean).join(" ").trim() || String(d.denomination || "").trim(),
+      role: String(d.qualite || "Dirigeant"),
+    }))
+    .filter((d) => d.name)
+    .slice(0, 5);
+  const tranche = String(item.tranche_effectif_salarie || siege.tranche_effectif_salarie || "");
+  const address =
+    String(siege.adresse || "").trim() ||
+    [siege.numero_voie, siege.type_voie, siege.libelle_voie, siege.code_postal, siege.libelle_commune].filter(Boolean).join(" ");
+  const data: RechercheData = {};
+  if (item.siren) data.siren = String(item.siren);
+  if (address) data.address = address;
+  if (TRANCHE_MAP[tranche]) data.headcount_range = TRANCHE_MAP[tranche];
+  const naf = String(item.activite_principale || siege.activite_principale || "");
+  if (naf) data.naf_code = naf;
+  if (dirigeants.length) data.dirigeants = dirigeants;
+  return { data, source: { status: "ok" } };
 }
 
-async function fetchPerplexity(input: {
-  name: string;
-  city?: string;
-  activity?: string;
-  address?: string;
-}): Promise<{ data: PerplexityData; source: SourceStatus }> {
+type PerplexityData = Pick<
+  EnrichmentResult,
+  "phone" | "website" | "hr_contact" | "decision_maker" | "employees_count" | "social_links" | "icebreakers" | "additional_info"
+>;
+
+async function fetchPerplexity(input: { name: string; city?: string; activity?: string; address?: string }): Promise<{ data: PerplexityData; source: SourceStatus }> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey)
-    return { data: {}, source: { status: "skipped", message: "PERPLEXITY_API_KEY non configurée" } };
+  if (!apiKey) return { data: {}, source: { status: "skipped", message: "Clé Perplexity non configurée" } };
 
   const location = [input.address, input.city].filter(Boolean).join(", ") || "France";
-  const prompt = `Recherche des informations commerciales sur "${input.name}"${
-    input.activity ? `, ${input.activity}` : ""
-  }, situé à ${location}.
+  const prompt = `Recherche des informations commerciales sur l'entreprise "${input.name}"${input.activity ? `, ${input.activity}` : ""}, située à ${location} (France).
 
-Trouve et retourne en JSON :
-- decision_maker: nom et fonction du gérant/décideur si trouvé
-- employees_count: estimation du nombre d'employés (ex: "5-10")
+Retourne en JSON :
+- phone: numéro de téléphone du standard / accueil de l'établissement (format français)
+- website: site web officiel (URL)
+- hr_contact: nom et fonction d'un interlocuteur RH, QSE, HSE ou sécurité si publiquement disponible
+- decision_maker: nom et fonction du dirigeant ou directeur de site
+- employees_count: estimation du nombre d'employés (ex: "50-99")
 - social_links: objet avec clés facebook, instagram, linkedin (URLs)
-- icebreakers: tableau d'actualités récentes (max 5), chaque élément avec type (news/event/social/award), title, source, date (ISO), url
-- additional_info: toute autre info pertinente pour un commercial B2B en santé-sécurité au travail
+- icebreakers: actualités récentes (max 5) avec type (news/event/social/award), title, source, date (ISO), url
+- additional_info: autre info utile pour un commercial B2B en santé-sécurité au travail
 
 Ne retourne QUE des informations vérifiables. Si tu ne trouves rien pour un champ, omets-le.`;
 
+  const str = { type: "string" };
   const res = await fetch("https://api.perplexity.ai/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "sonar",
       messages: [
-        {
-          role: "system",
-          content: "Tu es un assistant de recherche commerciale. Réponds uniquement en JSON valide.",
-        },
+        { role: "system", content: "Tu es un assistant de recherche commerciale. Réponds uniquement en JSON valide." },
         { role: "user", content: prompt },
       ],
       response_format: {
@@ -390,31 +341,17 @@ Ne retourne QUE des informations vérifiables. Si tu ne trouves rien pour un cha
           schema: {
             type: "object",
             properties: {
-              decision_maker: { type: "string" },
-              employees_count: { type: "string" },
-              social_links: {
-                type: "object",
-                properties: {
-                  facebook: { type: "string" },
-                  instagram: { type: "string" },
-                  linkedin: { type: "string" },
-                },
-              },
+              phone: str, website: str, hr_contact: str, decision_maker: str, employees_count: str,
+              social_links: { type: "object", properties: { facebook: str, instagram: str, linkedin: str } },
               icebreakers: {
                 type: "array",
                 items: {
                   type: "object",
-                  properties: {
-                    type: { type: "string", enum: ["news", "event", "social", "award"] },
-                    title: { type: "string" },
-                    source: { type: "string" },
-                    date: { type: "string" },
-                    url: { type: "string" },
-                  },
+                  properties: { type: { type: "string", enum: ["news", "event", "social", "award"] }, title: str, source: str, date: str, url: str },
                   required: ["title"],
                 },
               },
-              additional_info: { type: "string" },
+              additional_info: str,
             },
           },
         },
@@ -426,35 +363,28 @@ Ne retourne QUE des informations vérifiables. Si tu ne trouves rien pour un cha
     const errText = await res.text().catch(() => "");
     console.error("Perplexity error:", res.status, errText);
     let message = `Erreur Perplexity (${res.status})`;
-    if (res.status === 429) message = "Limites de requêtes Perplexity dépassées";
-    if (res.status === 402) message = "Crédits Perplexity insuffisants";
-    if (res.status === 401) message = "Clé API Perplexity invalide";
+    if (res.status === 429) message = "Limite de requêtes Perplexity atteinte";
+    if (res.status === 402 || (res.status === 401 && errText.includes("insufficient_quota"))) message = "Crédits Perplexity épuisés";
+    else if (res.status === 401) message = "Clé Perplexity invalide";
     return { data: {}, source: { status: "error", message } };
   }
 
-  const json = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
+  const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const content = json.choices?.[0]?.message?.content;
   if (!content) return { data: {}, source: { status: "error", message: "Réponse Perplexity vide" } };
-
   try {
     const parsed = JSON.parse(content) as PerplexityData;
     const cleaned: PerplexityData = {};
-    if (parsed.decision_maker) cleaned.decision_maker = parsed.decision_maker;
-    if (parsed.employees_count) cleaned.employees_count = parsed.employees_count;
-    if (
-      parsed.social_links &&
-      Object.values(parsed.social_links).some((value) => typeof value === "string" && value.length > 0)
-    ) {
+    for (const key of ["phone", "website", "hr_contact", "decision_maker", "employees_count", "additional_info"] as const) {
+      const v = parsed[key];
+      if (typeof v === "string" && v.trim()) cleaned[key] = v.trim();
+    }
+    if (parsed.social_links && Object.values(parsed.social_links).some((v) => typeof v === "string" && v.length > 0)) {
       cleaned.social_links = parsed.social_links;
     }
     if (Array.isArray(parsed.icebreakers) && parsed.icebreakers.length) {
-      cleaned.icebreakers = parsed.icebreakers
-        .filter((item) => item && typeof item.title === "string" && item.title.length > 0)
-        .slice(0, 5);
+      cleaned.icebreakers = parsed.icebreakers.filter((i) => i && typeof i.title === "string" && i.title.length > 0).slice(0, 5);
     }
-    if (parsed.additional_info) cleaned.additional_info = parsed.additional_info;
     return { data: cleaned, source: { status: "ok" } };
   } catch (error) {
     console.error("Perplexity JSON parse error:", error);
@@ -462,51 +392,29 @@ Ne retourne QUE des informations vérifiables. Si tu ne trouves rien pour un cha
   }
 }
 
-export async function enrichCompanyServer(input: {
-  name: string;
-  city?: string;
-  activity?: string;
-  address?: string;
-}): Promise<EnrichmentResult> {
-  if (!process.env.GOOGLE_PLACES_API_KEY && !process.env.PERPLEXITY_API_KEY) {
-    return {
-      status: "missing_key",
-      missingKey: "GOOGLE_PLACES_API_KEY & PERPLEXITY_API_KEY",
-      sources: {
-        google_places: { status: "skipped", message: "GOOGLE_PLACES_API_KEY non configurée" },
-        perplexity: { status: "skipped", message: "PERPLEXITY_API_KEY non configurée" },
-      },
-    };
-  }
+export async function enrichCompanyServer(input: { name: string; city?: string; activity?: string; address?: string }): Promise<EnrichmentResult> {
+  const [re, pp] = await Promise.allSettled([fetchRechercheEntreprises(input), fetchPerplexity(input)]);
+  const reRes = re.status === "fulfilled" ? re.value : { data: {} as RechercheData, source: { status: "error" as const, message: "Recherche d'entreprises injoignable" } };
+  const ppRes = pp.status === "fulfilled" ? pp.value : { data: {} as PerplexityData, source: { status: "error" as const, message: "Perplexity injoignable" } };
 
-  const [gp, pp] = await Promise.allSettled([fetchGooglePlacesV1(input), fetchPerplexity(input)]);
+  const field_sources: Record<string, EnrichmentSourceKey> = {};
+  for (const k of Object.keys(reRes.data)) field_sources[k] = "recherche_entreprises";
+  for (const k of Object.keys(ppRes.data)) field_sources[k] = "perplexity";
 
-  const gpRes =
-    gp.status === "fulfilled"
-      ? gp.value
-      : { data: {} as GooglePlacesData, source: { status: "error" as const, message: "Exception Google Places" } };
-  const ppRes =
-    pp.status === "fulfilled"
-      ? pp.value
-      : { data: {} as PerplexityData, source: { status: "error" as const, message: "Exception Perplexity" } };
-
-  const gpData = gpRes.data;
-  const ppData = ppRes.data;
-  const sources = { google_places: gpRes.source, perplexity: ppRes.source };
-
-  const anyData =
-    Object.keys(gpData).length > 0 || Object.keys(ppData).length > 0;
-  const bothFailed =
-    gpRes.source.status !== "ok" && ppRes.source.status !== "ok";
+  const anyData = Object.keys(field_sources).length > 0;
   const status: EnrichmentResult["status"] = !anyData
-    ? bothFailed
-      ? "not_found"
-      : "not_found"
-    : gpRes.source.status === "ok" && ppRes.source.status === "ok"
+    ? "not_found"
+    : reRes.source.status === "ok" && ppRes.source.status === "ok"
       ? "found"
       : "partial";
 
-  return { status, ...gpData, ...ppData, sources };
+  return {
+    status,
+    ...reRes.data,
+    ...ppRes.data,
+    field_sources,
+    sources: { recherche_entreprises: reRes.source, perplexity: ppRes.source },
+  };
 }
 
 export async function findEmailServer(input: { domain?: string; company?: string; firstName?: string; lastName?: string }) {
