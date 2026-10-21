@@ -74,8 +74,10 @@ export interface Prospect {
   reviews_count: number | null;
   google_maps_url: string | null;
   enrichment_sources: {
-    google_places?: { status: string; message?: string };
+    recherche_entreprises?: { status: string; message?: string };
     perplexity?: { status: string; message?: string };
+    /** Origine de chaque champ rempli par l'enrichissement. */
+    field_sources?: Record<string, string>;
   } | null;
   enriched_at: string | null;
   created_at: string;
