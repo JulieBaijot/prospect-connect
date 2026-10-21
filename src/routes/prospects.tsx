@@ -309,7 +309,7 @@ function ProspectsPage() {
   }
 
   async function enrichPlaces() {
-    setPlacesStatus("Recherche Google Places + Perplexity en cours…");
+    setPlacesStatus("Recherche d'entreprises + Perplexity en cours…");
     try {
       const result = await runEnrichment({
         data: {
@@ -319,43 +319,28 @@ function ProspectsPage() {
           address: form.address || undefined,
         },
       });
-      if (result.status === "missing_key") {
-        setPlacesStatus("Aucune clé d'enrichissement configurée.");
-        return;
-      }
+      const base = selected ?? ({ ...form } as unknown as Prospect);
+      const patch = buildEnrichmentPatch(base, result);
       setForm((prev) => ({
         ...prev,
-        address: prev.address || result.address || "",
-        main_phone: prev.main_phone || result.phone || "",
-        website: prev.website || result.website || "",
-        reception_hours: prev.reception_hours || result.hours || "",
-        google_place_id: prev.google_place_id || result.placeId || "",
+        address: prev.address || patch.address || "",
+        main_phone: prev.main_phone || patch.main_phone || "",
+        website: prev.website || patch.website || "",
+        siren: prev.siren || patch.siren || "",
+        naf_code: prev.naf_code || patch.naf_code || "",
+        headcount_range: (patch.headcount_range as HeadcountRange) || prev.headcount_range,
       }));
       if (selected) {
-        const patch: Partial<Prospect> & { enriched_at?: string } = {
-          decision_maker: selected.decision_maker || result.decision_maker || null,
-          employees_count: selected.employees_count || result.employees_count || null,
-          additional_info: selected.additional_info || result.additional_info || null,
-          social_links: selected.social_links || result.social_links || null,
-          icebreakers:
-            selected.icebreakers && selected.icebreakers.length
-              ? selected.icebreakers
-              : result.icebreakers || null,
-          average_rating: selected.average_rating ?? result.average_rating ?? null,
-          reviews_count: selected.reviews_count ?? result.reviews_count ?? null,
-          google_maps_url: selected.google_maps_url || result.google_maps_url || null,
-          enrichment_sources: result.sources,
-          enriched_at: new Date().toISOString(),
-        };
         await updateProspect(selected.id, patch);
         await refresh();
       }
-      const gp = result.sources.google_places;
+      const re = result.sources.recherche_entreprises;
       const pp = result.sources.perplexity;
+      const label = (s: { status: string; message?: string }) =>
+        `${s.status === "ok" ? "OK" : s.status === "skipped" ? "ignoré" : "erreur"}${s.message ? ` (${s.message})` : ""}`;
       setPlacesStatus(
         `Enrichissement ${result.status === "found" ? "complet" : result.status === "partial" ? "partiel" : "vide"}. ` +
-          `Google Places : ${gp.status}${gp.message ? ` (${gp.message})` : ""}. ` +
-          `Perplexity : ${pp.status}${pp.message ? ` (${pp.message})` : ""}.`,
+          `Recherche d'entreprises : ${label(re)}. Perplexity : ${label(pp)}.`,
       );
     } catch {
       setPlacesStatus("Erreur réseau pendant l'enrichissement.");
@@ -385,21 +370,7 @@ function ProspectsPage() {
             },
           });
           if (place.status === "found" || place.status === "partial") {
-            if (!prospect.main_phone && place.phone) patch.main_phone = place.phone;
-            if (!prospect.website && place.website) patch.website = place.website;
-            if (!prospect.address && place.address) patch.address = place.address;
-            if (!prospect.reception_hours && place.hours) patch.reception_hours = place.hours;
-            if (!prospect.google_place_id && place.placeId) patch.google_place_id = place.placeId;
-            if (!prospect.decision_maker && place.decision_maker) patch.decision_maker = place.decision_maker;
-            if (!prospect.employees_count && place.employees_count) patch.employees_count = place.employees_count;
-            if (!prospect.social_links && place.social_links) patch.social_links = place.social_links;
-            if ((!prospect.icebreakers || !prospect.icebreakers.length) && place.icebreakers) patch.icebreakers = place.icebreakers;
-            if (prospect.average_rating == null && place.average_rating != null) patch.average_rating = place.average_rating;
-            if (prospect.reviews_count == null && place.reviews_count != null) patch.reviews_count = place.reviews_count;
-            if (!prospect.google_maps_url && place.google_maps_url) patch.google_maps_url = place.google_maps_url;
-            if (!prospect.additional_info && place.additional_info) patch.additional_info = place.additional_info;
-            patch.enrichment_sources = place.sources;
-            (patch as Partial<Prospect> & { enriched_at?: string }).enriched_at = new Date().toISOString();
+            Object.assign(patch, buildEnrichmentPatch(prospect, place));
           }
         } catch {
           // Le batch continue même si un enrichissement échoue.
@@ -916,11 +887,14 @@ function ProspectsPage() {
                 Rechercher sur LinkedIn
               </Button>
               <Button variant="warning" onClick={enrichPlaces}>
-                Enrichir via Google Places
+                Enrichir (annuaire public + Perplexity)
               </Button>
             </div>
             {placesStatus ? (
               <p className="rounded-lg bg-script p-3 text-sm">{placesStatus}</p>
+            ) : null}
+            {selected?.enrichment_sources?.field_sources && Object.keys(selected.enrichment_sources.field_sources).length ? (
+              <EnrichmentProvenance prospect={selected} />
             ) : null}
             {selected && (selected.decision_maker || selected.average_rating != null || selected.icebreakers?.length || selected.social_links) ? (
               <div className="rounded-lg border border-border bg-card p-3 text-sm">
@@ -928,8 +902,6 @@ function ProspectsPage() {
                 <div className="mt-2 flex flex-wrap gap-3">
                   {selected.decision_maker ? <span>👤 {selected.decision_maker}</span> : null}
                   {selected.employees_count ? <span>👥 {selected.employees_count}</span> : null}
-                  {selected.average_rating != null ? <span>⭐ {selected.average_rating.toFixed(1)}{selected.reviews_count != null ? ` (${selected.reviews_count})` : ""}</span> : null}
-                  {selected.google_maps_url ? <a className="text-primary underline" href={selected.google_maps_url} target="_blank" rel="noreferrer">Maps</a> : null}
                   {selected.social_links?.linkedin ? <a className="text-primary underline" href={selected.social_links.linkedin} target="_blank" rel="noreferrer">LinkedIn</a> : null}
                   {selected.social_links?.facebook ? <a className="text-primary underline" href={selected.social_links.facebook} target="_blank" rel="noreferrer">Facebook</a> : null}
                   {selected.social_links?.instagram ? <a className="text-primary underline" href={selected.social_links.instagram} target="_blank" rel="noreferrer">Instagram</a> : null}
@@ -1040,5 +1012,110 @@ function MiniKpi({ label, value }: { label: string; value: string | number }) {
       <p className={labelClass}>{label}</p>
       <p className="mt-1 text-[20px] font-medium">{value}</p>
     </Card>
+  );
+}
+
+const SOURCE_NAMES: Record<string, string> = {
+  recherche_entreprises: "Recherche d'entreprises",
+  perplexity: "Perplexity",
+};
+const FIELD_LABELS: Record<string, string> = {
+  siren: "SIREN",
+  address: "Adresse",
+  headcount_range: "Effectif",
+  naf_code: "Code NAF",
+  decision_maker: "Dirigeant / décideur",
+  main_phone: "Téléphone standard",
+  website: "Site web",
+  hr_contact: "Interlocuteur RH / QSE",
+  employees_count: "Effectif estimé",
+  social_links: "Réseaux sociaux",
+  icebreakers: "Actualités",
+  additional_info: "Infos complémentaires",
+};
+
+type EnrichResponse = Awaited<ReturnType<typeof enrichCompany>>;
+
+/** Ne remplit que les champs vides, et note l'origine de chaque information ajoutée. */
+function buildEnrichmentPatch(prospect: Prospect, r: EnrichResponse): Partial<Prospect> & { enriched_at?: string } {
+  const fs = r.field_sources;
+  const prev = prospect.enrichment_sources ?? {};
+  const origins: Record<string, string> = { ...(prev.field_sources ?? {}) };
+  const patch: Partial<Prospect> & { enriched_at?: string } = {};
+  const fill = <K extends keyof Prospect>(key: K, value: Prospect[K] | undefined, from: string) => {
+    const current = prospect[key];
+    const empty = current == null || current === "" || (Array.isArray(current) && !current.length);
+    if (empty && value != null && value !== "" && fs[from]) {
+      patch[key] = value;
+      origins[key as string] = fs[from];
+    }
+  };
+  fill("siren", r.siren, "siren");
+  fill("address", r.address, "address");
+  fill("naf_code", r.naf_code, "naf_code");
+  fill("main_phone", r.phone, "phone");
+  fill("website", r.website, "website");
+  const dirigeant = r.dirigeants?.[0];
+  if (dirigeant) fill("decision_maker", `${dirigeant.name} (${dirigeant.role})`, "dirigeants");
+  else fill("decision_maker", r.decision_maker, "decision_maker");
+  fill("employees_count", r.employees_count, "employees_count");
+  fill("social_links", r.social_links, "social_links");
+  fill("icebreakers", r.icebreakers, "icebreakers");
+  fill("additional_info", r.additional_info, "additional_info");
+  // L'effectif officiel (INSEE) remplace l'effectif par défaut.
+  if (r.headcount_range && fs.headcount_range && r.headcount_range !== prospect.headcount_range) {
+    patch.headcount_range = r.headcount_range as HeadcountRange;
+    origins.headcount_range = fs.headcount_range;
+  }
+  if (r.hr_contact) origins.hr_contact = fs.hr_contact;
+  patch.enrichment_sources = {
+    recherche_entreprises: r.sources.recherche_entreprises,
+    perplexity: r.sources.perplexity,
+    field_sources: origins,
+    ...(r.hr_contact ? { hr_contact: r.hr_contact } : {}),
+    ...(r.dirigeants?.length ? { dirigeants: r.dirigeants } : {}),
+  } as Prospect["enrichment_sources"];
+  patch.enriched_at = new Date().toISOString();
+  return patch;
+}
+
+function EnrichmentProvenance({ prospect }: { prospect: Prospect }) {
+  const es = prospect.enrichment_sources as (Prospect["enrichment_sources"] & {
+    hr_contact?: string;
+    dirigeants?: { name: string; role: string }[];
+  }) | null;
+  const origins = es?.field_sources ?? {};
+  const valueOf = (key: string): string => {
+    if (key === "hr_contact") return es?.hr_contact ?? "";
+    if (key === "social_links") return Object.values(prospect.social_links ?? {}).filter(Boolean).length + " lien(s)";
+    if (key === "icebreakers") return `${prospect.icebreakers?.length ?? 0} élément(s)`;
+    const v = (prospect as unknown as Record<string, unknown>)[key];
+    return v == null ? "" : String(v);
+  };
+  return (
+    <div className="rounded-lg border border-border bg-card p-3 text-sm">
+      <p className={labelClass}>Informations trouvées et leur source</p>
+      <dl className="mt-2 grid gap-1">
+        {Object.entries(origins).map(([key, src]) => (
+          <div key={key} className="flex flex-wrap items-baseline gap-2">
+            <dt className="font-medium">{FIELD_LABELS[key] ?? key} :</dt>
+            <dd className="min-w-0 flex-1 break-words">{valueOf(key) || "—"}</dd>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+              {SOURCE_NAMES[src] ?? src}
+            </span>
+          </div>
+        ))}
+      </dl>
+      {es?.dirigeants && es.dirigeants.length > 1 ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Dirigeants (Recherche d'entreprises) : {es.dirigeants.map((d) => `${d.name} – ${d.role}`).join(" · ")}
+        </p>
+      ) : null}
+      {prospect.enriched_at ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Enrichi le {new Date(prospect.enriched_at).toLocaleDateString("fr-FR")}
+        </p>
+      ) : null}
+    </div>
   );
 }
