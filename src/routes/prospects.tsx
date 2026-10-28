@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink, FileUp, Plus, Save, Trash2, Wand2 } from "lucide-react";
+import { Download, ExternalLink, FileUp, Plus, Save, Trash2, Wand2 } from "lucide-react";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/prm/AppLayout";
@@ -17,6 +17,7 @@ import {
 } from "@/components/prm/ui";
 import {
   contactName,
+  exportCsv,
   bestPhone,
   dataQualityIssues,
   deleteProspect,
@@ -389,6 +390,70 @@ function ProspectsPage() {
     );
   }
 
+  function exportProspects() {
+    exportCsv(
+      `prospects-${new Date().toISOString().slice(0, 10)}.csv`,
+      filtered.map((p) => {
+        const c = p.contacts?.[0];
+        return {
+          Entreprise: p.company_name,
+          Ville: p.city,
+          Adresse: p.address,
+          Statut: p.status,
+          Segment: p.segment,
+          Effectif: p.headcount_range,
+          Offre: p.offer_target,
+          "Niveau de décision": p.decision_level,
+          Groupe: p.group_name,
+          Secteur: p.sector,
+          SIREN: p.siren,
+          NAF: p.naf_code,
+          Téléphone: p.main_phone,
+          Email: p.main_email,
+          Site: p.website,
+          Contact: c ? contactName(c) : p.decision_maker,
+          Fonction: c?.role_title,
+          "Email contact": c?.email,
+          "Téléphone contact": c?.direct_phone || c?.main_phone,
+          "Valeur estimée": p.estimated_value,
+          "Prochaine action": formatDate(p.next_action_date),
+          "Dernier contact": formatDate(p.last_contacted_at),
+          "Date de réveil": formatDate(p.parking_date),
+          "Motif parking": p.parking_trigger,
+          "Nb actions": p.prospection_logs?.length ?? 0,
+          Commentaires: p.comments,
+        };
+      }),
+    );
+  }
+
+  function exportHistory() {
+    const rows = filtered.flatMap((p) =>
+      (p.prospection_logs || []).map((log) => ({
+        Date: formatDate(log.action_date),
+        Entreprise: p.company_name,
+        Ville: p.city,
+        Contact: contactName(p.contacts?.find((c) => c.id === log.contact_id) ?? null),
+        Canal: log.canal,
+        Action: log.action_type,
+        Situation: log.stage,
+        Résultat: log.result,
+        Décroché: log.reached == null ? "" : log.reached ? "oui" : "non",
+        Notes: log.notes,
+        Promesse: log.promise_text,
+        "Date promesse": formatDate(log.promise_date),
+        "Promesse tenue": log.promise_kept == null ? "" : log.promise_kept ? "oui" : "non",
+        "Prochaine action": formatDate(log.next_action_date),
+        "Date RDV": formatDate(log.meeting_date),
+        Modèle: log.template_used,
+        "Objet email": log.email_subject,
+        "Texte email": log.email_body,
+      })),
+    );
+    rows.sort((a, b) => 0 * a.Date.length + 0 * b.Date.length);
+    exportCsv(`historique-prospection-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  }
+
   return (
     <>
       <PageTitle
@@ -403,6 +468,14 @@ function ProspectsPage() {
               <FileUp className="h-4 w-4" />
               Importer un CSV
             </Link>
+            <Button variant="neutral" onClick={exportProspects} disabled={!filtered.length}>
+              <Download className="mr-2 h-4 w-4" />
+              Exporter prospects
+            </Button>
+            <Button variant="neutral" onClick={exportHistory} disabled={!filtered.length}>
+              <Download className="mr-2 h-4 w-4" />
+              Exporter historique
+            </Button>
             <Button
               variant="neutral"
               onClick={qualifyIncompleteBatch}
