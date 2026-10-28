@@ -450,7 +450,6 @@ function ProspectsPage() {
         "Texte email": log.email_body,
       })),
     );
-    rows.sort((a, b) => 0 * a.Date.length + 0 * b.Date.length);
     exportCsv(`historique-prospection-${new Date().toISOString().slice(0, 10)}.csv`, rows);
   }
 
